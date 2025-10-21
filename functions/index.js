@@ -388,9 +388,12 @@ const sanitizeLandingMedia = (input, fallback = defaultLandingMedia) => {
     : fallback.heroGallery;
 
   const heroVideoRaw = input.heroVideo && typeof input.heroVideo === "object" ? input.heroVideo : {};
+  const videoSrc = heroVideoRaw.src ? String(heroVideoRaw.src).trim() : "";
+  const videoPoster = heroVideoRaw.poster ? String(heroVideoRaw.poster).trim() : "";
+  
   const heroVideo = {
-    src: heroVideoRaw.src ? String(heroVideoRaw.src).trim() : "",
-    poster: heroVideoRaw.poster ? String(heroVideoRaw.poster).trim() : "",
+    src: videoSrc,
+    poster: videoPoster,
   };
 
   const mediaHighlights = Array.isArray(input.mediaHighlights)

@@ -111,7 +111,13 @@ export default async function Home() {
   const [products, categories, landingMediaPayload] = await Promise.all([
     getProducts(apiBase),
     getCategories(apiBase),
-    fetch(`${apiBase}/landing-media`, { cache: 'no-store' })
+    fetch(`${apiBase}/landing-media`, { 
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(`Landing media request failed: ${response.status}`);
@@ -125,6 +131,9 @@ export default async function Home() {
   ]);
 
   const landingMedia = landingMediaPayload?.landingMedia;
+  
+  // DEBUG: Server-side log to verify data
+  console.log('[SERVER] Landing media heroVideo:', JSON.stringify(landingMedia?.heroVideo));
 
   const landingGallery: string[] = Array.isArray(landingMedia?.heroGallery) && landingMedia.heroGallery.length > 0
     ? landingMedia.heroGallery
