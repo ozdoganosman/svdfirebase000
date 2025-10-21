@@ -31,6 +31,12 @@ type Product = {
     minBoxes: number;
     boxLabel: string;
   };
+  specifications?: {
+    hoseLength?: string;
+    volume?: string;
+    color?: string;
+    neckSize?: string;
+  };
 };
 
 type Category = {

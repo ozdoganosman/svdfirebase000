@@ -23,6 +23,12 @@ type Product = {
     minBoxes: number;
     boxLabel: string;
   };
+  specifications?: {
+    hoseLength?: string;
+    volume?: string;
+    color?: string;
+    neckSize?: string;
+  };
 };
 
 type Category = {
@@ -274,8 +280,19 @@ export default async function ProductDetailPage({
                     {product.stock && product.stock > 0 && product.packageInfo && (
                       <li>• <strong>Stok durumu:</strong> {Math.floor(product.stock / product.packageInfo.itemsPerBox)} {product.packageInfo.boxLabel.toLowerCase()} ({product.stock} adet)</li>
                     )}
+                    {product.specifications?.hoseLength && (
+                      <li>• <strong>Hortum Boyu:</strong> {product.specifications.hoseLength}</li>
+                    )}
+                    {product.specifications?.volume && (
+                      <li>• <strong>Hacim:</strong> {product.specifications.volume}</li>
+                    )}
+                    {product.specifications?.color && (
+                      <li>• <strong>Renk:</strong> {product.specifications.color}</li>
+                    )}
+                    {product.specifications?.neckSize && (
+                      <li>• <strong>Boyun Ölçüsü:</strong> {product.specifications.neckSize}</li>
+                    )}
                     <li>• Teslimat süresi: 3-5 iş günü stoktan, 10-15 iş günü ithal ürünlerde</li>
-                    <li>• Renk seçenekleri: Beyaz, siyah, özel renk üretimi</li>
                     <li>• Sertifika: ISO 9001 üretim tesisi</li>
                   </ul>
                 </div>
