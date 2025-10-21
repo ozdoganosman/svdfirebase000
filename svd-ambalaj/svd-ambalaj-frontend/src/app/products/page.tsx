@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   description: "SVD Ambalaj ürün kataloğu - Sprey, pompa ve ambalaj çözümleri",
 };
 
+export const dynamic = 'force-dynamic';
+
 type BulkTier = {
   minQty: number;
   price: number;
