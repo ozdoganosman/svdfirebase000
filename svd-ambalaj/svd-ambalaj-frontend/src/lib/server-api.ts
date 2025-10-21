@@ -1,3 +1,4 @@
+const PRODUCTION_API_BASE = "https://api-tfi7rlxtca-uc.a.run.app";
 const DEFAULT_API_BASE = "http://localhost:5001/svdfirebase000/us-central1/api";
 const ABSOLUTE_URL_REGEX = /^https?:\/\//i;
 
@@ -30,6 +31,11 @@ const getSiteUrl = (): string | null => {
 const normalizeBase = (base: string): string => base.replace(/\/$/, "");
 
 export const resolveServerApiBase = (): string => {
+  // In production (deployed to Firebase), always use production API
+  if (process.env.NODE_ENV === 'production') {
+    return normalizeBase(PRODUCTION_API_BASE);
+  }
+
   const rawBase =
     typeof process?.env?.NEXT_PUBLIC_API_URL === "string"
       ? process.env.NEXT_PUBLIC_API_URL
