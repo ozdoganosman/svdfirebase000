@@ -26,6 +26,11 @@ type Product = {
   bulkPricing?: BulkTier[];
   images?: string[];
   image?: string;
+  packageInfo?: {
+    itemsPerBox: number;
+    minBoxes: number;
+    boxLabel: string;
+  };
 };
 
 type Category = {
@@ -577,12 +582,21 @@ export default async function Home() {
                           Toplu Alım Avantajı
                         </p>
                         <ul className="mt-3 space-y-2 text-sm text-amber-800">
-                          {product.bulkPricing.map((tier) => (
-                            <li key={`${product.id}-tier-${tier.minQty}`} className="flex items-center justify-between">
-                              <span>{tier.minQty}+ adet</span>
-                              <span className="font-semibold">{formatCurrency(tier.price)}</span>
-                            </li>
-                          ))}
+                          {product.bulkPricing.map((tier) => {
+                            const itemsPerBox = product.packageInfo?.itemsPerBox || 1;
+                            const totalItems = tier.minQty * itemsPerBox;
+                            return (
+                              <li key={`${product.id}-tier-${tier.minQty}`} className="flex items-center justify-between">
+                                <span>
+                                  {tier.minQty}+ koli
+                                  {itemsPerBox > 1 && (
+                                    <span className="text-xs text-slate-600"> ({totalItems.toLocaleString('tr-TR')}+ adet)</span>
+                                  )}
+                                </span>
+                                <span className="font-semibold">{formatCurrency(tier.price)}</span>
+                              </li>
+                            );
+                          })}
                         </ul>
                       </div>
                     )}

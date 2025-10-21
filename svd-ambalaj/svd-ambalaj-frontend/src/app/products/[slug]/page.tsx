@@ -223,10 +223,16 @@ export default async function ProductDetailPage({
                         {product.bulkPricing?.map((tier, index) => {
                           const nextTier = product.bulkPricing?.[index + 1];
                           const maxQty = nextTier ? nextTier.minQty - 1 : null;
+                          const totalItems = tier.minQty * product.packageInfo!.itemsPerBox;
+                          const totalItemsFormatted = totalItems.toLocaleString('tr-TR');
                           return (
                             <tr key={`tier-${tier.minQty}`} className="hover:bg-amber-50">
                               <td className="py-3 font-medium text-amber-900">
                                 {tier.minQty}{maxQty ? `-${maxQty}` : '+'} koli
+                                <br />
+                                <span className="text-xs text-slate-500">
+                                  ({totalItemsFormatted}{maxQty ? `-${(maxQty * product.packageInfo!.itemsPerBox).toLocaleString('tr-TR')}` : '+'} adet)
+                                </span>
                               </td>
                               <td className="py-3 text-slate-600">
                                 {tier.minQty * product.packageInfo!.itemsPerBox}
