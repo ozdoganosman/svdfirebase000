@@ -650,7 +650,7 @@ export default function AdminProductsPage() {
                     })}</td>
                     <td className="px-3 py-2 text-slate-600">{product.stock}</td>
                     <td className="px-3 py-2 text-xs text-slate-500">
-                      {new Date(product.createdAt).toLocaleString("tr-TR")}
+                      {product.createdAt ? new Date(product.createdAt).toLocaleString("tr-TR") : "-"}
                     </td>
                     <td className="px-3 py-2 space-x-2">
                       <button
