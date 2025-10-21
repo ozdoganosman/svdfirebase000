@@ -213,7 +213,8 @@ app.post("/media", requireAuth, (req, res) => {
           const [uploadedFile] = await bucket.upload(tempPath, {
             destination,
             metadata,
-            validation: "md5"
+            validation: "md5",
+            public: true  // Make file publicly accessible
           });
 
           functions.logger.info("File uploaded to Firebase Storage", {
