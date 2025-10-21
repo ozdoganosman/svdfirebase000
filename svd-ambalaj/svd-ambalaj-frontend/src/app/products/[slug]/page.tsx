@@ -166,24 +166,17 @@ export default async function ProductDetailPage({
                     <span className="text-2xl">📦</span>
                     Koli Satış Bilgileri
                   </h3>
-                  <div className="grid grid-cols-2 gap-6 md:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div className="rounded-xl bg-white p-4 shadow-sm">
                       <p className="text-xs font-medium text-amber-700 uppercase tracking-wide">Koli İçi Adet</p>
                       <p className="mt-1 text-3xl font-bold text-amber-900">
                         {product.packageInfo.itemsPerBox}
                       </p>
-                      <p className="text-xs text-slate-600">adet/koli</p>
-                    </div>
-                    <div className="rounded-xl bg-white p-4 shadow-sm">
-                      <p className="text-xs font-medium text-amber-700 uppercase tracking-wide">Minimum Sipariş</p>
-                      <p className="mt-1 text-3xl font-bold text-amber-900">
-                        {product.packageInfo.minBoxes}
-                      </p>
-                      <p className="text-xs text-slate-600">{product.packageInfo.boxLabel.toLowerCase()}</p>
+                      <p className="text-xs text-slate-600">adet/{product.packageInfo.boxLabel.toLowerCase()}</p>
                     </div>
                     <div className="rounded-xl bg-white p-4 shadow-sm">
                       <p className="text-xs font-medium text-amber-700 uppercase tracking-wide">Paket Türü</p>
-                      <p className="mt-1 text-2xl font-bold text-amber-900">
+                      <p className="mt-1 text-3xl font-bold text-amber-900">
                         {product.packageInfo.boxLabel}
                       </p>
                       <p className="text-xs text-slate-600">bazlı satış</p>
@@ -191,8 +184,7 @@ export default async function ProductDetailPage({
                   </div>
                   <div className="mt-4 rounded-lg bg-amber-200/50 p-3 text-sm text-amber-900">
                     <strong>💡 Not:</strong> Bu ürün sadece tam {product.packageInfo.boxLabel.toLowerCase()} olarak satılır. 
-                    Minimum {product.packageInfo.minBoxes} {product.packageInfo.boxLabel.toLowerCase()} 
-                    ({product.packageInfo.minBoxes * product.packageInfo.itemsPerBox} adet) sipariş verebilirsiniz.
+                    1 {product.packageInfo.boxLabel.toLowerCase()} = {product.packageInfo.itemsPerBox} adet ürün içerir.
                   </div>
                 </div>
               )}
@@ -274,9 +266,6 @@ export default async function ProductDetailPage({
                   <ul className="space-y-2 text-sm text-slate-600">
                     {product.packageInfo && (
                       <li>• <strong>Paket bilgisi:</strong> {product.packageInfo.itemsPerBox} adet/{product.packageInfo.boxLabel.toLowerCase()}</li>
-                    )}
-                    {product.packageInfo && (
-                      <li>• <strong>Minimum sipariş:</strong> {product.packageInfo.minBoxes} {product.packageInfo.boxLabel.toLowerCase()} ({product.packageInfo.minBoxes * product.packageInfo.itemsPerBox} adet)</li>
                     )}
                     {product.stock && product.stock > 0 && product.packageInfo && (
                       <li>• <strong>Stok durumu:</strong> {Math.floor(product.stock / product.packageInfo.itemsPerBox)} {product.packageInfo.boxLabel.toLowerCase()} ({product.stock} adet)</li>

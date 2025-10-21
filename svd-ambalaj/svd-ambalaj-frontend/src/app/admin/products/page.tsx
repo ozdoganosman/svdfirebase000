@@ -438,7 +438,7 @@ export default function AdminProductsPage() {
           <div className="md:col-span-2">
             <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-6">
               <h3 className="mb-4 text-lg font-bold text-amber-900">📦 Koli Satış Bilgileri</h3>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.itemsPerBox}>
                     Koli İçi Adet
@@ -455,6 +455,7 @@ export default function AdminProductsPage() {
                         packageInfo: {
                           ...prev.packageInfo,
                           itemsPerBox: Number(event.target.value) || 1,
+                          minBoxes: 1,
                         },
                       }))
                     }
@@ -463,31 +464,6 @@ export default function AdminProductsPage() {
                     required
                   />
                   <p className="mt-1 text-xs text-slate-600">1 kolide kaç adet ürün var?</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.minBoxes}>
-                    Minimum Koli Adedi
-                  </label>
-                  <input
-                    id={FIELD_IDS.minBoxes}
-                    name="minBoxes"
-                    type="number"
-                    min="1"
-                    value={form.packageInfo?.minBoxes ?? 1}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        packageInfo: {
-                          ...prev.packageInfo,
-                          minBoxes: Number(event.target.value) || 1,
-                        },
-                      }))
-                    }
-                    className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-amber-500"
-                    placeholder="1"
-                    required
-                  />
-                  <p className="mt-1 text-xs text-slate-600">Minimum kaç koli satılır?</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.boxLabel}>
