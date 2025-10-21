@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { resolveServerApiUrl } from "@/lib/server-api";
@@ -136,14 +135,12 @@ export default async function ProductDetailPage({
               {galleryImages.map((image, index) => (
                 <div
                   key={`${product.id}-image-${index}`}
-                  className="relative h-64 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100"
+                  className="h-64 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100"
                 >
-                  <Image
+                  <img
                     src={image}
                     alt={`${product.title} görsel ${index + 1}`}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 50vw, 100vw"
+                    className="h-full w-full object-cover"
                   />
                 </div>
               ))}
