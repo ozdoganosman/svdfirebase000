@@ -93,6 +93,11 @@ const mapProductDoc = (doc) => {
     category: data.category, // category_id yerine category
     images: normalizeImages(data.images),
     stock: Number(data.stock ?? 0),
+    packageInfo: {
+      itemsPerBox: Number(data.packageInfo?.itemsPerBox ?? 1),
+      minBoxes: Number(data.packageInfo?.minBoxes ?? 1),
+      boxLabel: data.packageInfo?.boxLabel || "Koli",
+    },
     createdAt: mapTimestamp(data.createdAt),
     updatedAt: mapTimestamp(data.updatedAt),
   };
@@ -193,6 +198,11 @@ const createProduct = async (payload) => {
     category: payload.category,
     images: normalizeImages(payload.images),
     stock: Number(payload.stock ?? 0),
+    packageInfo: {
+      itemsPerBox: Number(payload.packageInfo?.itemsPerBox ?? 1),
+      minBoxes: Number(payload.packageInfo?.minBoxes ?? 1),
+      boxLabel: payload.packageInfo?.boxLabel || "Koli",
+    },
     createdAt: now,
     updatedAt: now,
   };
@@ -213,6 +223,11 @@ const updateProduct = async (id, payload) => {
     slug: payload.title ? slugify(payload.title, { lower: true, strict: true }) : existing.slug,
     bulkPricing: payload.bulkPricing !== undefined ? normalizeBulkPricing(payload.bulkPricing) : existing.bulkPricing,
     images: payload.images !== undefined ? normalizeImages(payload.images) : existing.images,
+    packageInfo: payload.packageInfo !== undefined ? {
+      itemsPerBox: Number(payload.packageInfo?.itemsPerBox ?? existing.packageInfo?.itemsPerBox ?? 1),
+      minBoxes: Number(payload.packageInfo?.minBoxes ?? existing.packageInfo?.minBoxes ?? 1),
+      boxLabel: payload.packageInfo?.boxLabel || existing.packageInfo?.boxLabel || "Koli",
+    } : existing.packageInfo,
     updatedAt: FieldValue.serverTimestamp(),
   };
 
