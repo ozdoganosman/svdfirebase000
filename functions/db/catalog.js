@@ -98,6 +98,12 @@ const mapProductDoc = (doc) => {
       minBoxes: Number(data.packageInfo?.minBoxes ?? 1),
       boxLabel: data.packageInfo?.boxLabel || "Koli",
     },
+    specifications: data.specifications ? {
+      hoseLength: data.specifications.hoseLength || "",
+      volume: data.specifications.volume || "",
+      color: data.specifications.color || "",
+      neckSize: data.specifications.neckSize || "",
+    } : undefined,
     createdAt: mapTimestamp(data.createdAt),
     updatedAt: mapTimestamp(data.updatedAt),
   };
@@ -203,6 +209,7 @@ const createProduct = async (payload) => {
       minBoxes: Number(payload.packageInfo?.minBoxes ?? 1),
       boxLabel: payload.packageInfo?.boxLabel || "Koli",
     },
+    specifications: payload.specifications || undefined,
     createdAt: now,
     updatedAt: now,
   };
@@ -228,6 +235,7 @@ const updateProduct = async (id, payload) => {
       minBoxes: Number(payload.packageInfo?.minBoxes ?? existing.packageInfo?.minBoxes ?? 1),
       boxLabel: payload.packageInfo?.boxLabel || existing.packageInfo?.boxLabel || "Koli",
     } : existing.packageInfo,
+    specifications: payload.specifications !== undefined ? payload.specifications : existing.specifications,
     updatedAt: FieldValue.serverTimestamp(),
   };
 
