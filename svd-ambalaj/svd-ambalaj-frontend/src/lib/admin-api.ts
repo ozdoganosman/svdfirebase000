@@ -235,6 +235,11 @@ export type AdminProduct = {
   category: string;
   images: string[];
   stock: number;
+  packageInfo?: {
+    itemsPerBox: number;
+    minBoxes: number;
+    boxLabel: string;
+  };
   createdAt?: string;
   updatedAt?: string;
 };

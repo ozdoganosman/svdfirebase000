@@ -13,6 +13,11 @@ type ProductPayload = {
   category?: string;
   images?: string;
   stock?: number;
+  packageInfo?: {
+    itemsPerBox?: number;
+    minBoxes?: number;
+    boxLabel?: string;
+  };
 };
 
 type ProductBulkRow = {
@@ -30,6 +35,11 @@ const createEmptyForm = (): ProductPayload => ({
   category: "",
   images: "",
   stock: undefined,
+  packageInfo: {
+    itemsPerBox: 1,
+    minBoxes: 1,
+    boxLabel: "Koli",
+  },
 });
 
 const emptyForm: ProductPayload = createEmptyForm();
@@ -42,6 +52,9 @@ const FIELD_IDS = {
   stock: "admin-product-stock",
   category: "admin-product-category",
   images: "admin-product-images",
+  itemsPerBox: "admin-product-items-per-box",
+  minBoxes: "admin-product-min-boxes",
+  boxLabel: "admin-product-box-label",
 };
 
 const randomId = () => {
@@ -195,6 +208,11 @@ export default function AdminProductsPage() {
       category: product.category,
       images: product.images.join(", "),
       stock: product.stock,
+      packageInfo: {
+        itemsPerBox: product.packageInfo?.itemsPerBox ?? 1,
+        minBoxes: product.packageInfo?.minBoxes ?? 1,
+        boxLabel: product.packageInfo?.boxLabel ?? "Koli",
+      },
     });
     setSuccess(null);
   };
@@ -415,6 +433,89 @@ export default function AdminProductsPage() {
               className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-amber-500"
             />
           </div>
+          
+          {/* KOLI BILGILERI SECTION */}
+          <div className="md:col-span-2">
+            <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-6">
+              <h3 className="mb-4 text-lg font-bold text-amber-900">📦 Koli Satış Bilgileri</h3>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.itemsPerBox}>
+                    Koli İçi Adet
+                  </label>
+                  <input
+                    id={FIELD_IDS.itemsPerBox}
+                    name="itemsPerBox"
+                    type="number"
+                    min="1"
+                    value={form.packageInfo?.itemsPerBox ?? 1}
+                    onChange={(event) => 
+                      setForm((prev) => ({
+                        ...prev,
+                        packageInfo: {
+                          ...prev.packageInfo,
+                          itemsPerBox: Number(event.target.value) || 1,
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+                    placeholder="100"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-slate-600">1 kolide kaç adet ürün var?</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.minBoxes}>
+                    Minimum Koli Adedi
+                  </label>
+                  <input
+                    id={FIELD_IDS.minBoxes}
+                    name="minBoxes"
+                    type="number"
+                    min="1"
+                    value={form.packageInfo?.minBoxes ?? 1}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        packageInfo: {
+                          ...prev.packageInfo,
+                          minBoxes: Number(event.target.value) || 1,
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+                    placeholder="1"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-slate-600">Minimum kaç koli satılır?</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.boxLabel}>
+                    Paket Türü
+                  </label>
+                  <input
+                    id={FIELD_IDS.boxLabel}
+                    name="boxLabel"
+                    type="text"
+                    value={form.packageInfo?.boxLabel ?? "Koli"}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        packageInfo: {
+                          ...prev.packageInfo,
+                          boxLabel: event.target.value || "Koli",
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+                    placeholder="Koli, Paket, Kasa..."
+                  />
+                  <p className="mt-1 text-xs text-slate-600">Paketin adı (Koli/Paket/Kasa)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <div>
             <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.category}>Kategori</label>
             <input
@@ -493,7 +594,7 @@ export default function AdminProductsPage() {
           </div>
           <div className="md:col-span-2">
             <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium text-slate-700">Toplu Fiyatlandırma</label>
+              <label className="block text-sm font-medium text-slate-700">Toplu Fiyatlandırma (Koli Bazlı)</label>
               <div className="flex flex-wrap gap-2 text-xs">
                 <button
                   type="button"
@@ -520,6 +621,9 @@ export default function AdminProductsPage() {
                 </button>
               </div>
             </div>
+            <p className="mt-2 text-xs text-slate-600">
+              💡 Fiyatlar <strong>KOLİ ADEDİNE</strong> göredir. Örn: &quot;100+ adet&quot; = &quot;100+ koli satışında bu fiyat geçerlidir.&quot;
+            </p>
             <div className="mt-3 space-y-3">
               {(form.bulkPricing ?? []).map((row, index) => {
                 const minQtyInvalid = !row.minQty || Number(row.minQty) <= 0;
