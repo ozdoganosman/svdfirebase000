@@ -342,6 +342,7 @@ export default async function ProductDetailPage({
                 slug: product.slug,
                 price: product.price,
                 bulkPricing: product.bulkPricing,
+                packageInfo: product.packageInfo,
               }}
               quantity={1}
               variant="primary"
@@ -354,6 +355,7 @@ export default async function ProductDetailPage({
                 slug: product.slug,
                 price: product.price,
                 bulkPricing: product.bulkPricing,
+                packageInfo: product.packageInfo,
               }}
               quantity={1000}
               variant="secondary"

@@ -38,8 +38,27 @@ const CartContext = createContext<CartContextValue | undefined>(undefined);
 
 const STORAGE_KEY = "svd-ambalaj-cart";
 
+const getEffectivePrice = (item: CartItem): number => {
+  if (!item.bulkPricing || item.bulkPricing.length === 0) {
+    return item.price;
+  }
+  
+  const sortedTiers = [...item.bulkPricing].sort((a, b) => b.minQty - a.minQty);
+  
+  for (const tier of sortedTiers) {
+    if (item.quantity >= tier.minQty) {
+      return tier.price;
+    }
+  }
+  
+  return item.price;
+};
+
 const calculateSubtotal = (items: CartItem[]) =>
-  items.reduce((total, item) => total + item.price * item.quantity, 0);
+  items.reduce((total, item) => {
+    const effectivePrice = getEffectivePrice(item);
+    return total + effectivePrice * item.quantity;
+  }, 0);
 
 type CartProviderProps = {
   children: React.ReactNode;
