@@ -331,16 +331,34 @@ export default async function Home() {
       </section>
 
       <section className="bg-white py-12">
-        <div className="mx-auto max-w-6xl grid gap-6 px-6 sm:grid-cols-2 sm:px-10 lg:grid-cols-4">
-          {showcaseStats.map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-2xl border border-amber-100 bg-amber-50 px-6 py-8 text-center shadow-sm shadow-amber-200/50"
-            >
-              <p className="text-3xl font-bold text-amber-600">{stat.value}</p>
-              <p className="mt-2 text-sm font-semibold text-amber-800">{stat.label}</p>
-            </div>
-          ))}
+        <div className="mx-auto max-w-6xl px-6 sm:px-10">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {showcaseStats.map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-2xl border border-amber-100 bg-amber-50 px-6 py-8 text-center shadow-sm shadow-amber-200/50"
+              >
+                <p className="text-3xl font-bold text-amber-600">{stat.value}</p>
+                <p className="mt-2 text-sm font-semibold text-amber-800">{stat.label}</p>
+                {stat.label === 'Ürün çeşidi' && (
+                  <Link
+                    href="/products"
+                    className="mt-4 inline-block text-xs font-semibold text-amber-600 hover:text-amber-700 hover:underline"
+                  >
+                    Tümünü Gör →
+                  </Link>
+                )}
+                {stat.label === 'Çözüm kategorisi' && (
+                  <Link
+                    href="/categories"
+                    className="mt-4 inline-block text-xs font-semibold text-amber-600 hover:text-amber-700 hover:underline"
+                  >
+                    Keşfet →
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -404,13 +422,11 @@ export default async function Home() {
                 href={`/categories/${category.slug}`}
                 className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-amber-400 hover:shadow-lg"
               >
-                <div className="relative h-40 w-full overflow-hidden">
-                  <Image
-                    src={category.image ?? "/images/placeholders/category.jpg"}
+                <div className="relative h-40 w-full overflow-hidden bg-slate-100">
+                  <img
+                    src={resolveMediaPath(category.image) || "/images/placeholders/category.jpg"}
                     alt={category.name}
-                    fill
-                    className="object-cover transition duration-500 group-hover:scale-110"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
                   />
                 </div>
                 <div className="flex flex-1 flex-col justify-between gap-4 p-6">

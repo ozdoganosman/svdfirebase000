@@ -50,7 +50,8 @@ async function getProduct(slug: string): Promise<Product | undefined> {
     if (!response.ok) {
       return undefined;
     }
-    return response.json();
+    const data = await response.json();
+    return data?.product ?? data;
   } catch (error) {
     console.error("Product fetch error", error);
     return undefined;
