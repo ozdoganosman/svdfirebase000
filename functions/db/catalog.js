@@ -226,8 +226,12 @@ const updateProduct = async (id, payload) => {
   }
 
   const updatedData = {
-    ...payload,
+    title: payload.title !== undefined ? payload.title : existing.title,
     slug: payload.title ? slugify(payload.title, { lower: true, strict: true }) : existing.slug,
+    description: payload.description !== undefined ? payload.description : existing.description,
+    price: payload.price !== undefined ? Number(payload.price) : existing.price,
+    category: payload.category !== undefined ? payload.category : existing.category,
+    stock: payload.stock !== undefined ? Number(payload.stock) : existing.stock,
     bulkPricing: payload.bulkPricing !== undefined ? normalizeBulkPricing(payload.bulkPricing) : existing.bulkPricing,
     images: payload.images !== undefined ? normalizeImages(payload.images) : existing.images,
     packageInfo: payload.packageInfo !== undefined ? {
