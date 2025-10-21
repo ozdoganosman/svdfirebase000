@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SampleRequestForm } from "@/components/sample-request-form";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { LandingVideoSection } from "@/components/landing-video-section";
+import { LandingGallerySection } from "@/components/landing-gallery-section";
 import {
   resolveServerApiBase,
   resolveServerApiOrigin,
@@ -33,12 +34,6 @@ type Category = {
   slug: string;
   description?: string;
   image?: string;
-};
-
-type HighlightCard = {
-  title: string;
-  caption: string;
-  image: string;
 };
 
 const formatCurrency = (value: number) =>
@@ -150,31 +145,6 @@ export default async function Home() {
   const heroImage = resolvedLandingGallery[0] ?? '/images/products/mist-sprey-24-410.jpg';
   const heroOverlayImages = resolvedLandingGallery.slice(1);
   const heroCycleDuration = 20;
-
-  const mediaHighlights: HighlightCard[] = Array.isArray(landingMedia?.mediaHighlights) && landingMedia.mediaHighlights.length > 0
-    ? landingMedia.mediaHighlights
-    : [
-        {
-          title: 'Tam otomatik dolum hatlarımız',
-          caption: 'Günlük 180K adetlik kadın-erkek bakım dolum kapasitesi',
-          image: resolvedLandingGallery[1] ?? '/images/products/mist-sprey-24-410.jpg',
-        },
-        {
-          title: 'Trigger pompa montaj istasyonu',
-          caption: 'Inline tork ve sızıntı testleriyle %0,02 hata oranı',
-          image: resolvedLandingGallery[2] ?? '/images/products/mist-sprey-24-410.jpg',
-        },
-        {
-          title: 'PET şişe şişirme ve depo alanı',
-          caption: '7.000 m² stoklu sevkiyat alanı ile haftalık konteyner çıkışı',
-          image: resolvedLandingGallery[3] ?? '/images/products/mist-sprey-24-410.jpg',
-        },
-      ];
-
-  const resolvedMediaHighlights: HighlightCard[] = mediaHighlights.map((item) => ({
-    ...item,
-    image: resolveMediaPath(item.image) || item.image,
-  }));
 
   const capabilities = [
     {
@@ -403,41 +373,7 @@ export default async function Home() {
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-semibold">Fotoğraf galerisi</h3>
-                <p className="text-sm text-slate-300">
-                  Geniş ekranlı cihazlar için optimize edilmiş yatay galeri ile üretim hattınızı detaylı bir şekilde sergileyin.
-                </p>
-              </div>
-              <span className="rounded-full border border-white/20 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-slate-200">
-                Sürükleyerek inceleyin
-              </span>
-            </div>
-            <div className="overflow-x-auto pb-2">
-              <div className="flex min-w-max gap-4">
-                {resolvedMediaHighlights.map((item: { title: string; caption: string; image: string }) => (
-                  <figure
-                    key={item.title}
-                    className="relative h-64 w-[320px] flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-lg shadow-black/30"
-                  >
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 80vw, 320px"
-                    />
-                    <figcaption className="absolute inset-x-0 bottom-0 space-y-1 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 text-sm">
-                      <p className="font-semibold text-white">{item.title}</p>
-                      <p className="text-xs text-slate-200/90">{item.caption}</p>
-                    </figcaption>
-                  </figure>
-                ))}
-              </div>
-            </div>
-          </div>
+          <LandingGallerySection />
         </div>
       </section>
 
