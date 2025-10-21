@@ -32,21 +32,44 @@ export type CartContextValue = {
   clearCart: () => void;
   getItemQuantity: (productId: string) => number;
   subtotal: number;
+  totalBoxes: number;
+  totalItems: number;
+  getBoxCount: (item: CartItem) => number;
+  getTotalItemCount: (item: CartItem) => number;
+  getEffectivePrice: (item: CartItem) => number;
+  getAppliedTier: (item: CartItem) => BulkTier | null;
+  getNextTier: (item: CartItem) => BulkTier | null;
+  calculateItemTotal: (item: CartItem) => number;
 };
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
 
 const STORAGE_KEY = "svd-ambalaj-cart";
 
+const getBoxCount = (item: CartItem): number => {
+  // If packageInfo exists, quantity represents boxes, otherwise individual items
+  return item.quantity;
+};
+
+const getTotalItemCount = (item: CartItem): number => {
+  if (item.packageInfo) {
+    return item.quantity * item.packageInfo.itemsPerBox;
+  }
+  return item.quantity;
+};
+
 const getEffectivePrice = (item: CartItem): number => {
   if (!item.bulkPricing || item.bulkPricing.length === 0) {
     return item.price;
   }
   
+  // For products with packageInfo, bulk pricing is based on box count
+  const comparisonQty = item.packageInfo ? item.quantity : item.quantity;
+  
   const sortedTiers = [...item.bulkPricing].sort((a, b) => b.minQty - a.minQty);
   
   for (const tier of sortedTiers) {
-    if (item.quantity >= tier.minQty) {
+    if (comparisonQty >= tier.minQty) {
       return tier.price;
     }
   }
@@ -54,11 +77,48 @@ const getEffectivePrice = (item: CartItem): number => {
   return item.price;
 };
 
+const getAppliedTier = (item: CartItem): BulkTier | null => {
+  if (!item.bulkPricing || item.bulkPricing.length === 0) {
+    return null;
+  }
+  
+  const comparisonQty = item.packageInfo ? item.quantity : item.quantity;
+  const sortedTiers = [...item.bulkPricing].sort((a, b) => b.minQty - a.minQty);
+  
+  for (const tier of sortedTiers) {
+    if (comparisonQty >= tier.minQty) {
+      return tier;
+    }
+  }
+  
+  return null;
+};
+
+const getNextTier = (item: CartItem): BulkTier | null => {
+  if (!item.bulkPricing || item.bulkPricing.length === 0) {
+    return null;
+  }
+  
+  const comparisonQty = item.packageInfo ? item.quantity : item.quantity;
+  const sortedTiers = [...item.bulkPricing].sort((a, b) => a.minQty - b.minQty);
+  
+  for (const tier of sortedTiers) {
+    if (comparisonQty < tier.minQty) {
+      return tier;
+    }
+  }
+  
+  return null;
+};
+
+const calculateItemTotal = (item: CartItem): number => {
+  const effectivePrice = getEffectivePrice(item);
+  const totalItems = getTotalItemCount(item);
+  return effectivePrice * totalItems;
+};
+
 const calculateSubtotal = (items: CartItem[]) =>
-  items.reduce((total, item) => {
-    const effectivePrice = getEffectivePrice(item);
-    return total + effectivePrice * item.quantity;
-  }, 0);
+  items.reduce((total, item) => total + calculateItemTotal(item), 0);
 
 type CartProviderProps = {
   children: React.ReactNode;
@@ -120,6 +180,12 @@ export function CartProvider({ children }: CartProviderProps) {
   const clearCart = () => setItems([]);
 
   const subtotal = calculateSubtotal(items);
+  const totalBoxes = items.reduce((total, item) => {
+    return total + (item.packageInfo ? item.quantity : 0);
+  }, 0);
+  const totalItems = items.reduce((total, item) => {
+    return total + getTotalItemCount(item);
+  }, 0);
   const getItemQuantity = (productId: string) =>
     items.find((item) => item.id === productId)?.quantity ?? 0;
 
@@ -131,6 +197,14 @@ export function CartProvider({ children }: CartProviderProps) {
     clearCart,
     getItemQuantity,
     subtotal,
+    totalBoxes,
+    totalItems,
+    getBoxCount,
+    getTotalItemCount,
+    getEffectivePrice,
+    getAppliedTier,
+    getNextTier,
+    calculateItemTotal,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
