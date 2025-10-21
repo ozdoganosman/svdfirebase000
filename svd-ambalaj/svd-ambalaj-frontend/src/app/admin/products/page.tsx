@@ -231,6 +231,10 @@ export default function AdminProductsPage() {
       const message = editingId ? "Ürün güncellendi" : "Ürün eklendi";
       resetForm();
       setSuccess(message);
+      // Scroll to top to show success message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -447,6 +451,14 @@ export default function AdminProductsPage() {
 
   return (
     <div className="space-y-8">
+      {/* SUCCESS/ERROR MESSAGES */}
+      {error && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+      {success && (
+        <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</div>
+      )}
+
       {/* ÜRÜN LİSTESİ EN ÜSTTE */}
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
@@ -563,12 +575,6 @@ export default function AdminProductsPage() {
             {editingId ? 'Mevcut ürünü güncelleyin.' : 'Yeni bir ürün ekleyin.'}
           </p>
         </div>
-        {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>
-        )}
-        {success && (
-          <div className="rounded-md border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700">{success}</div>
-        )}
         <form className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
           <div>
             <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.title}>Başlık</label>
