@@ -475,9 +475,9 @@ export default function AdminProductsPage() {
                       setForm((prev) => ({
                         ...prev,
                         packageInfo: {
-                          ...prev.packageInfo,
                           itemsPerBox: Number(event.target.value) || 1,
                           minBoxes: 1,
+                          boxLabel: prev.packageInfo?.boxLabel || "Koli",
                         },
                       }))
                     }
@@ -500,7 +500,8 @@ export default function AdminProductsPage() {
                       setForm((prev) => ({
                         ...prev,
                         packageInfo: {
-                          ...prev.packageInfo,
+                          itemsPerBox: prev.packageInfo?.itemsPerBox || 1,
+                          minBoxes: 1,
                           boxLabel: event.target.value || "Koli",
                         },
                       }))
