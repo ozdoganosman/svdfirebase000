@@ -209,6 +209,7 @@ export default async function CategoryDetailPage({
                     slug: product.slug,
                     price: product.price,
                     bulkPricing: product.bulkPricing,
+                    packageInfo: product.packageInfo,
                   }}
                 />
                 <Link

@@ -32,18 +32,25 @@ const variantClasses: Record<NonNullable<AddToCartButtonProps["variant"]>, strin
 
 export function AddToCartButton({
   product,
-  quantity = 1,
+  quantity,
   variant = "primary",
   className = "",
 }: AddToCartButtonProps) {
   const { addItem } = useCart();
   const [isPending, startTransition] = useTransition();
 
+  // If packageInfo exists and quantity is not explicitly set, use minBoxes
+  const effectiveQuantity = quantity ?? (product.packageInfo?.minBoxes || 1);
+
   const handleAddToCart = () => {
     startTransition(() => {
-      addItem(product, quantity);
+      addItem(product, effectiveQuantity);
     });
   };
+
+  const buttonText = product.packageInfo 
+    ? `${effectiveQuantity} ${product.packageInfo.boxLabel} Sepete Ekle`
+    : "Sepete Ekle";
 
   return (
     <button
@@ -52,7 +59,7 @@ export function AddToCartButton({
       disabled={isPending}
       className={`${variantClasses[variant]} ${className}`.trim()}
     >
-      {isPending ? "Ekleniyor..." : "Sepete Ekle"}
+      {isPending ? "Ekleniyor..." : buttonText}
     </button>
   );
 }

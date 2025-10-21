@@ -206,6 +206,7 @@ export default async function ProductsPage() {
                       slug: product.slug,
                       price: product.price,
                       bulkPricing: product.bulkPricing,
+                      packageInfo: product.packageInfo,
                     }}
                   />
                   <Link

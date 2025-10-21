@@ -650,6 +650,7 @@ export default async function Home() {
                         slug: product.slug,
                         price: product.price,
                         bulkPricing: product.bulkPricing,
+                        packageInfo: product.packageInfo,
                       }}
                     />
                     <Link

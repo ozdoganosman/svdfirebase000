@@ -359,7 +359,6 @@ export default async function ProductDetailPage({
                 bulkPricing: product.bulkPricing,
                 packageInfo: product.packageInfo,
               }}
-              quantity={1}
               variant="primary"
               className="w-full"
             />
