@@ -1,0 +1,5 @@
+node_modules/
+*.local
+svdfirebase000-firebase-adminsdk-*.json
+*.service-account.json
+.env
