@@ -16,6 +16,7 @@ type Product = {
   slug: string;
   description: string;
   price: number;
+  stock?: number;
   bulkPricing?: { minQty: number; price: number }[];
   packageInfo?: {
     itemsPerBox: number;

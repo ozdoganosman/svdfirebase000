@@ -19,6 +19,7 @@ type ProductSummary = {
     minBoxes: number;
     boxLabel: string;
   };
+  stock?: number;
 };
 
 type CartItem = ProductSummary & {
@@ -152,11 +153,27 @@ export function CartProvider({ children }: CartProviderProps) {
   const addItem = (product: ProductSummary, quantity = 1) => {
     setItems((prev) => {
       const existing = prev.find((item) => item.id === product.id);
+      const newQuantity = existing ? existing.quantity + quantity : quantity;
+      
+      // Stock validation for packaged products
+      if (product.stock !== undefined && product.packageInfo) {
+        const availableBoxes = Math.floor(product.stock / product.packageInfo.itemsPerBox);
+        if (newQuantity > availableBoxes) {
+          setToastMessage(`⚠️ Stokta sadece ${availableBoxes} ${product.packageInfo.boxLabel.toLowerCase()} var!`);
+          return prev;
+        }
+      }
+      // Stock validation for regular products
+      else if (product.stock !== undefined && newQuantity > product.stock) {
+        setToastMessage(`⚠️ Stokta sadece ${product.stock} adet var!`);
+        return prev;
+      }
+      
       if (existing) {
-        setToastMessage(`${product.title} sepete eklendi! (${existing.quantity + quantity} ${product.packageInfo?.boxLabel.toLowerCase() || 'adet'})`);
+        setToastMessage(`${product.title} sepete eklendi! (${newQuantity} ${product.packageInfo?.boxLabel.toLowerCase() || 'adet'})`);
         return prev.map((item) =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: newQuantity }
             : item
         );
       }
@@ -174,11 +191,28 @@ export function CartProvider({ children }: CartProviderProps) {
       removeItem(productId);
       return;
     }
-    setItems((prev) =>
-      prev.map((item) =>
+    setItems((prev) => {
+      const product = prev.find((item) => item.id === productId);
+      if (!product) return prev;
+      
+      // Stock validation for packaged products
+      if (product.stock !== undefined && product.packageInfo) {
+        const availableBoxes = Math.floor(product.stock / product.packageInfo.itemsPerBox);
+        if (quantity > availableBoxes) {
+          setToastMessage(`⚠️ Stokta sadece ${availableBoxes} ${product.packageInfo.boxLabel.toLowerCase()} var!`);
+          return prev;
+        }
+      }
+      // Stock validation for regular products
+      else if (product.stock !== undefined && quantity > product.stock) {
+        setToastMessage(`⚠️ Stokta sadece ${product.stock} adet var!`);
+        return prev;
+      }
+      
+      return prev.map((item) =>
         item.id === productId ? { ...item, quantity } : item
-      )
-    );
+      );
+    });
   };
 
   const clearCart = () => setItems([]);

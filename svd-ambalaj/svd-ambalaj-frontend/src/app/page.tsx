@@ -23,6 +23,7 @@ type Product = {
   slug: string;
   description: string;
   price: number;
+  stock?: number;
   bulkPricing?: BulkTier[];
   images?: string[];
   image?: string;
@@ -649,6 +650,7 @@ export default async function Home() {
                         title: product.title,
                         slug: product.slug,
                         price: product.price,
+                        stock: product.stock,
                         bulkPricing: product.bulkPricing,
                         packageInfo: product.packageInfo,
                       }}

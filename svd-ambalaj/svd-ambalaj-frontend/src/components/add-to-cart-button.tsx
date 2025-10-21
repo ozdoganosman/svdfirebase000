@@ -9,6 +9,7 @@ export type AddToCartButtonProps = {
     title: string;
     slug: string;
     price: number;
+    stock?: number;
     bulkPricing?: { minQty: number; price: number }[];
     packageInfo?: {
       itemsPerBox: number;
