@@ -12,7 +12,11 @@ const links = [
 ];
 
 export function SiteHeader() {
-  const { items } = useCart();
+  const { items, totalBoxes } = useCart();
+  
+  // Show total boxes for packaged products, or item count for regular products
+  const badgeCount = totalBoxes > 0 ? totalBoxes : items.length;
+  
   return (
     <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 sm:px-10">
@@ -37,9 +41,9 @@ export function SiteHeader() {
               className="relative transition hover:text-amber-600"
             >
               {link.label}
-              {link.href === "/cart" && items.length > 0 && (
+              {link.href === "/cart" && badgeCount > 0 && (
                 <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
-                  {items.length}
+                  {badgeCount}
                 </span>
               )}
             </Link>
@@ -75,9 +79,9 @@ export function SiteHeader() {
               className="relative transition hover:text-amber-600"
             >
               {link.label}
-              {link.href === "/cart" && items.length > 0 && (
+              {link.href === "/cart" && badgeCount > 0 && (
                 <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
-                  {items.length}
+                  {badgeCount}
                 </span>
               )}
             </Link>
