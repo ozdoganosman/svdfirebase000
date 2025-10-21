@@ -44,9 +44,12 @@ export function LandingGallerySection() {
 
         if (response.ok) {
           const data = await response.json();
+          console.log('🎨 Gallery API response:', data);
           const mediaHighlights = data?.landingMedia?.mediaHighlights;
+          console.log('🎨 Media highlights:', mediaHighlights);
 
           if (Array.isArray(mediaHighlights) && mediaHighlights.length > 0) {
+            console.log('✅ Setting highlights:', mediaHighlights);
             setHighlights(mediaHighlights);
           }
         }
