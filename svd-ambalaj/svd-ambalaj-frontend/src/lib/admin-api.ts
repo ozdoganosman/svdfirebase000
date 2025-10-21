@@ -240,6 +240,12 @@ export type AdminProduct = {
     minBoxes: number;
     boxLabel: string;
   };
+  specifications?: {
+    hoseLength?: string;
+    volume?: string;
+    color?: string;
+    neckSize?: string;
+  };
   createdAt?: string;
   updatedAt?: string;
 };

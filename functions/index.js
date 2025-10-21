@@ -626,6 +626,7 @@ app.post("/products", requireAuth, async (req, res) => {
       images,
       stock,
       packageInfo,
+      specifications,
     } = req.body || {};
 
     if (!title || typeof title !== "string") {
@@ -642,6 +643,7 @@ app.post("/products", requireAuth, async (req, res) => {
       images: sanitizeImages(images),
       stock,
       packageInfo,
+      specifications,
     };
 
     const product = await catalog.createProduct(payload);
@@ -668,6 +670,7 @@ app.put("/products/:id", requireAuth, async (req, res) => {
       images: req.body?.images !== undefined ? sanitizeImages(req.body.images, existing.images) : undefined,
       stock: req.body?.stock,
       packageInfo: req.body?.packageInfo,
+      specifications: req.body?.specifications,
     };
 
     const product = await catalog.updateProduct(req.params.id, payload);

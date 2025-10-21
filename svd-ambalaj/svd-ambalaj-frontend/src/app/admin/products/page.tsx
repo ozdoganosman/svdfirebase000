@@ -18,6 +18,12 @@ type ProductPayload = {
     minBoxes?: number;
     boxLabel?: string;
   };
+  specifications?: {
+    hoseLength?: string;
+    volume?: string;
+    color?: string;
+    neckSize?: string;
+  };
 };
 
 type ProductBulkRow = {
@@ -39,6 +45,12 @@ const createEmptyForm = (): ProductPayload => ({
     itemsPerBox: 1,
     minBoxes: 1,
     boxLabel: "Koli",
+  },
+  specifications: {
+    hoseLength: "",
+    volume: "",
+    color: "",
+    neckSize: "",
   },
 });
 
@@ -185,6 +197,12 @@ export default function AdminProductsPage() {
         minBoxes: 1,
         boxLabel: form.packageInfo.boxLabel || "Koli",
       } : undefined,
+      specifications: form.specifications && (
+        form.specifications.hoseLength || 
+        form.specifications.volume || 
+        form.specifications.color || 
+        form.specifications.neckSize
+      ) ? form.specifications : undefined,
     };
 
     console.log('📦 Form packageInfo:', form.packageInfo);
@@ -238,8 +256,48 @@ export default function AdminProductsPage() {
         minBoxes: product.packageInfo?.minBoxes ?? 1,
         boxLabel: product.packageInfo?.boxLabel ?? "Koli",
       },
+      specifications: {
+        hoseLength: product.specifications?.hoseLength ?? "",
+        volume: product.specifications?.volume ?? "",
+        color: product.specifications?.color ?? "",
+        neckSize: product.specifications?.neckSize ?? "",
+      },
     });
     setSuccess(null);
+    // Scroll to form
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  };
+
+  const handleCopy = (product: AdminProduct) => {
+    setEditingId(null);
+    setForm({
+      title: `${product.title} (Kopya)`,
+      slug: `${product.slug}-kopya`,
+      description: product.description,
+      price: product.price,
+      bulkPricing: (product.bulkPricing ?? []).map((tier) => ({
+        id: randomId(),
+        minQty: String(tier.minQty ?? ""),
+        price: String(tier.price ?? ""),
+      })),
+      category: product.category,
+      images: product.images.join(", "),
+      stock: product.stock,
+      packageInfo: {
+        itemsPerBox: product.packageInfo?.itemsPerBox ?? 1,
+        minBoxes: product.packageInfo?.minBoxes ?? 1,
+        boxLabel: product.packageInfo?.boxLabel ?? "Koli",
+      },
+      specifications: {
+        hoseLength: product.specifications?.hoseLength ?? "",
+        volume: product.specifications?.volume ?? "",
+        color: product.specifications?.color ?? "",
+        neckSize: product.specifications?.neckSize ?? "",
+      },
+    });
+    setSuccess(null);
+    // Scroll to form
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   };
 
   const handleRemoveImage = (url: string) => {
@@ -385,11 +443,117 @@ export default function AdminProductsPage() {
 
   return (
     <div className="space-y-8">
+      {/* ÜRÜN LİSTESİ EN ÜSTTE */}
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900">Kayıtlı Ürünler</h2>
+            <p className="text-sm text-slate-600">Toplam {products.length} ürün</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                resetForm();
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+              }}
+              className="inline-flex items-center rounded-md border border-amber-500 bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-600"
+            >
+              + Yeni Ürün Ekle
+            </button>
+            <button
+              type="button"
+              onClick={fetchProducts}
+              disabled={loading}
+              className="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:border-slate-100 disabled:text-slate-400"
+            >
+              Yenile
+            </button>
+          </div>
+        </div>
+        {loading ? (
+          <div className="py-8 text-center text-sm text-slate-500">Yükleniyor...</div>
+        ) : products.length === 0 ? (
+          <div className="py-8 text-center text-sm text-slate-500">
+            <p className="mb-4">Henüz ürün bulunmuyor.</p>
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
+              className="text-amber-600 hover:underline"
+            >
+              İlk ürünü ekle →
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+              <thead className="bg-slate-100">
+                <tr>
+                  <th className="px-3 py-2 font-medium text-slate-700">Başlık</th>
+                  <th className="px-3 py-2 font-medium text-slate-700">Kategori</th>
+                  <th className="px-3 py-2 font-medium text-slate-700">Fiyat</th>
+                  <th className="px-3 py-2 font-medium text-slate-700">Stok</th>
+                  <th className="px-3 py-2 font-medium text-slate-700">Oluşturma</th>
+                  <th className="px-3 py-2 font-medium text-slate-700">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {products.map((product) => {
+                  const category = categories.find(cat => cat.id === product.category);
+                  return (
+                    <tr key={product.id} className="hover:bg-slate-50">
+                      <td className="px-3 py-2 font-medium text-slate-900">{product.title}</td>
+                      <td className="px-3 py-2 text-slate-600">
+                        {category ? category.name : product.category || '-'}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600">{product.price.toLocaleString("tr-TR", {
+                        style: "currency",
+                        currency: "TRY",
+                      })}</td>
+                      <td className="px-3 py-2 text-slate-600">{product.stock}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">
+                        {product.createdAt ? new Date(product.createdAt).toLocaleString("tr-TR") : "-"}
+                      </td>
+                      <td className="px-3 py-2 space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(product)}
+                          className="inline-flex items-center rounded-md border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                        >
+                          Düzenle
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(product)}
+                          className="inline-flex items-center rounded-md border border-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-600 transition hover:bg-amber-50"
+                        >
+                          Kopyala
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(product.id)}
+                          className="inline-flex items-center rounded-md border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                        >
+                          Sil
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* FORM EN ALTTA */}
       <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Ürün Yönetimi</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            {editingId ? 'Ürün Düzenle' : 'Yeni Ürün Ekle'}
+          </h1>
           <p className="text-sm text-slate-600">
-            Ürünleri listeleyin, yeni ürün ekleyin veya mevcut ürünleri güncelleyin.
+            {editingId ? 'Mevcut ürünü güncelleyin.' : 'Yeni bir ürün ekleyin.'}
           </p>
         </div>
         {error && (
@@ -515,6 +679,102 @@ export default function AdminProductsPage() {
                   <p className="mt-1 text-xs text-slate-600">Paketin adı (Koli/Paket/Kasa)</p>
                 </div>
               </div>
+            </div>
+          </div>
+          
+          {/* EK ÖZELLİKLER SECTION */}
+          <div className="md:col-span-2">
+            <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-6">
+              <h3 className="mb-4 text-lg font-bold text-blue-900">🔧 Ek Özellikler</h3>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    Hortum Boyu
+                  </label>
+                  <input
+                    name="hoseLength"
+                    type="text"
+                    value={form.specifications?.hoseLength ?? ""}
+                    onChange={(event) => 
+                      setForm((prev) => ({
+                        ...prev,
+                        specifications: {
+                          ...prev.specifications,
+                          hoseLength: event.target.value,
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                    placeholder="Örn: 17 cm, 23 cm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    Hacim (ml)
+                  </label>
+                  <input
+                    name="volume"
+                    type="text"
+                    value={form.specifications?.volume ?? ""}
+                    onChange={(event) => 
+                      setForm((prev) => ({
+                        ...prev,
+                        specifications: {
+                          ...prev.specifications,
+                          volume: event.target.value,
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                    placeholder="Örn: 250ml, 500ml"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    Renk
+                  </label>
+                  <input
+                    name="color"
+                    type="text"
+                    value={form.specifications?.color ?? ""}
+                    onChange={(event) => 
+                      setForm((prev) => ({
+                        ...prev,
+                        specifications: {
+                          ...prev.specifications,
+                          color: event.target.value,
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                    placeholder="Örn: Beyaz, Siyah, Şeffaf"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    Ağız Çapı
+                  </label>
+                  <input
+                    name="neckSize"
+                    type="text"
+                    value={form.specifications?.neckSize ?? ""}
+                    onChange={(event) => 
+                      setForm((prev) => ({
+                        ...prev,
+                        specifications: {
+                          ...prev.specifications,
+                          neckSize: event.target.value,
+                        },
+                      }))
+                    }
+                    className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                    placeholder="Örn: 24/410, 28/400"
+                  />
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-blue-700">
+                Bu alanlar opsiyoneldir. Ürün detaylarında görüntülenecektir.
+              </p>
             </div>
           </div>
           
@@ -775,6 +1035,13 @@ export default function AdminProductsPage() {
                           className="inline-flex items-center rounded-md border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
                         >
                           Düzenle
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(product)}
+                          className="inline-flex items-center rounded-md border border-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-600 transition hover:bg-amber-50"
+                        >
+                          Kopyala
                         </button>
                         <button
                           type="button"
