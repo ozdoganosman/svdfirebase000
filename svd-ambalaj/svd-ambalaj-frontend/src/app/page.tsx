@@ -108,7 +108,7 @@ export default async function Home() {
   const [products, categories, landingMediaPayload] = await Promise.all([
     getProducts(apiBase),
     getCategories(apiBase),
-    fetch(`${apiBase}/landing-media`, { next: { revalidate: 60 } })
+    fetch(`${apiBase}/landing-media`, { cache: 'no-store' })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(`Landing media request failed: ${response.status}`);
