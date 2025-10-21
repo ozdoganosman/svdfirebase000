@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { resolveServerApiBase } from '@/lib/server-api';
 
 interface HeroVideo {
   src: string;
@@ -18,7 +17,7 @@ export function LandingVideoSection({ fallbackPoster }: { fallbackPoster: string
   useEffect(() => {
     const fetchVideo = async () => {
       try {
-        const apiBase = resolveServerApiBase();
+        const apiBase = 'https://api-tfi7rlxtca-uc.a.run.app';
         const response = await fetch(`${apiBase}/landing-media`, {
           cache: 'no-store',
           headers: {
