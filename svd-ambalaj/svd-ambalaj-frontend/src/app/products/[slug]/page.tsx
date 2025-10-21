@@ -363,19 +363,6 @@ export default async function ProductDetailPage({
               variant="primary"
               className="w-full"
             />
-            <AddToCartButton
-              product={{
-                id: product.id,
-                title: product.title,
-                slug: product.slug,
-                price: product.price,
-                bulkPricing: product.bulkPricing,
-                packageInfo: product.packageInfo,
-              }}
-              quantity={1000}
-              variant="secondary"
-              className="w-full"
-            />
 
             <a
               href="mailto:info@svdambalaj.com"
