@@ -180,6 +180,11 @@ export default function AdminProductsPage() {
       category: form.category,
       images: form.images,
       stock: form.stock !== undefined && form.stock !== null ? Number(form.stock) : undefined,
+      packageInfo: form.packageInfo ? {
+        itemsPerBox: Number(form.packageInfo.itemsPerBox) || 1,
+        minBoxes: 1,
+        boxLabel: form.packageInfo.boxLabel || "Koli",
+      } : undefined,
     };
 
     setSaving(true);
