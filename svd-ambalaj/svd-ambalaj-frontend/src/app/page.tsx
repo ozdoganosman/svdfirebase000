@@ -46,8 +46,7 @@ const formatCurrency = (value: number) =>
 async function getProducts(apiBase: string): Promise<Product[]> {
   try {
     const response = await fetch(`${apiBase}/products`, {
-      // cache on the server side for a minute to reduce file IO
-      next: { revalidate: 60 },
+      cache: 'no-store'
     });
 
     if (!response.ok) {

@@ -42,7 +42,7 @@ const formatCurrency = (value: number) =>
 async function getProducts(): Promise<Product[]> {
   try {
     const response = await fetch(resolveServerApiUrl("/products"), {
-      next: { revalidate: 60 },
+      cache: 'no-store'
     });
     if (!response.ok) {
       return [];
