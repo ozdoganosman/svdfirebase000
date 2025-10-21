@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { Toast } from "@/components/toast";
 
 type BulkTier = {
   minQty: number;
@@ -126,6 +127,7 @@ type CartProviderProps = {
 
 export function CartProvider({ children }: CartProviderProps) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -151,12 +153,14 @@ export function CartProvider({ children }: CartProviderProps) {
     setItems((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
+        setToastMessage(`${product.title} sepete eklendi! (${existing.quantity + quantity} ${product.packageInfo?.boxLabel.toLowerCase() || 'adet'})`);
         return prev.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       }
+      setToastMessage(`${product.title} sepete eklendi!`);
       return [...prev, { ...product, quantity }];
     });
   };
@@ -207,7 +211,18 @@ export function CartProvider({ children }: CartProviderProps) {
     calculateItemTotal,
   };
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider value={value}>
+      {children}
+      {toastMessage && (
+        <Toast
+          message={toastMessage}
+          type="success"
+          onClose={() => setToastMessage(null)}
+        />
+      )}
+    </CartContext.Provider>
+  );
 }
 
 export function useCart() {

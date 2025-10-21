@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useCart } from "@/context/CartContext";
 
 const links = [
   { href: "/products", label: "Ürünler" },
@@ -9,6 +12,7 @@ const links = [
 ];
 
 export function SiteHeader() {
+  const { items } = useCart();
   return (
     <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 sm:px-10">
@@ -30,9 +34,14 @@ export function SiteHeader() {
             <Link
               key={link.href}
               href={link.href}
-              className="transition hover:text-amber-600"
+              className="relative transition hover:text-amber-600"
             >
               {link.label}
+              {link.href === "/cart" && items.length > 0 && (
+                <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
+                  {items.length}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
@@ -60,8 +69,17 @@ export function SiteHeader() {
       <div className="md:hidden">
         <nav className="flex items-center justify-between border-t border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700">
           {links.slice(0, 3).map((link) => (
-            <Link key={link.href} href={link.href} className="transition hover:text-amber-600">
+            <Link 
+              key={link.href} 
+              href={link.href} 
+              className="relative transition hover:text-amber-600"
+            >
               {link.label}
+              {link.href === "/cart" && items.length > 0 && (
+                <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
+                  {items.length}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
