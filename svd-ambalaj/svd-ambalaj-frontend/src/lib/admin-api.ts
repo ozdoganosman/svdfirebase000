@@ -29,6 +29,21 @@ function selectApiBase(): string | null {
 
   for (const candidate of candidates) {
     try {
+      // If running in the browser on a non-localhost host, avoid honoring
+      // candidates that explicitly point to localhost/127.0.0.1. This prevents
+      // deployed sites from attempting to call a developer's local functions
+      // emulator (eg. http://localhost:5001) which would cause
+      // ERR_CONNECTION_REFUSED in users' browsers.
+      if (isBrowser && typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        const isRunningOnLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+        const candidateIsLocalhost = /^https?:\/\/(?:localhost|127(?:\.0){0,2}\.1)(:\d+)?\//i.test(candidate);
+        if (!isRunningOnLocalHost && candidateIsLocalhost) {
+          // skip this candidate since we're in production (not localhost)
+          continue;
+        }
+      }
+
       if (ABSOLUTE_URL_REGEX.test(candidate)) {
         return normalizeBase(candidate);
       }
