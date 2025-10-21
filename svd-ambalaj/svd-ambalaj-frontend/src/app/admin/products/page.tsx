@@ -1,6 +1,5 @@
 'use client';
 
-import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AdminMedia, AdminProduct, apiFetch, resolveMediaUrl, uploadMediaFile } from "@/lib/admin-api";
 import { MediaPicker } from "@/components/admin/media/media-picker";
@@ -474,7 +473,7 @@ export default function AdminProductsPage() {
                   return (
                     <div key={url} className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 shadow-sm">
                       <div className="relative aspect-square w-full overflow-hidden rounded-md border border-slate-200 bg-white">
-                        <Image src={resolved} alt={url} fill className="object-cover" sizes="(max-width: 768px) 50vw, 200px" />
+                        <img src={resolved} alt={url} className="absolute inset-0 h-full w-full object-cover" />
                       </div>
                       <div className="truncate text-xs text-slate-600" title={resolved}>
                         {url}
