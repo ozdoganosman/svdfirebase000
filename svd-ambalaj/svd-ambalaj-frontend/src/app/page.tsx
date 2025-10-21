@@ -7,6 +7,9 @@ import {
   resolveServerApiOrigin,
 } from "@/lib/server-api";
 
+// Force dynamic rendering to always fetch fresh landing media
+export const dynamic = 'force-dynamic';
+
 type BulkTier = {
   minQty: number;
   price: number;
