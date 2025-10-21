@@ -91,6 +91,11 @@ export default async function Home() {
     if (!path) {
       return '';
     }
+    // If it's already a full URL (http:// or https://), return it as-is
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    // If it's a relative path starting with /uploads/ and we have an API origin, prepend it
     if (path.startsWith('/uploads/') && apiOrigin) {
       return `${apiOrigin}${path}`;
     }
