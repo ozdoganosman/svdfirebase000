@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { resolveServerApiUrl } from "@/lib/server-api";
@@ -106,12 +105,10 @@ export default async function ProductsPage() {
               className="flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm shadow-slate-200/60 transition hover:-translate-y-1 hover:shadow-lg"
             >
               <div className="relative h-48 w-full overflow-hidden bg-slate-100">
-                <Image
+                <img
                   src={resolveProductImage(product)}
                   alt={product.title}
-                  fill
-                  className="object-cover transition duration-500 hover:scale-110"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  className="h-full w-full object-cover transition duration-500 hover:scale-110"
                 />
               </div>
               <div className="flex flex-1 flex-col gap-4 p-6">
