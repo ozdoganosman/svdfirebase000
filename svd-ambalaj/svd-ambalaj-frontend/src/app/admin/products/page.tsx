@@ -93,6 +93,7 @@ export default function AdminProductsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isMediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchProducts = async () => {
@@ -125,6 +126,7 @@ export default function AdminProductsPage() {
   const resetForm = () => {
     setForm(createEmptyForm());
     setEditingId(null);
+    setShowForm(false);
   };
 
   const parsedBulkPricing = useMemo(() => {
@@ -264,8 +266,9 @@ export default function AdminProductsPage() {
       },
     });
     setSuccess(null);
+    setShowForm(true);
     // Scroll to form
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
   };
 
   const handleCopy = (product: AdminProduct) => {
@@ -296,8 +299,9 @@ export default function AdminProductsPage() {
       },
     });
     setSuccess(null);
+    setShowForm(true);
     // Scroll to form
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
   };
 
   const handleRemoveImage = (url: string) => {
@@ -454,8 +458,10 @@ export default function AdminProductsPage() {
             <button
               type="button"
               onClick={() => {
-                resetForm();
-                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                setForm(createEmptyForm());
+                setEditingId(null);
+                setShowForm(true);
+                setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
               }}
               className="inline-flex items-center rounded-md border border-amber-500 bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-600"
             >
@@ -546,8 +552,9 @@ export default function AdminProductsPage() {
         )}
       </section>
 
-      {/* FORM EN ALTTA */}
-      <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      {/* FORM EN ALTTA - Sadece showForm true ise göster */}
+      {showForm && (
+        <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">
             {editingId ? 'Ürün Düzenle' : 'Yeni Ürün Ekle'}
@@ -982,83 +989,7 @@ export default function AdminProductsPage() {
           </div>
         </form>
       </section>
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-900">Kayıtlı Ürünler</h2>
-          <button
-            type="button"
-            onClick={fetchProducts}
-            disabled={loading}
-            className="inline-flex items-center rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:border-slate-100 disabled:text-slate-400"
-          >
-            Yenile
-          </button>
-        </div>
-        {loading ? (
-          <div className="py-8 text-center text-sm text-slate-500">Yükleniyor...</div>
-        ) : products.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-500">Henüz ürün bulunmuyor.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-              <thead className="bg-slate-100">
-                <tr>
-                  <th className="px-3 py-2 font-medium text-slate-700">Başlık</th>
-                  <th className="px-3 py-2 font-medium text-slate-700">Kategori</th>
-                  <th className="px-3 py-2 font-medium text-slate-700">Fiyat</th>
-                  <th className="px-3 py-2 font-medium text-slate-700">Stok</th>
-                  <th className="px-3 py-2 font-medium text-slate-700">Oluşturma</th>
-                  <th className="px-3 py-2 font-medium text-slate-700">İşlemler</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {products.map((product) => {
-                  const category = categories.find(cat => cat.id === product.category);
-                  return (
-                    <tr key={product.id} className="hover:bg-slate-50">
-                      <td className="px-3 py-2 font-medium text-slate-900">{product.title}</td>
-                      <td className="px-3 py-2 text-slate-600">
-                        {category ? category.name : product.category || '-'}
-                      </td>
-                      <td className="px-3 py-2 text-slate-600">{product.price.toLocaleString("tr-TR", {
-                        style: "currency",
-                        currency: "TRY",
-                      })}</td>
-                      <td className="px-3 py-2 text-slate-600">{product.stock}</td>
-                      <td className="px-3 py-2 text-xs text-slate-500">
-                        {product.createdAt ? new Date(product.createdAt).toLocaleString("tr-TR") : "-"}
-                      </td>
-                      <td className="px-3 py-2 space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(product)}
-                          className="inline-flex items-center rounded-md border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-                        >
-                          Düzenle
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(product)}
-                          className="inline-flex items-center rounded-md border border-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-600 transition hover:bg-amber-50"
-                        >
-                          Kopyala
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(product.id)}
-                          className="inline-flex items-center rounded-md border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                        >
-                          Sil
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      )}
       <MediaPicker isOpen={isMediaPickerOpen} onClose={() => setMediaPickerOpen(false)} onSelect={handleMediaSelect} />
     </div>
   );
