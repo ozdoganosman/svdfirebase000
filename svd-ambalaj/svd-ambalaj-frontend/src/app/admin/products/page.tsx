@@ -64,8 +64,15 @@ const randomId = () => {
   return Math.random().toString(36).slice(2);
 };
 
+type Category = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,8 +96,18 @@ export default function AdminProductsPage() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const data = await apiFetch<{ categories: Category[] }>("/categories");
+      setCategories(data.categories ?? []);
+    } catch (err) {
+      console.error("Failed to fetch categories:", err);
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
+    fetchCategories();
   }, []);
 
   const resetForm = () => {
@@ -493,17 +510,24 @@ export default function AdminProductsPage() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.category}>Kategori</label>
-            <input
+            <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.category}>
+              Kategori *
+            </label>
+            <select
               id={FIELD_IDS.category}
               name="category"
-              type="text"
               value={form.category ?? ""}
               onChange={(event) => handleChange("category", event.target.value)}
               className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-amber-500"
-              placeholder="ör. siseler"
               required
-            />
+            >
+              <option value="">Kategori seçin...</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.images}>Görseller</label>
@@ -719,36 +743,41 @@ export default function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {products.map((product) => (
-                  <tr key={product.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-2 font-medium text-slate-900">{product.title}</td>
-                    <td className="px-3 py-2 text-slate-600">{product.category}</td>
-                    <td className="px-3 py-2 text-slate-600">{product.price.toLocaleString("tr-TR", {
-                      style: "currency",
-                      currency: "TRY",
-                    })}</td>
-                    <td className="px-3 py-2 text-slate-600">{product.stock}</td>
-                    <td className="px-3 py-2 text-xs text-slate-500">
-                      {product.createdAt ? new Date(product.createdAt).toLocaleString("tr-TR") : "-"}
-                    </td>
-                    <td className="px-3 py-2 space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(product)}
-                        className="inline-flex items-center rounded-md border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-                      >
-                        Düzenle
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(product.id)}
-                        className="inline-flex items-center rounded-md border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                      >
-                        Sil
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {products.map((product) => {
+                  const category = categories.find(cat => cat.id === product.category);
+                  return (
+                    <tr key={product.id} className="hover:bg-slate-50">
+                      <td className="px-3 py-2 font-medium text-slate-900">{product.title}</td>
+                      <td className="px-3 py-2 text-slate-600">
+                        {category ? category.name : product.category || '-'}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600">{product.price.toLocaleString("tr-TR", {
+                        style: "currency",
+                        currency: "TRY",
+                      })}</td>
+                      <td className="px-3 py-2 text-slate-600">{product.stock}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">
+                        {product.createdAt ? new Date(product.createdAt).toLocaleString("tr-TR") : "-"}
+                      </td>
+                      <td className="px-3 py-2 space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(product)}
+                          className="inline-flex items-center rounded-md border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                        >
+                          Düzenle
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(product.id)}
+                          className="inline-flex items-center rounded-md border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                        >
+                          Sil
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
