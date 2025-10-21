@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { SampleRequestForm } from "@/components/sample-request-form";
 import { AddToCartButton } from "@/components/add-to-cart-button";
+import { LandingVideoSection } from "@/components/landing-video-section";
 import {
   resolveServerApiBase,
   resolveServerApiOrigin,
@@ -149,15 +150,6 @@ export default async function Home() {
   const heroImage = resolvedLandingGallery[0] ?? '/images/products/mist-sprey-24-410.jpg';
   const heroOverlayImages = resolvedLandingGallery.slice(1);
   const heroCycleDuration = 20;
-
-  const heroVideo = {
-    src: landingMedia?.heroVideo?.src || '',
-    poster: landingMedia?.heroVideo?.poster || heroImage,
-  };
-
-  const fallbackHeroVideoSrc = 'https://cdn.coverr.co/videos/coverr-plastic-bottles-on-a-production-line-5589/1080p.mp4';
-  const heroVideoSrc = resolveMediaPath(heroVideo.src) || fallbackHeroVideoSrc;
-  const heroVideoPoster = resolveMediaPath(heroVideo.poster) || heroImage;
 
   const mediaHighlights: HighlightCard[] = Array.isArray(landingMedia?.mediaHighlights) && landingMedia.mediaHighlights.length > 0
     ? landingMedia.mediaHighlights
@@ -381,30 +373,7 @@ export default async function Home() {
       <section className="bg-slate-950 py-20 text-white">
         <div className="mx-auto max-w-6xl space-y-12 px-6 sm:px-10">
           <div className="grid gap-10 lg:grid-cols-[1.3fr,0.7fr] lg:items-center">
-            <div className="relative aspect-video overflow-hidden rounded-3xl border border-white/10 bg-black/60 shadow-2xl shadow-black/40">
-              <video
-                key={heroVideoSrc}
-                className="absolute inset-0 h-full w-full object-cover"
-                poster={heroVideoPoster}
-                controls
-                playsInline
-              >
-                <source src={heroVideoSrc} type="video/mp4" />
-                Tarayıcınız video etiketini desteklemiyor.
-              </video>
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 space-y-2 p-6">
-                <span className="inline-flex rounded-full bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-200">
-                  Fabrika turu
-                </span>
-                <p className="text-lg font-semibold text-white">
-                  SVD Ambalaj üretim parkuruna yakından bakın, dolum ve paketleme istasyonlarının işleyişini izleyin.
-                </p>
-                <p className="text-sm text-slate-200/80">
-                  Videolarınızı buraya yükleyerek müşterilerinize tedarik güvencenizi gösterin.
-                </p>
-              </div>
-            </div>
+            <LandingVideoSection fallbackPoster={heroImage} />
             <div className="space-y-6">
               <div className="space-y-3">
                 <h2 className="text-3xl font-bold">Görsel ve video içeriklerle daha güçlü etkileşim</h2>
