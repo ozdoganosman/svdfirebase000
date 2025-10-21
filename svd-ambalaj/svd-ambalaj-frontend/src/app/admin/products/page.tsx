@@ -187,6 +187,9 @@ export default function AdminProductsPage() {
       } : undefined,
     };
 
+    console.log('📦 Form packageInfo:', form.packageInfo);
+    console.log('📦 Payload packageInfo:', payload.packageInfo);
+
     setSaving(true);
     setError(null);
     setSuccess(null);
