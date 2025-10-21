@@ -589,6 +589,27 @@ export default async function Home() {
                       {product.description}
                     </p>
                   </header>
+                  {(product.specifications?.hoseLength || product.specifications?.volume || product.specifications?.color || product.specifications?.neckSize) && (
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-700">
+                        Teknik Özellikler
+                      </p>
+                      <ul className="space-y-1 text-xs text-slate-600">
+                        {product.specifications?.hoseLength && (
+                          <li>• <strong>Hortum Boyu:</strong> {product.specifications.hoseLength}</li>
+                        )}
+                        {product.specifications?.volume && (
+                          <li>• <strong>Hacim:</strong> {product.specifications.volume}</li>
+                        )}
+                        {product.specifications?.color && (
+                          <li>• <strong>Renk:</strong> {product.specifications.color}</li>
+                        )}
+                        {product.specifications?.neckSize && (
+                          <li>• <strong>Boyun Ölçüsü:</strong> {product.specifications.neckSize}</li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
                   <div className="mt-auto space-y-3">
                     <div>
                       <span className="text-sm text-slate-500">Başlangıç fiyatı</span>
