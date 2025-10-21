@@ -13,6 +13,11 @@ type ProductSummary = {
   slug: string;
   price: number;
   bulkPricing?: BulkTier[];
+  packageInfo?: {
+    itemsPerBox: number;
+    minBoxes: number;
+    boxLabel: string;
+  };
 };
 
 type CartItem = ProductSummary & {
