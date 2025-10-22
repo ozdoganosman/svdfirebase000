@@ -15,6 +15,8 @@ import * as media from "./db/media.js";
 import * as orders from "./db/orders.js";
 import * as samples from "./db/samples.js";
 import * as auth from "./db/auth.js";
+import * as exchangeRates from "./db/exchange-rates.js";
+import { fetchTCMBRate } from "./services/exchange-rate.js";
 
 // Load environment variables
 dotenv.config();
@@ -826,5 +828,45 @@ const createSampleRequestHandler = async (req, res) => {
 
 app.post("/sample-requests", createSampleRequestHandler);
 app.post("/samples", createSampleRequestHandler);
+
+// Exchange Rate endpoints
+app.get("/exchange-rate", async (_req, res) => {
+  try {
+    const rate = await exchangeRates.getCurrentRate("USD");
+    res.status(200).json({ exchangeRate: rate });
+  } catch (error) {
+    functions.logger.error("Error fetching exchange rate", error);
+    res.status(500).json({ error: "Failed to fetch exchange rate." });
+  }
+});
+
+app.get("/exchange-rate/history", requireAuth, async (req, res) => {
+  try {
+    const limit = parseInt(req.query?.limit || "30", 10);
+    const history = await exchangeRates.getRateHistory("USD", limit);
+    res.status(200).json({ history });
+  } catch (error) {
+    functions.logger.error("Error fetching rate history", error);
+    res.status(500).json({ error: "Failed to fetch rate history." });
+  }
+});
+
+app.post("/exchange-rate/update", requireAuth, async (_req, res) => {
+  try {
+    functions.logger.info("Manual exchange rate update requested");
+    const rateData = await fetchTCMBRate();
+    const result = await exchangeRates.saveExchangeRate(rateData);
+    res.status(200).json({ 
+      message: "Exchange rate updated successfully", 
+      exchangeRate: result.data 
+    });
+  } catch (error) {
+    functions.logger.error("Error manually updating exchange rate", error);
+    res.status(500).json({ error: "Failed to update exchange rate." });
+  }
+});
+
+// Export scheduled functions
+export { updateExchangeRate, forceUpdateExchangeRate } from "./scheduled/update-exchange-rate.js";
 
 export const api = functions.https.onRequest(app);
