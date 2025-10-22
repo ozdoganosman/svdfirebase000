@@ -615,7 +615,9 @@ export default function AdminProductsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.price}>Fiyat</label>
+            <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.price}>
+              Fiyat (TRY) <span className="text-xs text-slate-500">(opsiyonel - USD varsa otomatik hesaplanır)</span>
+            </label>
             <input
               id={FIELD_IDS.price}
               name="price"
@@ -624,7 +626,26 @@ export default function AdminProductsPage() {
               value={form.price ?? ""}
               onChange={(event) => handleChange("price", event.target.value)}
               className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+              placeholder="34.50"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700" htmlFor="admin-product-price-usd">
+              Fiyat (USD) <span className="text-xs font-semibold text-amber-600">✓ Önerilen</span>
+            </label>
+            <input
+              id="admin-product-price-usd"
+              name="priceUSD"
+              type="number"
+              step="0.01"
+              value={form.priceUSD ?? ""}
+              onChange={(event) => handleChange("priceUSD", event.target.value)}
+              className="mt-1 w-full rounded-md border border-amber-500 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              placeholder="1.00"
+            />
+            <p className="mt-1 text-xs text-slate-600">
+              Dolar bazlı fiyat - Güncel kurla TL'ye çevrilir
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.stock}>Stok</label>
