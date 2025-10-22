@@ -88,8 +88,8 @@ const mapProductDoc = (doc) => {
     title: data.title,
     slug: data.slug,
     description: data.description || "",
-    price: Number(data.price ?? 0),
-    priceUSD: Number(data.priceUSD ?? 0),
+    price: data.price !== undefined ? Number(data.price) : undefined,
+    priceUSD: data.priceUSD !== undefined ? Number(data.priceUSD) : undefined,
     bulkPricing: normalizeBulkPricing(data.bulkPricing),
     bulkPricingUSD: normalizeBulkPricing(data.bulkPricingUSD),
     category: data.category, // category_id yerine category
@@ -201,10 +201,6 @@ const createProduct = async (payload) => {
     title: payload.title,
     slug: slugify(payload.title, { lower: true, strict: true }),
     description: payload.description || "",
-    price: payload.price !== undefined ? Number(payload.price) : 0,
-    priceUSD: payload.priceUSD !== undefined ? Number(payload.priceUSD) : 0,
-    bulkPricing: normalizeBulkPricing(payload.bulkPricing),
-    bulkPricingUSD: normalizeBulkPricing(payload.bulkPricingUSD),
     category: payload.category,
     images: normalizeImages(payload.images),
     stock: Number(payload.stock ?? 0),
@@ -217,6 +213,21 @@ const createProduct = async (payload) => {
     createdAt: now,
     updatedAt: now,
   };
+
+  // Para birimi alanlarını sadece değer varsa ekle
+  if (payload.price !== undefined) {
+    productData.price = Number(payload.price);
+  }
+  if (payload.priceUSD !== undefined) {
+    productData.priceUSD = Number(payload.priceUSD);
+  }
+  if (payload.bulkPricing !== undefined) {
+    productData.bulkPricing = normalizeBulkPricing(payload.bulkPricing);
+  }
+  if (payload.bulkPricingUSD !== undefined) {
+    productData.bulkPricingUSD = normalizeBulkPricing(payload.bulkPricingUSD);
+  }
+
   const docRef = payload.id ? productsCollection.doc(payload.id) : productsCollection.doc();
   await docRef.set(productData);
   const doc = await docRef.get();

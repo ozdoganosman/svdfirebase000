@@ -646,13 +646,15 @@ export default function AdminProductsPage() {
                           <span className="text-amber-700 font-semibold">
                             ${product.priceUSD.toFixed(2)} USD
                           </span>
-                        ) : (
+                        ) : product.price && product.price > 0 ? (
                           <span>
                             {product.price.toLocaleString("tr-TR", {
                               style: "currency",
                               currency: "TRY",
                             })}
                           </span>
+                        ) : (
+                          <span className="text-slate-400">Fiyat girilmemiş</span>
                         )}
                       </td>
                       <td className="px-3 py-2 text-slate-600">{product.stock}</td>
