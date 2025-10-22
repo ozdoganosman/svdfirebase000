@@ -2,11 +2,19 @@
 
 **Proje:** SVD Ambalaj E-Ticaret Platformu
 **Başlangıç Tarihi:** 22 Ekim 2025
-**Son Güncelleme:** 22 Ekim 2025
+**Son Güncelleme:** 23 Ekim 2025
 
 ---
 
 ## 🆕 Son Eklenen Özellikler
+
+### 23 Ekim 2025
+1. Admin Ürünler sayfası USD-Only tamamlandı: TRY alanları kaldırıldı, 0.001 adımlı USD fiyat ve USD toplu fiyatlandırma (koli bazlı) aktif
+2. Tüm kritik sayfalarda Next.js Image’a geçiş: Ana sayfa ürün/kategori kartları, ürün detayları, admin medya, admin kategori, admin landing, medya seçici, galeri
+3. Ürün detaylarında görsel fallback düzeltildi: `/images/placeholders/product.jpg`
+4. Sepette ürün teknik özellikleri gösterimi eklendi (hortum boyu, hacim, renk, ağız çapı)
+5. Admin Ürünler başlığından “TL → USD Dönüştür” ve “Yenile” aksiyonları kaldırıldı (USD-Only mimariye uyum)
+6. Lint temizliği: Kullanılmayan değişkenler kaldırıldı; derleme uyarıları giderildi
 
 ### 22 Ekim 2025
 1. **💵 Döviz Kuru Sistemi (Faz 1.1) - ✅ TAMAMLANDI** - USD bazlı fiyatlandırma, TCMB entegrasyonu, backend ve frontend altyapı
@@ -31,10 +39,10 @@
 
 ## 📊 Durum Özeti
 
-- ✅ Tamamlandı: 1/53 (Faz 1.1 - USD Pricing System COMPLETE)
-- 🔄 Devam Ediyor: 0/53
-- ⏳ Beklemede: 52/53
-- **İlerleme:** ~18% (Core MVP features complete)
+- ✅ Tamamlandı: Faz 1.1 çekirdek + USD-Only Admin + Görsel optimizasyon (kritik ekranlar)
+- 🔄 Devam Ediyor: Görsel optimizasyonun kalan sayfaları (minör), TRY kalıntılarının temizlik kontrolü
+- ⏳ Beklemede: Faz 1.2–1.5 ve Faz 2+ (aşağıda listelenenler)
+- Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı durumda
 
 **Son Deployment:** 22 Ekim 2025, 21:00
 **Son Commit:** 22 Ekim 2025, 22:30 (Landing page currency policy)
@@ -55,7 +63,7 @@
 - ✅ Admin USD price input
 - ✅ Landing page currency policy
 - ✅ Kur geçmişi takibi
-- ⏳ Cart USD calculations (optional)
+- ⏳ Cart USD calculations (optional) — Not: Sepet TL, USD→TL kurla hesaplanıyor (USD parantezli gösterim eklenebilir)
 - ⏳ Admin rate management (optional)
 
 ---
@@ -103,8 +111,9 @@ Frontend:
 - ✅ `src/app/admin/products/page.tsx` - USD price input
 
 **İleriye Bırakılan (Non-Critical):**
-- ⏳ `src/context/CartContext.tsx` - Cart USD calculations (yapı hazır, UI update sonra)
+- ⏳ `src/context/CartContext.tsx` - Cart USD calculations (UI’de USD parantez opsiyonu)
 - ⏳ `src/app/admin/exchange-rates/page.tsx` - Admin rate management (nice-to-have)
+- ✅ Görsel optimizasyon (kritik sayfalar tamam) — kalan minör sayfalar için takip
 
 **Teknik Detaylar:**
 - TCMB API: XML parsing with date formatting (today/yesterday fallback)
@@ -1013,11 +1022,11 @@ reviews/
 ## 🔧 FAZ 5: TEKNİK İYİLEŞTİRMELER
 
 ### 5.1 Performans Optimizasyonu ⚡
-**Durum:** ⏳ Beklemede
+**Durum:** 🔄 Devam Ediyor
 **Öncelik:** Orta
 
 #### Görevler:
-- [ ] Image optimization (Next.js Image)
+- [x] Image optimization (Next.js Image) — Ana sayfa, ürünler, ürün detay, admin: ürünler/kategoriler/landing/medya, medya seçici, galeri
 - [ ] Lazy loading
 - [ ] Code splitting
 - [ ] Redis cache
@@ -1094,18 +1103,28 @@ Gerekli yeni koleksiyonlar:
 
 ---
 
-## 🎯 Aktif Sprint
+## 🎯 Aktif Sprint (Güncel Odak)
 
 **Sprint:** Sprint 1 - Acil Öncelikler
 **Başlangıç:** 22 Ekim 2025
 **Bitiş:** 5 Kasım 2025
-**Odak:** Ürün arama, sipariş takip, kullanıcı hesapları, ödeme
+**Odak (güncel):**
+- Ürün arama ve filtreleme (1.2)
+- Sipariş takip numarası (1.3)
+- Firebase Auth entegrasyonu (1.4)
+- İyzico ödeme entegrasyonu (1.5)
 
-### Bu Sprint'te Yapılacaklar:
-1. ✅ Ürün arama ve filtreleme
-2. ✅ Sipariş takip numarası
-3. ✅ Firebase Auth entegrasyonu
-4. ✅ İyzico ödeme entegrasyonu
+### Bir Sonraki Adımlar (Önümüzde Neler Var?)
+Kısa vadeli (bu sprint):
+- [ ] Ürün arama/filtreleme UI + URL parametreleri (app/products, app/categories)
+- [ ] Sipariş numarası üretimi ve order şemasında kur bilgisinin saklanması (functions/db/orders.js, ilgili admin ve success sayfaları)
+- [ ] Auth akışları (kayıt/giriş/şifre sıfırlama) ve korumalı sayfalar
+- [ ] Ödeme başlangıcı (iyzico sandbox), callback ve sonuç ekranı
+
+Tamamlayıcı iyileştirmeler:
+- [ ] Kalan minör sayfalarda next/image dönüşümleri ve lazy loading
+- [ ] Sepette (TL) USD parantez gösterimi (opsiyonel)
+- [ ] TRY kalıntıları için son kontrol ve temizlik (migrasyon sonrası)
 
 ---
 

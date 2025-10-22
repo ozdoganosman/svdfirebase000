@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { AdminCategory, AdminMedia, apiFetch, resolveMediaUrl, uploadMediaFile } from "@/lib/admin-api";
 import { MediaPicker } from "@/components/admin/media/media-picker";
 
@@ -293,10 +294,12 @@ export default function AdminCategoriesPage() {
             {form.image && (
               <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 shadow-sm">
                 <div className="relative aspect-video w-full overflow-hidden rounded-md border border-slate-200 bg-white">
-                  <img
+                  <Image
                     src={resolveMediaUrl(form.image)}
                     alt={form.image}
-                    className="absolute inset-0 h-full w-full object-cover"
+                    fill
+                    sizes="(max-width: 640px) 100vw, 50vw"
+                    className="object-cover"
                   />
                 </div>
                 <p className="mt-2 truncate text-xs text-slate-600" title={resolveMediaUrl(form.image)}>

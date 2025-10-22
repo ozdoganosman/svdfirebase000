@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { resolveServerApiUrl, resolveServerApiBase } from "@/lib/server-api";
 import { formatDualPrice, type ExchangeRate } from "@/lib/currency";
@@ -149,9 +150,16 @@ export default async function ProductDetailPage({
 
   const category = categories.find((item) => item.id === product.category);
 
+  // Compute TRY prices from USD for cart interactions
+  const rate = exchangeRate?.rate ?? 0;
+  const tryUnitPrice = product.priceUSD && rate > 0 ? product.priceUSD * rate : product.price;
+  const tryBulkPricing = (product.priceUSD && product.bulkPricingUSD && rate > 0)
+    ? product.bulkPricingUSD.map((tier) => ({ minQty: tier.minQty, price: tier.price * rate }))
+    : product.bulkPricing;
+
   const galleryImages = product.images && product.images.length > 0
     ? product.images
-    : ["/images/placeholders/product-default.jpg"];
+    : ["/images/placeholders/product.jpg"];
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-16 text-slate-900">
@@ -162,12 +170,14 @@ export default async function ProductDetailPage({
               {galleryImages.map((image, index) => (
                 <div
                   key={`${product.id}-image-${index}`}
-                  className="h-64 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100"
+                  className="relative h-64 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100"
                 >
-                  <img
+                  <Image
                     src={image}
                     alt={`${product.title} görsel ${index + 1}`}
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="(max-width: 640px) 100vw, 50vw"
+                    className="object-cover"
                   />
                 </div>
               ))}
@@ -414,9 +424,10 @@ export default async function ProductDetailPage({
                 id: product.id,
                 title: product.title,
                 slug: product.slug,
-                price: product.price,
-                bulkPricing: product.bulkPricing,
+                price: tryUnitPrice || 0,
+                bulkPricing: tryBulkPricing,
                 packageInfo: product.packageInfo,
+                specifications: product.specifications,
               }}
               variant="primary"
               className="w-full"

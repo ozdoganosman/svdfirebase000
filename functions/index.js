@@ -621,9 +621,12 @@ app.post("/products", requireAuth, async (req, res) => {
     const {
       id,
       title,
+      slug,
       description = "",
       price,
+      priceUSD,
       bulkPricing,
+      bulkPricingUSD,
       category,
       images,
       stock,
@@ -638,9 +641,12 @@ app.post("/products", requireAuth, async (req, res) => {
     const payload = {
       id,
       title,
+      slug,
       description,
-      price,
+      price: price !== undefined ? price : undefined,
+      priceUSD: priceUSD !== undefined ? priceUSD : undefined,
       bulkPricing: parseBulkPricing(bulkPricing),
+      bulkPricingUSD: parseBulkPricing(bulkPricingUSD),
       category,
       images: sanitizeImages(images),
       stock,
@@ -651,7 +657,11 @@ app.post("/products", requireAuth, async (req, res) => {
     const product = await catalog.createProduct(payload);
     res.status(201).json({ product });
   } catch (error) {
-    functions.logger.error("Error creating product", error);
+    functions.logger.error("Error creating product", { 
+      message: error.message, 
+      stack: error.stack,
+      body: req.body
+    });
     res.status(500).json({ error: "Failed to create product." });
   }
 });
@@ -663,22 +673,34 @@ app.put("/products/:id", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "Product not found." });
     }
 
+    const body = req.body || {};
     const payload = {
-      title: req.body?.title,
-      description: req.body?.description,
-      price: req.body?.price,
-      bulkPricing: req.body?.bulkPricing !== undefined ? parseBulkPricing(req.body.bulkPricing) : undefined,
-      category: req.body?.category,
-      images: req.body?.images !== undefined ? sanitizeImages(req.body.images, existing.images) : undefined,
-      stock: req.body?.stock,
-      packageInfo: req.body?.packageInfo,
-      specifications: req.body?.specifications,
+      title: body.title,
+      slug: body.slug,
+      description: body.description,
+      category: body.category,
+      stock: body.stock,
+      images: body.images !== undefined ? sanitizeImages(body.images, existing.images) : undefined,
+      packageInfo: body.packageInfo,
+      specifications: body.specifications,
+      price: body.price,
+      priceUSD: body.priceUSD,
+      bulkPricing: body.bulkPricing !== undefined ? parseBulkPricing(body.bulkPricing) : undefined,
+      bulkPricingUSD: body.bulkPricingUSD !== undefined ? parseBulkPricing(body.bulkPricingUSD) : undefined,
     };
+
+    // Filter out undefined values so they don't overwrite existing data
+    Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
 
     const product = await catalog.updateProduct(req.params.id, payload);
     res.status(200).json({ product });
   } catch (error) {
-    functions.logger.error("Error updating product", error);
+    functions.logger.error("Error updating product", {
+      message: error.message,
+      stack: error.stack,
+      body: req.body,
+      productId: req.params.id
+    });
     res.status(500).json({ error: "Failed to update product." });
   }
 });
@@ -863,6 +885,22 @@ app.post("/exchange-rate/update", requireAuth, async (_req, res) => {
   } catch (error) {
     functions.logger.error("Error manually updating exchange rate", error);
     res.status(500).json({ error: "Failed to update exchange rate." });
+  }
+});
+
+// Migration: Convert legacy TRY pricing to USD-only
+app.post("/products/migrate-try-to-usd", requireAuth, async (_req, res) => {
+  try {
+    const rate = await exchangeRates.getCurrentRate("USD");
+    const fx = rate?.rate;
+    if (!fx || !Number.isFinite(fx) || fx <= 0) {
+      return res.status(500).json({ error: "Invalid exchange rate." });
+    }
+    const result = await catalog.migrateTryToUSD(fx);
+    res.status(200).json({ message: "Migration completed", exchangeRate: fx, result });
+  } catch (error) {
+    functions.logger.error("TRY->USD migration failed", { message: error.message, stack: error.stack });
+    res.status(500).json({ error: "Migration failed." });
   }
 });
 

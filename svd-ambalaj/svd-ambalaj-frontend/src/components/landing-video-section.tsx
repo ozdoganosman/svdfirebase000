@@ -12,7 +12,8 @@ export function LandingVideoSection({ fallbackPoster }: { fallbackPoster: string
     src: 'https://cdn.coverr.co/videos/coverr-plastic-bottles-on-a-production-line-5589/1080p.mp4',
     poster: fallbackPoster,
   });
-  const [loading, setLoading] = useState(true);
+  // Internal fetch state kept for potential future skeleton UI; unused for now
+  const [, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchVideo = async () => {

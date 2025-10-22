@@ -450,10 +450,12 @@ export default async function Home() {
                 className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-amber-400 hover:shadow-lg"
               >
                 <div className="relative h-40 w-full overflow-hidden bg-slate-100">
-                  <img
+                  <Image
                     src={resolveMediaPath(category.image) || "/images/placeholders/category.jpg"}
                     alt={category.name}
-                    className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    className="object-cover transition duration-500 group-hover:scale-110"
                   />
                 </div>
                 <div className="flex flex-1 flex-col justify-between gap-4 p-6">
@@ -658,10 +660,12 @@ export default async function Home() {
                 className="flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm shadow-slate-200/60 transition hover:-translate-y-1 hover:shadow-lg"
               >
                 <div className="relative h-48 w-full overflow-hidden bg-slate-100">
-                  <img
+                  <Image
                     src={resolveProductImage(product)}
                     alt={product.title}
-                    className="h-full w-full object-contain p-4 transition duration-500 hover:scale-110"
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-contain p-4 transition duration-500 hover:scale-110"
                   />
                 </div>
                 <div className="flex flex-1 flex-col gap-4 p-6">

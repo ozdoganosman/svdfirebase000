@@ -12,7 +12,7 @@ const PATH_ALIASES: Record<string, string> = {
 let adminAuthToken: string | null = null;
 let unauthorizedHandler: UnauthorizedHandler | null = null;
 
-type HeadersInitLike = HeadersInit | Record<string, string>;
+// Note: keep type space minimal; remove unused aliases to satisfy lint
 
 const isBrowser = typeof window !== "undefined";
 
@@ -230,7 +230,7 @@ export type AdminProduct = {
   title: string;
   slug: string;
   description?: string;
-  price: number;
+  price?: number;
   priceUSD?: number;
   bulkPricing: AdminBulkPricingTier[];
   bulkPricingUSD?: AdminBulkPricingTier[];

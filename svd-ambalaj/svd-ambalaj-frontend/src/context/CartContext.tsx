@@ -20,6 +20,12 @@ type ProductSummary = {
     boxLabel: string;
   };
   stock?: number;
+  specifications?: {
+    hoseLength?: string;
+    volume?: string;
+    color?: string;
+    neckSize?: string;
+  };
 };
 
 type CartItem = ProductSummary & {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { AdminMedia, AdminProduct, apiFetch, resolveMediaUrl, uploadMediaFile } from "@/lib/admin-api";
 import { MediaPicker } from "@/components/admin/media/media-picker";
 
@@ -96,7 +97,8 @@ export default function AdminProductsPage() {
   const [isMediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [priceCurrency, setPriceCurrency] = useState<'TRY' | 'USD'>('USD'); // Para birimi seçimi
+  // USD-only mode: keep a cached exchange rate for display/conversion fallback
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchProducts = async () => {
@@ -124,30 +126,27 @@ export default function AdminProductsPage() {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
+    // Fetch current exchange rate for USD (for list fallback display)
+    (async () => {
+      try {
+        const data = await apiFetch<{ exchangeRate: { rate: number } }>("/exchange-rate");
+        const rate = Number(data?.exchangeRate?.rate);
+        if (Number.isFinite(rate) && rate > 0) {
+          setExchangeRate(rate);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch exchange rate", err);
+      }
+    })();
   }, []);
 
   const resetForm = () => {
     setForm(createEmptyForm());
     setEditingId(null);
     setShowForm(false);
-    setPriceCurrency('USD'); // Yeni ürün için USD varsayılan
   };
 
-  const parsedBulkPricing = useMemo(() => {
-    const rows = form.bulkPricing ?? [];
-    return rows
-      .map((row) => ({
-        minQty: Number(row.minQty),
-        price: Number(row.price),
-      }))
-      .filter(
-        (row) =>
-          Number.isFinite(row.minQty) &&
-          Number.isFinite(row.price) &&
-          row.minQty > 0 &&
-          row.price > 0
-      );
-  }, [form.bulkPricing]);
+  // TRY bulk pricing removed in USD-only mode
 
   const parsedBulkPricingUSD = useMemo(() => {
     const rows = form.bulkPricingUSD ?? [];
@@ -165,17 +164,7 @@ export default function AdminProductsPage() {
       );
   }, [form.bulkPricingUSD]);
 
-  const hasBulkPricingError = useMemo(() => {
-    const rows = form.bulkPricing ?? [];
-    if (rows.length === 0) {
-      return false;
-    }
-    return rows.some((row) => {
-      const minQty = Number(row.minQty);
-      const price = Number(row.price);
-      return !Number.isFinite(minQty) || minQty <= 0 || !Number.isFinite(price) || price <= 0;
-    });
-  }, [form.bulkPricing]);
+  // TRY bulk pricing validation removed in USD-only mode
 
   const imageList = useMemo(
     () =>
@@ -193,27 +182,15 @@ export default function AdminProductsPage() {
     }));
   };
 
-  const handleCurrencyChange = (newCurrency: 'TRY' | 'USD') => {
-    // Eğer para birimi değişiyorsa ve mevcut fiyat doluysa, diğer alana kopyala
-    if (newCurrency !== priceCurrency) {
-      if (newCurrency === 'USD' && form.price) {
-        // TRY'den USD'ye geçiş - TRY değerini USD'ye kopyala (kullanıcı düzenleyecek)
-        setForm(prev => ({
-          ...prev,
-          priceUSD: prev.price,
-          price: undefined,
-        }));
-      } else if (newCurrency === 'TRY' && form.priceUSD) {
-        // USD'den TRY'ye geçiş - USD değerini TRY'ye kopyala
-        setForm(prev => ({
-          ...prev,
-          price: prev.priceUSD,
-          priceUSD: undefined,
-        }));
+  // USD-only mode: no currency switch. If any legacy TRY price exists in form state, migrate it once to USD field.
+  useEffect(() => {
+    setForm((prev) => {
+      if (prev.price && (prev.priceUSD === undefined || prev.priceUSD === null)) {
+        return { ...prev, priceUSD: Number(prev.price) || undefined, price: undefined, bulkPricing: [] };
       }
-    }
-    setPriceCurrency(newCurrency);
-  };
+      return prev;
+    });
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -222,12 +199,9 @@ export default function AdminProductsPage() {
       return;
     }
 
-    if (hasBulkPricingError) {
-      setError("Toplu fiyatlandırma satırlarında geçersiz değerler var.");
-      return;
-    }
+    // No TRY bulk pricing validation in USD-only mode
 
-    // Para birimine göre payload oluştur
+    // USD-only payload
     const payload: Record<string, unknown> = {
       title: form.title,
       slug: form.slug?.trim() || undefined,
@@ -248,35 +222,15 @@ export default function AdminProductsPage() {
       ) ? form.specifications : undefined,
     };
 
-    // Seçili para birimine göre fiyat ve bulk pricing ekle
-    if (priceCurrency === 'USD') {
-      // USD seçiliyse sadece USD alanlarını gönder
-      const usdPriceStr = String(form.priceUSD || '').trim();
-      const usdPrice = usdPriceStr !== '' ? Number(usdPriceStr) : undefined;
-      payload.priceUSD = usdPrice;
-      payload.bulkPricingUSD = parsedBulkPricingUSD.length > 0 ? JSON.stringify(parsedBulkPricingUSD) : undefined;
-      // TRY alanlarını sıfırla/temizle
-      payload.price = undefined;
-      payload.bulkPricing = undefined;
-      
-      console.log('USD Mode - Raw:', form.priceUSD, 'String:', usdPriceStr, 'Final:', usdPrice);
-      console.log('USD bulk tiers:', parsedBulkPricingUSD);
-    } else {
-      // TRY seçiliyse sadece TRY alanlarını gönder
-      const tryPriceStr = String(form.price || '').trim();
-      const tryPrice = tryPriceStr !== '' ? Number(tryPriceStr) : undefined;
-      payload.price = tryPrice;
-      payload.bulkPricing = parsedBulkPricing.length > 0 ? JSON.stringify(parsedBulkPricing) : undefined;
-      // USD alanlarını sıfırla/temizle
-      payload.priceUSD = undefined;
-      payload.bulkPricingUSD = undefined;
-      
-      console.log('TRY Mode - Raw:', form.price, 'String:', tryPriceStr, 'Final:', tryPrice);
-      console.log('TRY bulk tiers:', parsedBulkPricing);
-    }
+    // Only USD fields are sent; TRY fields are explicitly nulled to clear legacy data
+    const usdPriceStr = String(form.priceUSD || '').trim();
+    const usdPrice = usdPriceStr !== '' ? Number(usdPriceStr) : undefined;
+    payload.priceUSD = usdPrice;
+    payload.bulkPricingUSD = parsedBulkPricingUSD.length > 0 ? JSON.stringify(parsedBulkPricingUSD) : undefined;
+    payload.price = null;
+    payload.bulkPricing = null;
 
-    console.log('Selected Currency:', priceCurrency);
-    console.log('Final Payload:', JSON.stringify(payload, null, 2));
+    console.log('USD-only payload:', JSON.stringify(payload, null, 2));
 
     setSaving(true);
     setError(null);
@@ -313,24 +267,11 @@ export default function AdminProductsPage() {
   const handleEdit = (product: AdminProduct) => {
     setEditingId(product.id);
     
-    // Ürünün USD fiyatı varsa USD modunda aç, yoksa TRY
-    if (product.priceUSD && product.priceUSD > 0) {
-      setPriceCurrency('USD');
-    } else {
-      setPriceCurrency('TRY');
-    }
-    
     setForm({
       title: product.title,
       slug: product.slug,
       description: product.description,
-      price: product.price,
       priceUSD: product.priceUSD,
-      bulkPricing: (product.bulkPricing ?? []).map((tier) => ({
-        id: randomId(),
-        minQty: String(tier.minQty ?? ""),
-        price: String(tier.price ?? ""),
-      })),
       bulkPricingUSD: (product.bulkPricingUSD ?? []).map((tier) => ({
         id: randomId(),
         minQty: String(tier.minQty ?? ""),
@@ -363,8 +304,8 @@ export default function AdminProductsPage() {
       title: `${product.title} (Kopya)`,
       slug: `${product.slug}-kopya`,
       description: product.description,
-      price: product.price,
-      bulkPricing: (product.bulkPricing ?? []).map((tier) => ({
+      priceUSD: product.priceUSD,
+      bulkPricingUSD: (product.bulkPricingUSD ?? []).map((tier) => ({
         id: randomId(),
         minQty: String(tier.minQty ?? ""),
         price: String(tier.price ?? ""),
@@ -485,19 +426,7 @@ export default function AdminProductsPage() {
     }
   };
 
-  const handleBulkPricingChange = (index: number, key: 'minQty' | 'price', value: string) => {
-    setForm((prev) => ({
-      ...prev,
-      bulkPricing: (prev.bulkPricing ?? []).map((row, rowIndex) =>
-        rowIndex === index
-          ? {
-              ...row,
-              [key]: value,
-            }
-          : row
-      ),
-    }));
-  };
+  // TRY bulk handlers removed in USD-only mode
 
   const handleBulkPricingUSDChange = (index: number, key: 'minQty' | 'price', value: string) => {
     setForm((prev) => ({
@@ -513,19 +442,7 @@ export default function AdminProductsPage() {
     }));
   };
 
-  const addBulkPricingRow = () => {
-    setForm((prev) => ({
-      ...prev,
-      bulkPricing: [
-        ...(prev.bulkPricing ?? []),
-        {
-          id: randomId(),
-          minQty: "",
-          price: "",
-        },
-      ],
-    }));
-  };
+  // TRY bulk handlers removed in USD-only mode
 
   const addBulkPricingUSDRow = () => {
     setForm((prev) => ({
@@ -541,12 +458,7 @@ export default function AdminProductsPage() {
     }));
   };
 
-  const removeBulkPricingRow = (index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      bulkPricing: (prev.bulkPricing ?? []).filter((_, rowIndex) => rowIndex !== index),
-    }));
-  };
+  // TRY bulk handlers removed in USD-only mode
 
   const removeBulkPricingUSDRow = (index: number) => {
     setForm((prev) => ({
@@ -555,16 +467,7 @@ export default function AdminProductsPage() {
     }));
   };
 
-  const presetBulkPricing = (preset: { minQty: number; price: number }[]) => {
-    setForm((prev) => ({
-      ...prev,
-      bulkPricing: preset.map((item) => ({
-        id: randomId(),
-        minQty: String(item.minQty),
-        price: String(item.price.toFixed(2)),
-      })),
-    }));
-  };
+  // TRY bulk handlers removed in USD-only mode
 
   return (
     <div className="space-y-8">
@@ -595,14 +498,6 @@ export default function AdminProductsPage() {
               className="inline-flex items-center rounded-md border border-amber-500 bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-600"
             >
               + Yeni Ürün Ekle
-            </button>
-            <button
-              type="button"
-              onClick={fetchProducts}
-              disabled={loading}
-              className="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:border-slate-100 disabled:text-slate-400"
-            >
-              Yenile
             </button>
           </div>
         </div>
@@ -642,20 +537,25 @@ export default function AdminProductsPage() {
                         {category ? category.name : product.category || '-'}
                       </td>
                       <td className="px-3 py-2 text-slate-600">
-                        {product.priceUSD && product.priceUSD > 0 ? (
-                          <span className="text-amber-700 font-semibold">
-                            ${product.priceUSD.toFixed(2)} USD
-                          </span>
-                        ) : product.price && product.price > 0 ? (
-                          <span>
-                            {product.price.toLocaleString("tr-TR", {
-                              style: "currency",
-                              currency: "TRY",
-                            })}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">Fiyat girilmemiş</span>
-                        )}
+                        {(() => {
+                          const usd = Number(product.priceUSD);
+                          if (Number.isFinite(usd) && usd > 0) {
+                            return (
+                              <span className="text-amber-700 font-semibold">${usd.toFixed(2)} USD</span>
+                            );
+                          }
+                          const tryPrice = Number(product.price);
+                          const fx = Number(exchangeRate);
+                          if (Number.isFinite(tryPrice) && tryPrice > 0 && Number.isFinite(fx) && fx > 0) {
+                            const derivedUsd = tryPrice / fx;
+                            return (
+                              <span className="text-slate-700" title="TRY'den kura göre hesaplandı">
+                                ≈ ${derivedUsd.toFixed(2)} USD
+                              </span>
+                            );
+                          }
+                          return <span className="text-slate-400">Fiyat girilmemiş</span>;
+                        })()}
                       </td>
                       <td className="px-3 py-2 text-slate-600">{product.stock}</td>
                       <td className="px-3 py-2 text-xs text-slate-500">
@@ -705,45 +605,12 @@ export default function AdminProductsPage() {
           </p>
         </div>
 
-        {/* PARA BİRİMİ SEÇİCİ - SWITCH */}
+        {/* USD-ONLY INFO */}
         <div className="rounded-xl border-2 border-amber-500 bg-gradient-to-r from-amber-50 to-orange-50 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-bold text-amber-900">💰 Fiyatlandırma Para Birimi</h3>
-              <p className="mt-1 text-sm text-amber-800">
-                Ürün fiyatlarını hangi para biriminde girmek istersiniz?
-              </p>
-            </div>
-            <div className="flex items-center gap-3 rounded-full bg-white p-1 shadow-md">
-              <button
-                type="button"
-                onClick={() => handleCurrencyChange('TRY')}
-                className={`rounded-full px-6 py-2.5 text-sm font-bold transition-all ${
-                  priceCurrency === 'TRY'
-                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                ₺ TRY
-              </button>
-              <button
-                type="button"
-                onClick={() => handleCurrencyChange('USD')}
-                className={`rounded-full px-6 py-2.5 text-sm font-bold transition-all ${
-                  priceCurrency === 'USD'
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                $ USD
-              </button>
-            </div>
-          </div>
-          <div className="mt-3 rounded-lg bg-amber-100 px-4 py-3 text-sm text-amber-900">
-            <strong>💡 Bilgi:</strong> {priceCurrency === 'USD' 
-              ? 'USD seçildiğinde fiyatlar dolar olarak girilir ve müşteriye güncel kurla TL olarak gösterilir.' 
-              : 'TRY seçildiğinde fiyatlar doğrudan Türk Lirası olarak girilir ve gösterilir.'}
-          </div>
+          <h3 className="text-lg font-bold text-amber-900">💰 Fiyatlandırma Para Birimi: USD (sabit)</h3>
+          <p className="mt-1 text-sm text-amber-800">
+            Fiyatları dolar olarak girin; müşteriye güncel kurla TL gösterilir. Eski TL fiyatlar otomatik kaldırılır.
+          </p>
         </div>
 
         <form className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
@@ -784,39 +651,16 @@ export default function AdminProductsPage() {
             />
           </div>
 
-          {/* FİYAT ALANI - Para birimine göre göster */}
-          {priceCurrency === 'TRY' && (
+          {/* FİYAT ALANI - USD ONLY */}
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.price}>
-                Birim Fiyat (TRY) <span className="text-xs font-semibold text-green-600">✓ Aktif</span>
-              </label>
-              <input
-                id={FIELD_IDS.price}
-                name="price"
-                type="number"
-                step="0.01"
-                value={form.price ?? ""}
-                onChange={(event) => handleChange("price", event.target.value)}
-                className="mt-1 w-full rounded-md border border-green-500 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="34.50"
-                required
-              />
-              <p className="mt-1 text-xs text-slate-600">
-                Türk Lirası ile fiyat girişi - Müşteriye TL olarak gösterilir
-              </p>
-            </div>
-          )}
-
-          {priceCurrency === 'USD' && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="admin-product-price-usd">
+               <label className="block text-sm font-medium text-slate-700" htmlFor="admin-product-price-usd">
                 Birim Fiyat (USD) <span className="text-xs font-semibold text-amber-600">✓ Aktif</span>
               </label>
               <input
                 id="admin-product-price-usd"
                 name="priceUSD"
                 type="number"
-                step="0.01"
+                 step="0.001"
                 value={form.priceUSD ?? ""}
                 onChange={(event) => handleChange("priceUSD", event.target.value)}
                 className="mt-1 w-full rounded-md border border-amber-500 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -827,7 +671,7 @@ export default function AdminProductsPage() {
                 Dolar bazlı fiyat - Güncel kurla TL&apos;ye çevrilip müşteriye gösterilir
               </p>
             </div>
-          )}
+          
 
           <div>
             <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.stock}>Stok</label>
@@ -1061,7 +905,13 @@ export default function AdminProductsPage() {
                   return (
                     <div key={url} className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 shadow-sm">
                       <div className="relative aspect-square w-full overflow-hidden rounded-md border border-slate-200 bg-white">
-                        <img src={resolved} alt={url} className="absolute inset-0 h-full w-full object-cover" />
+                        <Image 
+                          src={resolved} 
+                          alt={url} 
+                          fill 
+                          sizes="(max-width: 640px) 100vw, 50vw" 
+                          className="object-cover"
+                        />
                       </div>
                       <div className="truncate text-xs text-slate-600" title={resolved}>
                         {url}
@@ -1080,122 +930,7 @@ export default function AdminProductsPage() {
             )}
           </div>
 
-          {/* TOPLU FİYATLANDIRMA - Para birimine göre göster */}
-          {priceCurrency === 'TRY' && (
-          <div className="md:col-span-2">
-            <div className="rounded-xl border-2 border-green-200 bg-green-50 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="block text-sm font-semibold text-green-900">
-                    💵 Toplu Fiyatlandırma TRY (Koli Bazlı)
-                  </label>
-                  <p className="mt-1 text-xs text-green-800">
-                    💡 Fiyatlar <strong>KOLİ ADEDİNE</strong> göredir. TL bazlı kademeli fiyatlandırma.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => presetBulkPricing([
-                    { minQty: 1, price: Number(form.price) || 1 },
-                    { minQty: 100, price: (Number(form.price || 1) * 0.95) || 0.95 },
-                    { minQty: 500, price: (Number(form.price || 1) * 0.9) || 0.9 },
-                  ])}
-                  className="rounded-md border border-slate-200 px-2 py-1 font-medium text-slate-600 transition hover:bg-slate-100"
-                >
-                  Örnek 3 Katman
-                </button>
-                <button
-                  type="button"
-                  onClick={() => presetBulkPricing([
-                    { minQty: 1, price: Number(form.price) || 1 },
-                    { minQty: 50, price: (Number(form.price || 1) * 0.96) || 0.96 },
-                    { minQty: 200, price: (Number(form.price || 1) * 0.92) || 0.92 },
-                    { minQty: 1000, price: (Number(form.price || 1) * 0.88) || 0.88 },
-                  ])}
-                  className="rounded-md border border-slate-200 px-2 py-1 font-medium text-slate-600 transition hover:bg-slate-100"
-                >
-                  Örnek 4 Katman
-                </button>
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-slate-600">
-              💡 Fiyatlar <strong>KOLİ ADEDİNE</strong> göredir. Örn: &quot;100+ adet&quot; = &quot;100+ koli satışında bu fiyat geçerlidir.&quot;
-            </p>
-            <div className="mt-3 space-y-3">
-              {(form.bulkPricing ?? []).map((row, index) => {
-                const minQtyInvalid = !row.minQty || Number(row.minQty) <= 0;
-                const priceInvalid = !row.price || Number(row.price) <= 0;
-                return (
-                  <div key={row.id} className="grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-12">
-                    <div className="sm:col-span-4">
-                      <label className="text-xs font-medium text-slate-600">Minimum Adet</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={row.minQty}
-                        onChange={(event) => handleBulkPricingChange(index, 'minQty', event.target.value)}
-                        className={`mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-amber-500 ${
-                          minQtyInvalid ? 'border-red-300' : 'border-slate-200'
-                        }`}
-                        placeholder="Örn. 100"
-                        required
-                      />
-                    </div>
-                    <div className="sm:col-span-4">
-                      <label className="text-xs font-medium text-slate-600">Birim Fiyatı</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min={0}
-                        value={row.price}
-                        onChange={(event) => handleBulkPricingChange(index, 'price', event.target.value)}
-                        className={`mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-amber-500 ${
-                          priceInvalid ? 'border-red-300' : 'border-slate-200'
-                        }`}
-                        placeholder="Örn. 4.25"
-                        required
-                      />
-                    </div>
-                    <div className="flex items-end justify-end sm:col-span-4">
-                      <button
-                        type="button"
-                        onClick={() => removeBulkPricingRow(index)}
-                        className="inline-flex items-center rounded-md border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                      >
-                        Satırı Sil
-                      </button>
-                    </div>
-                    {(minQtyInvalid || priceInvalid) && (
-                      <div className="sm:col-span-12 text-xs text-red-600">
-                        Minimum adet ve fiyat 0’dan büyük olmalıdır.
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={addBulkPricingRow}
-                  className="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
-                >
-                  Katman Ekle
-                </button>
-                {hasBulkPricingError && (
-                  <span className="text-xs text-red-600">Geçersiz değerler bulunuyor, lütfen kontrol edin.</span>
-                )}
-                {!form.bulkPricing?.length && (
-                  <span className="text-xs text-slate-500">Toplu fiyatlandırma isteğe bağlıdır.</span>
-                )}
-              </div>
-            </div>
-            </div>
-          </div>
-          )}
-
           {/* TOPLU FİYATLANDIRMA USD */}
-          {priceCurrency === 'USD' && (
           <div className="md:col-span-2">
             <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-6">
               <div className="flex items-center justify-between">
@@ -1232,7 +967,7 @@ export default function AdminProductsPage() {
                         <label className="text-xs font-medium text-amber-800">Birim Fiyatı (USD)</label>
                         <input
                           type="number"
-                          step="0.01"
+                          step="0.001"
                           min={0}
                           value={row.price}
                           onChange={(event) => handleBulkPricingUSDChange(index, 'price', event.target.value)}
@@ -1269,7 +1004,6 @@ export default function AdminProductsPage() {
               </div>
             </div>
           </div>
-          )}
 
           <div className="md:col-span-2 flex items-center gap-3">
             <button
@@ -1295,6 +1029,7 @@ export default function AdminProductsPage() {
       <MediaPicker isOpen={isMediaPickerOpen} onClose={() => setMediaPickerOpen(false)} onSelect={handleMediaSelect} />
     </div>
   );
+
 }
 
 

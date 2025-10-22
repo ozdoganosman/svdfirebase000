@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AdminMedia, fetchMediaList, resolveMediaUrl } from "@/lib/admin-api";
+import Image from "next/image";
 
 type MediaPickerProps = {
   isOpen: boolean;
@@ -86,7 +87,13 @@ export function MediaPicker({ isOpen, onClose, onSelect }: MediaPickerProps) {
                   className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:border-amber-300 hover:shadow-lg"
                 >
                   <div className="relative aspect-video w-full bg-slate-100">
-                    <img src={fileUrl} alt={item.originalName} className="absolute inset-0 h-full w-full object-cover" />
+                    <Image
+                      src={fileUrl}
+                      alt={item.originalName}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover"
+                    />
                   </div>
                   <div className="space-y-1 px-4 py-3 text-sm">
                     <p className="font-semibold text-slate-900 group-hover:text-amber-600">{item.originalName}</p>

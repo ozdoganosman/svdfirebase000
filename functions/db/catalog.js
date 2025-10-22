@@ -215,10 +215,10 @@ const createProduct = async (payload) => {
   };
 
   // Para birimi alanlarını sadece değer varsa ekle
-  if (payload.price !== undefined) {
+  if (payload.price !== undefined && payload.price !== null) {
     productData.price = Number(payload.price);
   }
-  if (payload.priceUSD !== undefined) {
+  if (payload.priceUSD !== undefined && payload.priceUSD !== null) {
     productData.priceUSD = Number(payload.priceUSD);
   }
   if (payload.bulkPricing !== undefined) {
@@ -257,18 +257,25 @@ const updateProduct = async (id, payload) => {
   };
 
   // Para birimi alanlarını özel olarak işle
-  // payload'da açıkça belirtildiyse kullan, undefined ise sil
-  if ("price" in payload) {
-    updatedData.price = payload.price !== undefined ? Number(payload.price) : FieldValue.delete();
+  // Sadece payload'da gönderilen değerleri güncelle, diğerlerini koru
+  if (payload.price !== undefined && payload.price !== null) {
+    updatedData.price = Number(payload.price);
+  } else if (payload.price === null) {
+    updatedData.price = FieldValue.delete();
   }
-  if ("priceUSD" in payload) {
-    updatedData.priceUSD = payload.priceUSD !== undefined ? Number(payload.priceUSD) : FieldValue.delete();
+
+  if (payload.priceUSD !== undefined && payload.priceUSD !== null) {
+    updatedData.priceUSD = Number(payload.priceUSD);
+  } else if (payload.priceUSD === null) {
+    updatedData.priceUSD = FieldValue.delete();
   }
-  if ("bulkPricing" in payload) {
-    updatedData.bulkPricing = payload.bulkPricing !== undefined ? normalizeBulkPricing(payload.bulkPricing) : FieldValue.delete();
+
+  if (payload.bulkPricing !== undefined) {
+    updatedData.bulkPricing = normalizeBulkPricing(payload.bulkPricing);
   }
-  if ("bulkPricingUSD" in payload) {
-    updatedData.bulkPricingUSD = payload.bulkPricingUSD !== undefined ? normalizeBulkPricing(payload.bulkPricingUSD) : FieldValue.delete();
+
+  if (payload.bulkPricingUSD !== undefined) {
+    updatedData.bulkPricingUSD = normalizeBulkPricing(payload.bulkPricingUSD);
   }
 
   await productsCollection.doc(id).update(updatedData);
@@ -301,3 +308,47 @@ export {
   updateProduct,
   deleteProduct,
 };
+
+// --- Migration utilities ---
+/**
+ * Migrate legacy TRY prices to USD-only pricing.
+ * For any product that has price (TRY) but missing priceUSD, set priceUSD = price / rate.
+ * For bulkPricing (TRY), create bulkPricingUSD converting each tier price by dividing by rate.
+ * Then remove TRY fields (price, bulkPricing).
+ */
+export async function migrateTryToUSD(rate) {
+  const snapshot = await productsCollection.get();
+  let updated = 0;
+  for (const doc of snapshot.docs) {
+    const data = doc.data() || {};
+    const hasTry = data.price !== undefined || (Array.isArray(data.bulkPricing) && data.bulkPricing.length > 0);
+    const missingUsd = data.priceUSD === undefined && (data.price !== undefined || data.bulkPricingUSD === undefined);
+    if (!hasTry || !missingUsd) {
+      continue;
+    }
+
+    const updatedData = { updatedAt: FieldValue.serverTimestamp() };
+
+    if (data.price !== undefined && (data.priceUSD === undefined || data.priceUSD === null)) {
+      const tryPrice = Number(data.price);
+      if (Number.isFinite(tryPrice) && rate && Number.isFinite(rate) && rate > 0) {
+        updatedData.priceUSD = Number((tryPrice / rate).toFixed(4));
+      }
+    }
+
+    if (Array.isArray(data.bulkPricing) && (!Array.isArray(data.bulkPricingUSD) || data.bulkPricingUSD.length === 0)) {
+      const tiers = normalizeBulkPricing(data.bulkPricing);
+      if (tiers.length > 0 && rate && Number.isFinite(rate) && rate > 0) {
+        updatedData.bulkPricingUSD = tiers.map(t => ({ minQty: t.minQty, price: Number((t.price / rate).toFixed(4)) }));
+      }
+    }
+
+    // Remove TRY fields regardless if we set USD or not (moving to USD-only)
+    updatedData.price = FieldValue.delete();
+    updatedData.bulkPricing = FieldValue.delete();
+
+    await productsCollection.doc(doc.id).update(updatedData);
+    updated += 1;
+  }
+  return { total: snapshot.size, updated };
+}

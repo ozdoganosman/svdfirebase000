@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 
 interface MediaHighlight {
   title: string;
@@ -79,10 +80,12 @@ export function LandingGallerySection() {
               key={`${item.title}-${index}`}
               className="relative h-64 w-[320px] flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-lg shadow-black/30"
             >
-              <img
+              <Image
                 src={item.image}
                 alt={item.title}
-                className="absolute inset-0 h-full w-full object-cover"
+                fill
+                sizes="320px"
+                className="object-cover"
               />
               <figcaption className="absolute inset-x-0 bottom-0 space-y-1 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 text-sm">
                 <p className="font-semibold text-white">{item.title}</p>

@@ -96,7 +96,7 @@ function sanitizeLandingMedia(input: unknown, fallback: LandingMedia): LandingMe
   };
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const landingMedia = await readLandingMedia();
     return NextResponse.json({ landingMedia });

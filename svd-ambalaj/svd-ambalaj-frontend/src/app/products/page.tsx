@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { resolveServerApiUrl, resolveServerApiBase } from "@/lib/server-api";
 import { formatDualPrice, type ExchangeRate } from "@/lib/currency";
@@ -42,12 +43,7 @@ type Product = {
   };
 };
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("tr-TR", {
-    style: "currency",
-    currency: "TRY",
-    minimumFractionDigits: 2,
-  }).format(value);
+// formatCurrency unused here; rely on formatDualPrice for display
 
 async function getExchangeRate(): Promise<ExchangeRate | null> {
   try {
@@ -133,10 +129,12 @@ export default async function ProductsPage() {
               className="flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm shadow-slate-200/60 transition hover:-translate-y-1 hover:shadow-lg"
             >
               <div className="relative h-48 w-full overflow-hidden bg-slate-100">
-                <img
+                <Image
                   src={resolveProductImage(product)}
                   alt={product.title}
-                  className="h-full w-full object-contain p-4 transition duration-500 hover:scale-110"
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  className="object-contain p-4 transition duration-500 hover:scale-110"
                 />
               </div>
               <div className="flex flex-1 flex-col gap-4 p-6">
@@ -187,7 +185,7 @@ export default async function ProductsPage() {
                       {product.packageInfo ? "Birim fiyat" : "Başlangıç fiyatı"}
                     </span>
                     <p className="text-2xl font-bold text-amber-600">
-                      {formatDualPrice(product.priceUSD, rate, false, 1, product.price)} <span className="text-sm font-normal text-slate-500">+KDV</span>
+                      {formatDualPrice(product.priceUSD, rate, true, 1, product.price)} <span className="text-sm font-normal text-slate-500">+KDV</span>
                     </p>
                     {product.packageInfo && (
                       <p className="text-sm text-slate-600">
@@ -212,7 +210,7 @@ export default async function ProductsPage() {
                                   <span className="text-xs text-slate-600"> ({totalItems.toLocaleString('tr-TR')}+ adet)</span>
                                 )}
                               </span>
-                              <span className="font-semibold">{formatDualPrice(product.priceUSD ? tier.price : undefined, rate, false, 1, !product.priceUSD ? tier.price : undefined)} <span className="text-xs font-normal">+KDV</span></span>
+                              <span className="font-semibold">{formatDualPrice(product.priceUSD ? tier.price : undefined, rate, true, 1, !product.priceUSD ? tier.price : undefined)} <span className="text-xs font-normal">+KDV</span></span>
                             </li>
                           );
                         })}
@@ -228,8 +226,11 @@ export default async function ProductsPage() {
                       slug: product.slug,
                       price: product.priceUSD ? (product.priceUSD * rate) : (product.price ?? 0),
                       stock: product.stock,
-                      bulkPricing: product.bulkPricing,
+                      bulkPricing: product.priceUSD && product.bulkPricingUSD
+                        ? product.bulkPricingUSD.map(tier => ({ minQty: tier.minQty, price: tier.price * rate }))
+                        : product.bulkPricing,
                       packageInfo: product.packageInfo,
+                      specifications: product.specifications,
                     }}
                   />
                   <Link

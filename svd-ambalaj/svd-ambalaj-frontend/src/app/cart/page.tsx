@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCart } from "@/context/CartContext";
 import { useEffect, useState } from "react";
 import { resolveServerApiUrl } from "@/lib/server-api";
@@ -19,6 +20,12 @@ type Product = {
     itemsPerBox: number;
     minBoxes: number;
     boxLabel: string;
+  };
+  specifications?: {
+    hoseLength?: string;
+    volume?: string;
+    color?: string;
+    neckSize?: string;
   };
 };
 
@@ -237,10 +244,12 @@ export default function CartPage() {
                         >
                           <Link href={`/products/${product.slug}`} className="block aspect-square overflow-hidden bg-slate-100">
                             {product.images && product.images[0] ? (
-                              <img
+                              <Image
                                 src={product.images[0]}
                                 alt={product.title}
-                                className="h-full w-full object-contain p-4 transition duration-300 group-hover:scale-105"
+                                fill
+                                sizes="(max-width: 640px) 100vw, 50vw"
+                                className="object-contain p-4 transition duration-300 group-hover:scale-105"
                               />
                             ) : (
                               <div className="flex h-full items-center justify-center text-slate-400">
@@ -323,6 +332,26 @@ export default function CartPage() {
                         )}
                       </p>
                     </div>
+                    {/* Teknik Özellikler */}
+                    {(item.specifications?.hoseLength || item.specifications?.volume || item.specifications?.color || item.specifications?.neckSize) && (
+                      <div className="sm:col-span-2">
+                        <p className="text-xs font-semibold text-slate-700">Teknik Özellikler</p>
+                        <ul className="mt-1 text-xs text-slate-600">
+                          {item.specifications?.hoseLength && (
+                            <li>• Hortum Boyu: {item.specifications.hoseLength}</li>
+                          )}
+                          {item.specifications?.volume && (
+                            <li>• Hacim: {item.specifications.volume}</li>
+                          )}
+                          {item.specifications?.color && (
+                            <li>• Renk: {item.specifications.color}</li>
+                          )}
+                          {item.specifications?.neckSize && (
+                            <li>• Boyun Ölçüsü: {item.specifications.neckSize}</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
                     {item.packageInfo && (
                       <div>
                         <p className="text-xs text-slate-500">

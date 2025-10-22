@@ -16,6 +16,12 @@ export type AddToCartButtonProps = {
       minBoxes: number;
       boxLabel: string;
     };
+    specifications?: {
+      hoseLength?: string;
+      volume?: string;
+      color?: string;
+      neckSize?: string;
+    };
   };
   quantity?: number;
   variant?: "primary" | "secondary" | "ghost";

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import {
   AdminMedia,
   LandingMedia,
@@ -268,7 +269,13 @@ export default function AdminLandingMediaPage() {
             return (
               <div key={`${item}-${index}`} className="flex w-40 flex-col gap-2">
                 <div className="relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                  <img src={resolved} alt={item} className="absolute inset-0 h-full w-full object-cover" />
+                  <Image
+                    src={resolved}
+                    alt={item}
+                    fill
+                    sizes="160px"
+                    className="object-cover"
+                  />
                 </div>
                 <div className="truncate text-xs text-slate-500" title={item}>
                   {item}
@@ -404,7 +411,13 @@ export default function AdminLandingMediaPage() {
             </div>
             {videoField.poster && (
               <div className="relative mt-3 h-40 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                <img src={resolveMediaUrl(videoField.poster)} alt="Video poster" className="absolute inset-0 h-full w-full object-cover" />
+                <Image
+                  src={resolveMediaUrl(videoField.poster)}
+                  alt="Video poster"
+                  fill
+                  sizes="(max-width: 640px) 100vw, 50vw"
+                  className="object-cover"
+                />
               </div>
             )}
           </div>
@@ -473,7 +486,13 @@ export default function AdminLandingMediaPage() {
                 </div>
                 {item.image && (
                   <div className="relative mt-2 h-32 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                    <img src={resolveMediaUrl(item.image)} alt={item.title || "Galeri görseli"} className="absolute inset-0 h-full w-full object-cover" />
+                    <Image
+                      src={resolveMediaUrl(item.image)}
+                      alt={item.title || "Galeri görseli"}
+                      fill
+                      sizes="(max-width: 640px) 100vw, 50vw"
+                      className="object-cover"
+                    />
                   </div>
                 )}
               </div>

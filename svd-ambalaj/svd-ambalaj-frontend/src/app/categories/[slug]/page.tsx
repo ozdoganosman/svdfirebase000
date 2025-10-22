@@ -223,7 +223,8 @@ export default async function CategoryDetailPage({
                             <span className="font-semibold">
                               {product.bulkPricingUSD && exchangeRate
                                 ? formatDualPrice(tier.price, exchangeRate.rate, true)
-                                : formatCurrency(tier.price)
+                                : // TRY tier: still show USD in parens by providing tryAmount
+                                  formatDualPrice(undefined, exchangeRate?.rate ?? 0, true, 1, tier.price)
                               }
                             </span>
                           </li>
@@ -239,8 +240,10 @@ export default async function CategoryDetailPage({
                     id: product.id,
                     title: product.title,
                     slug: product.slug,
-                    price: product.price,
-                    bulkPricing: product.bulkPricing,
+                    price: product.priceUSD && exchangeRate ? (product.priceUSD * exchangeRate.rate) : (product.price ?? 0),
+                    bulkPricing: product.priceUSD && product.bulkPricingUSD && exchangeRate
+                      ? product.bulkPricingUSD.map(tier => ({ minQty: tier.minQty, price: tier.price * exchangeRate.rate }))
+                      : product.bulkPricing,
                     packageInfo: product.packageInfo,
                   }}
                 />
