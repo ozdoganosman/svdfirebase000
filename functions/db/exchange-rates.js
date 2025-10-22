@@ -2,8 +2,8 @@
  * Exchange Rates Database Operations
  */
 
-import admin from "./client.js";
-const db = admin.firestore();
+import { db } from "./client.js";
+import { FieldValue } from "firebase-admin/firestore";
 
 /**
  * Save exchange rate to Firestore
@@ -19,7 +19,7 @@ async function saveExchangeRate(rateData) {
       rate,
       effectiveDate,
       source,
-      lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+      lastUpdated: FieldValue.serverTimestamp(),
       isActive: true,
     };
 
@@ -28,7 +28,7 @@ async function saveExchangeRate(rateData) {
     // Also save to history
     await db.collection("exchangeRates").doc(currency).collection("history").add({
       ...data,
-      savedAt: admin.firestore.FieldValue.serverTimestamp(),
+      savedAt: FieldValue.serverTimestamp(),
     });
 
     console.log("[Exchange Rate DB] Saved rate:", { currency, rate, effectiveDate });
