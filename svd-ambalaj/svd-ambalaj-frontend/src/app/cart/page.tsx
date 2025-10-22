@@ -240,7 +240,7 @@ export default function CartPage() {
                               <img
                                 src={product.images[0]}
                                 alt={product.title}
-                                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                                className="h-full w-full object-contain p-4 transition duration-300 group-hover:scale-105"
                               />
                             ) : (
                               <div className="flex h-full items-center justify-center text-slate-400">
@@ -257,7 +257,7 @@ export default function CartPage() {
                               </h3>
                             </Link>
                             <p className="mt-2 text-xl font-bold text-amber-600">
-                              {formatCurrency(product.price)}
+                              {formatCurrency(product.price)} <span className="text-sm font-normal text-slate-500">+KDV</span>
                             </p>
                             <div className="mt-4">
                               <AddToCartButton
@@ -315,7 +315,7 @@ export default function CartPage() {
                         {item.packageInfo ? 'Birim Fiyat' : 'Fiyat'}
                       </p>
                       <p className="text-sm font-semibold text-slate-700">
-                        {formatCurrency(effectivePrice)}
+                        {formatCurrency(effectivePrice)} <span className="text-xs font-normal text-slate-500">+KDV</span>
                         {effectivePrice < item.price && (
                           <span className="ml-2 text-xs text-green-600 line-through">
                             {formatCurrency(item.price)}
@@ -329,7 +329,7 @@ export default function CartPage() {
                           {item.packageInfo.boxLabel} Fiyatı
                         </p>
                         <p className="text-sm font-semibold text-slate-700">
-                          {formatCurrency(effectivePrice * item.packageInfo.itemsPerBox)}
+                          {formatCurrency(effectivePrice * item.packageInfo.itemsPerBox)} <span className="text-xs font-normal text-slate-500">+KDV</span>
                         </p>
                       </div>
                     )}
@@ -363,15 +363,15 @@ export default function CartPage() {
                   {nextTier && (
                     <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
                       💡 {nextTier.minQty - item.quantity} {item.packageInfo?.boxLabel.toLowerCase() || 'adet'} daha ekleyin, 
-                      birim fiyat {formatCurrency(nextTier.price)} olsun!
+                      birim fiyat {formatCurrency(nextTier.price)} +KDV olsun!
                     </div>
                   )}
                 </div>
 
                 <div className="flex items-center justify-between border-t border-slate-100 pt-4">
-                  <span className="text-sm font-semibold text-slate-700">Toplam</span>
+                  <span className="text-sm font-semibold text-slate-700">Toplam (KDV Hariç)</span>
                   <span className="text-xl font-bold text-amber-600">
-                    {formatCurrency(itemTotal)}
+                    {formatCurrency(itemTotal)} <span className="text-sm font-normal text-slate-500">+KDV</span>
                   </span>
                 </div>
               </div>
@@ -393,25 +393,49 @@ export default function CartPage() {
                 <dd className="font-semibold">{totalItems.toLocaleString('tr-TR')} adet</dd>
               </div>
               <div className="flex items-center justify-between text-slate-700">
-                <dt>Ara toplam</dt>
-                <dd className="font-semibold">{formatCurrency(subtotal)}</dd>
+                <dt>Ara toplam (KDV Hariç)</dt>
+                <dd className="font-semibold">{formatCurrency(subtotal)} <span className="text-xs font-normal text-slate-500">+KDV</span></dd>
               </div>
               <div className="flex items-center justify-between text-slate-500">
                 <dt>KDV (%20)</dt>
                 <dd>{formatCurrency(subtotal * 0.20)}</dd>
               </div>
-              <div className="flex items-center justify-between text-slate-500">
-                <dt>Kargo</dt>
-                <dd>Teklifte belirtilecek</dd>
+              <div className="flex items-center justify-between text-slate-700">
+                <dt className="flex items-center gap-1">
+                  Kargo
+                  {totalItems >= 50000 && (
+                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">Bedava</span>
+                  )}
+                </dt>
+                <dd className="font-semibold">
+                  {totalItems >= 50000 ? (
+                    <span className="text-green-600">{formatCurrency(0)}</span>
+                  ) : (
+                    <>
+                      {formatCurrency(totalBoxes * 120)}
+                      <span className="ml-1 text-xs font-normal text-slate-500">
+                        ({totalBoxes} koli × ₺120)
+                      </span>
+                    </>
+                  )}
+                </dd>
               </div>
+              {totalItems < 50000 && totalItems > 0 && (
+                <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+                  <p className="font-semibold">💡 Kargo Avantajı</p>
+                  <p className="mt-1">
+                    {(50000 - totalItems).toLocaleString('tr-TR')} adet daha sipariş vererek <span className="font-semibold">ücretsiz kargo</span> kazanın!
+                  </p>
+                </div>
+              )}
             </dl>
             <div className="mt-6 border-t border-amber-100 pt-4">
               <div className="flex items-center justify-between text-base font-bold text-amber-700">
-                <span>Toplam (KDV Dahil)</span>
-                <span>{formatCurrency(subtotal * 1.20)}</span>
+                <span>Genel Toplam (KDV Dahil)</span>
+                <span>{formatCurrency((subtotal * 1.20) + (totalItems >= 50000 ? 0 : totalBoxes * 120))}</span>
               </div>
               <p className="mt-2 text-xs text-slate-600">
-                KDV hariç: {formatCurrency(subtotal)}
+                KDV hariç: {formatCurrency(subtotal + (totalItems >= 50000 ? 0 : totalBoxes * 120))} +KDV
               </p>
             </div>
             <Link

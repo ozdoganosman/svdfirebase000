@@ -578,7 +578,7 @@ export default async function Home() {
                   <img
                     src={resolveProductImage(product)}
                     alt={product.title}
-                    className="h-full w-full object-cover transition duration-500 hover:scale-110"
+                    className="h-full w-full object-contain p-4 transition duration-500 hover:scale-110"
                   />
                 </div>
                 <div className="flex flex-1 flex-col gap-4 p-6">
@@ -615,7 +615,7 @@ export default async function Home() {
                     <div>
                       <span className="text-sm text-slate-500">Başlangıç fiyatı</span>
                       <p className="text-2xl font-bold text-amber-600">
-                        {formatCurrency(product.price)}
+                        {formatCurrency(product.price)} <span className="text-sm font-normal text-slate-500">+KDV</span>
                       </p>
                     </div>
                     {product.bulkPricing && product.bulkPricing.length > 0 && (
@@ -635,7 +635,7 @@ export default async function Home() {
                                     <span className="text-xs text-slate-600"> ({totalItems.toLocaleString('tr-TR')}+ adet)</span>
                                   )}
                                 </span>
-                                <span className="font-semibold">{formatCurrency(tier.price)}</span>
+                                <span className="font-semibold">{formatCurrency(tier.price)} <span className="text-xs font-normal">+KDV</span></span>
                               </li>
                             );
                           })}
