@@ -88,11 +88,10 @@ const mapProductDoc = (doc) => {
     title: data.title,
     slug: data.slug,
     description: data.description || "",
-    // Backward compatibility: keep TRY price, add USD price
     price: Number(data.price ?? 0),
-    priceUSD: Number(data.priceUSD ?? data.price ?? 0), // Use USD if available, fallback to TRY
+    priceUSD: Number(data.priceUSD ?? 0),
     bulkPricing: normalizeBulkPricing(data.bulkPricing),
-    bulkPricingUSD: data.bulkPricingUSD ? normalizeBulkPricing(data.bulkPricingUSD) : normalizeBulkPricing(data.bulkPricing),
+    bulkPricingUSD: normalizeBulkPricing(data.bulkPricingUSD),
     category: data.category, // category_id yerine category
     images: normalizeImages(data.images),
     stock: Number(data.stock ?? 0),
@@ -202,10 +201,10 @@ const createProduct = async (payload) => {
     title: payload.title,
     slug: slugify(payload.title, { lower: true, strict: true }),
     description: payload.description || "",
-    price: Number(payload.price ?? payload.priceUSD ?? 0), // Backward compat
-    priceUSD: Number(payload.priceUSD ?? payload.price ?? 0),
-    bulkPricing: normalizeBulkPricing(payload.bulkPricing ?? payload.bulkPricingUSD),
-    bulkPricingUSD: normalizeBulkPricing(payload.bulkPricingUSD ?? payload.bulkPricing),
+    price: payload.price !== undefined ? Number(payload.price) : 0,
+    priceUSD: payload.priceUSD !== undefined ? Number(payload.priceUSD) : 0,
+    bulkPricing: normalizeBulkPricing(payload.bulkPricing),
+    bulkPricingUSD: normalizeBulkPricing(payload.bulkPricingUSD),
     category: payload.category,
     images: normalizeImages(payload.images),
     stock: Number(payload.stock ?? 0),
