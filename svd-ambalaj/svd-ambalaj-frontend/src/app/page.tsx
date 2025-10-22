@@ -568,6 +568,69 @@ export default async function Home() {
         </div>
       </section>
 
+      <section className="bg-gradient-to-br from-amber-500 to-amber-600 py-16 text-white">
+        <div className="mx-auto max-w-5xl space-y-8 px-6 sm:px-10">
+          <div className="text-center">
+            <span className="inline-flex items-center rounded-full bg-white/20 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm">
+              💵 Fiyatlandırma Politikası
+            </span>
+            <h2 className="mt-4 text-3xl font-bold">USD Bazlı Fiyatlandırma Sistemi</h2>
+            <p className="mt-3 text-lg text-amber-50">
+              Şeffaf ve güncel fiyatlandırma için tüm ürünlerimiz dolar bazlı fiyatlandırılmaktadır
+            </p>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="rounded-2xl border border-white/20 bg-white/10 p-6 backdrop-blur-sm">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/20">
+                <span className="text-2xl">📊</span>
+              </div>
+              <h3 className="mb-2 text-xl font-semibold">TCMB Efektif Satış Kuru</h3>
+              <p className="text-sm text-amber-50">
+                Fiyatlarımız T.C. Merkez Bankası&apos;nın günlük USD efektif satış kuru baz alınarak hesaplanır. Her gün saat 16:00&apos;da otomatik güncellenir.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/20 bg-white/10 p-6 backdrop-blur-sm">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/20">
+                <span className="text-2xl">🔄</span>
+              </div>
+              <h3 className="mb-2 text-xl font-semibold">Anlık Kur Gösterimi</h3>
+              <p className="text-sm text-amber-50">
+                Site üst başlığında anlık döviz kurunu görebilirsiniz. Tüm fiyatlar hem TL hem de USD olarak görüntülenir. Sepetiniz güncel kurla hesaplanır.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/20 bg-white/10 p-6 backdrop-blur-sm">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/20">
+                <span className="text-2xl">💰</span>
+              </div>
+              <h3 className="mb-2 text-xl font-semibold">Döviz Dalgalanmalarından Korunma</h3>
+              <p className="text-sm text-amber-50">
+                USD bazlı fiyatlandırma sayesinde uzun vadeli siparişlerinizde ani kur değişimlerinden etkilenmezsiniz. Teklif verdiğimiz USD fiyatları sabittir.
+              </p>
+            </div>
+          </div>
+
+          {exchangeRate && (
+            <div className="rounded-2xl border-2 border-white/30 bg-white/15 p-6 text-center backdrop-blur-sm">
+              <p className="text-sm font-medium text-amber-100">Güncel Döviz Kuru</p>
+              <p className="mt-2 text-4xl font-bold">₺{exchangeRate.rate.toFixed(4)}</p>
+              <p className="mt-2 text-sm text-amber-100">
+                {new Date(exchangeRate.effectiveDate).toLocaleDateString("tr-TR", {
+                  day: "2-digit",
+                  month: "long",
+                  year: "numeric"
+                })} - {exchangeRate.source.toUpperCase()}
+              </p>
+              <p className="mt-4 text-xs text-amber-200">
+                * Fiyatlar KDV hariç olup, ödeme anındaki güncel kurla hesaplanır
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
       <section id="products" className="bg-white py-16">
         <div className="mx-auto max-w-6xl px-6 sm:px-10">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
