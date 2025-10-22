@@ -88,8 +88,11 @@ const mapProductDoc = (doc) => {
     title: data.title,
     slug: data.slug,
     description: data.description || "",
+    // Backward compatibility: keep TRY price, add USD price
     price: Number(data.price ?? 0),
+    priceUSD: Number(data.priceUSD ?? data.price ?? 0), // Use USD if available, fallback to TRY
     bulkPricing: normalizeBulkPricing(data.bulkPricing),
+    bulkPricingUSD: data.bulkPricingUSD ? normalizeBulkPricing(data.bulkPricingUSD) : normalizeBulkPricing(data.bulkPricing),
     category: data.category, // category_id yerine category
     images: normalizeImages(data.images),
     stock: Number(data.stock ?? 0),
@@ -199,8 +202,10 @@ const createProduct = async (payload) => {
     title: payload.title,
     slug: slugify(payload.title, { lower: true, strict: true }),
     description: payload.description || "",
-    price: Number(payload.price ?? 0),
-    bulkPricing: normalizeBulkPricing(payload.bulkPricing),
+    price: Number(payload.price ?? payload.priceUSD ?? 0), // Backward compat
+    priceUSD: Number(payload.priceUSD ?? payload.price ?? 0),
+    bulkPricing: normalizeBulkPricing(payload.bulkPricing ?? payload.bulkPricingUSD),
+    bulkPricingUSD: normalizeBulkPricing(payload.bulkPricingUSD ?? payload.bulkPricing),
     category: payload.category,
     images: normalizeImages(payload.images),
     stock: Number(payload.stock ?? 0),
@@ -230,9 +235,11 @@ const updateProduct = async (id, payload) => {
     slug: payload.title ? slugify(payload.title, { lower: true, strict: true }) : existing.slug,
     description: payload.description !== undefined ? payload.description : existing.description,
     price: payload.price !== undefined ? Number(payload.price) : existing.price,
+    priceUSD: payload.priceUSD !== undefined ? Number(payload.priceUSD) : existing.priceUSD,
     category: payload.category !== undefined ? payload.category : existing.category,
     stock: payload.stock !== undefined ? Number(payload.stock) : existing.stock,
     bulkPricing: payload.bulkPricing !== undefined ? normalizeBulkPricing(payload.bulkPricing) : existing.bulkPricing,
+    bulkPricingUSD: payload.bulkPricingUSD !== undefined ? normalizeBulkPricing(payload.bulkPricingUSD) : existing.bulkPricingUSD,
     images: payload.images !== undefined ? normalizeImages(payload.images) : existing.images,
     packageInfo: payload.packageInfo !== undefined ? {
       itemsPerBox: Number(payload.packageInfo?.itemsPerBox ?? existing.packageInfo?.itemsPerBox ?? 1),
