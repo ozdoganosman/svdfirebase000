@@ -205,14 +205,11 @@ export default function AdminProductsPage() {
       return;
     }
 
+    // Para birimine göre payload oluştur
     const payload: Record<string, unknown> = {
       title: form.title,
       slug: form.slug?.trim() || undefined,
       description: form.description || "",
-      price: form.price !== undefined && form.price !== null ? Number(form.price) : undefined,
-      priceUSD: form.priceUSD !== undefined && form.priceUSD !== null ? Number(form.priceUSD) : undefined,
-      bulkPricing: parsedBulkPricing.length > 0 ? JSON.stringify(parsedBulkPricing) : undefined,
-      bulkPricingUSD: parsedBulkPricingUSD.length > 0 ? JSON.stringify(parsedBulkPricingUSD) : undefined,
       category: form.category,
       images: form.images,
       stock: form.stock !== undefined && form.stock !== null ? Number(form.stock) : undefined,
@@ -229,8 +226,25 @@ export default function AdminProductsPage() {
       ) ? form.specifications : undefined,
     };
 
-    console.log('📦 Form packageInfo:', form.packageInfo);
-    console.log('📦 Payload packageInfo:', payload.packageInfo);
+    // Seçili para birimine göre fiyat ve bulk pricing ekle
+    if (priceCurrency === 'USD') {
+      // USD seçiliyse sadece USD alanlarını gönder
+      payload.priceUSD = form.priceUSD !== undefined && form.priceUSD !== null ? Number(form.priceUSD) : undefined;
+      payload.bulkPricingUSD = parsedBulkPricingUSD.length > 0 ? JSON.stringify(parsedBulkPricingUSD) : undefined;
+      // TRY alanlarını sıfırla/temizle
+      payload.price = undefined;
+      payload.bulkPricing = undefined;
+    } else {
+      // TRY seçiliyse sadece TRY alanlarını gönder
+      payload.price = form.price !== undefined && form.price !== null ? Number(form.price) : undefined;
+      payload.bulkPricing = parsedBulkPricing.length > 0 ? JSON.stringify(parsedBulkPricing) : undefined;
+      // USD alanlarını sıfırla/temizle
+      payload.priceUSD = undefined;
+      payload.bulkPricingUSD = undefined;
+    }
+
+    console.log('� Para birimi:', priceCurrency);
+    console.log('📦 Gönderilen payload:', payload);
 
     setSaving(true);
     setError(null);
@@ -595,10 +609,20 @@ export default function AdminProductsPage() {
                       <td className="px-3 py-2 text-slate-600">
                         {category ? category.name : product.category || '-'}
                       </td>
-                      <td className="px-3 py-2 text-slate-600">{product.price.toLocaleString("tr-TR", {
-                        style: "currency",
-                        currency: "TRY",
-                      })}</td>
+                      <td className="px-3 py-2 text-slate-600">
+                        {product.priceUSD && product.priceUSD > 0 ? (
+                          <span className="text-amber-700 font-semibold">
+                            ${product.priceUSD.toFixed(2)} USD
+                          </span>
+                        ) : (
+                          <span>
+                            {product.price.toLocaleString("tr-TR", {
+                              style: "currency",
+                              currency: "TRY",
+                            })}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-slate-600">{product.stock}</td>
                       <td className="px-3 py-2 text-xs text-slate-500">
                         {product.createdAt ? new Date(product.createdAt).toLocaleString("tr-TR") : "-"}
