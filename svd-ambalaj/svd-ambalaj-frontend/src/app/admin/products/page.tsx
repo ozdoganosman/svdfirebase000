@@ -443,6 +443,20 @@ export default function AdminProductsPage() {
     }));
   };
 
+  const handleBulkPricingUSDChange = (index: number, key: 'minQty' | 'price', value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      bulkPricingUSD: (prev.bulkPricingUSD ?? []).map((row, rowIndex) =>
+        rowIndex === index
+          ? {
+              ...row,
+              [key]: value,
+            }
+          : row
+      ),
+    }));
+  };
+
   const addBulkPricingRow = () => {
     setForm((prev) => ({
       ...prev,
@@ -457,10 +471,31 @@ export default function AdminProductsPage() {
     }));
   };
 
+  const addBulkPricingUSDRow = () => {
+    setForm((prev) => ({
+      ...prev,
+      bulkPricingUSD: [
+        ...(prev.bulkPricingUSD ?? []),
+        {
+          id: randomId(),
+          minQty: "",
+          price: "",
+        },
+      ],
+    }));
+  };
+
   const removeBulkPricingRow = (index: number) => {
     setForm((prev) => ({
       ...prev,
       bulkPricing: (prev.bulkPricing ?? []).filter((_, rowIndex) => rowIndex !== index),
+    }));
+  };
+
+  const removeBulkPricingUSDRow = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      bulkPricingUSD: (prev.bulkPricingUSD ?? []).filter((_, rowIndex) => rowIndex !== index),
     }));
   };
 
@@ -1022,6 +1057,82 @@ export default function AdminProductsPage() {
               </div>
             </div>
           </div>
+
+          {/* TOPLU FİYATLANDIRMA USD (ÖNERİLEN) */}
+          <div className="md:col-span-2">
+            <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="block text-sm font-semibold text-amber-900">
+                    💵 Toplu Fiyatlandırma USD (Koli Bazlı) 
+                    <span className="ml-2 text-xs font-bold text-green-700">✓ ÖNERİLEN</span>
+                  </label>
+                  <p className="mt-1 text-xs text-amber-800">
+                    💡 Fiyatlar <strong>KOLİ ADEDİNE</strong> göredir. Güncel kurla otomatik TL&apos;ye çevrilir.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 space-y-3">
+                {(form.bulkPricingUSD ?? []).map((row, index) => {
+                  const minQtyInvalid = !row.minQty || Number(row.minQty) <= 0;
+                  const priceInvalid = !row.price || Number(row.price) <= 0;
+                  return (
+                    <div key={row.id} className="grid grid-cols-1 gap-3 rounded-lg border border-amber-300 bg-white p-3 sm:grid-cols-12">
+                      <div className="sm:col-span-4">
+                        <label className="text-xs font-medium text-amber-800">Minimum Koli Adedi</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={row.minQty}
+                          onChange={(event) => handleBulkPricingUSDChange(index, 'minQty', event.target.value)}
+                          className={`mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                            minQtyInvalid ? 'border-red-300' : 'border-amber-200'
+                          }`}
+                          placeholder="Örn. 100"
+                        />
+                      </div>
+                      <div className="sm:col-span-4">
+                        <label className="text-xs font-medium text-amber-800">Birim Fiyatı (USD)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={row.price}
+                          onChange={(event) => handleBulkPricingUSDChange(index, 'price', event.target.value)}
+                          className={`mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                            priceInvalid ? 'border-red-300' : 'border-amber-200'
+                          }`}
+                          placeholder="Örn. 0.12"
+                        />
+                      </div>
+                      <div className="flex items-end justify-end sm:col-span-4">
+                        <button
+                          type="button"
+                          onClick={() => removeBulkPricingUSDRow(index)}
+                          className="inline-flex items-center rounded-md border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                        >
+                          Satırı Sil
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={addBulkPricingUSDRow}
+                    className="inline-flex items-center rounded-md border border-amber-600 bg-amber-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-700"
+                  >
+                    USD Katman Ekle
+                  </button>
+                  {!form.bulkPricingUSD?.length && (
+                    <span className="text-xs text-amber-800">USD ile katmanlı fiyatlandırma yapabilirsiniz.</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="md:col-span-2 flex items-center gap-3">
             <button
               type="submit"
@@ -1047,4 +1158,5 @@ export default function AdminProductsPage() {
     </div>
   );
 }
+
 
