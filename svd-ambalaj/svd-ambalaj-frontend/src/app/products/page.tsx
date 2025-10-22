@@ -62,24 +62,35 @@ async function getExchangeRate(): Promise<ExchangeRate | null> {
   }
 }
 
-async function getProducts(): Promise<Product[]> {
+async function getProducts(params?: { q?: string }): Promise<Product[]> {
   try {
-    const response = await fetch(resolveServerApiUrl("/products"), {
+    const query = params?.q ? `?q=${encodeURIComponent(params.q)}` : "";
+    const response = await fetch(resolveServerApiUrl(`/products${query}`), {
       cache: 'no-store'
     });
     if (!response.ok) {
       return [];
     }
     const payload = await response.json();
-    return payload?.products ?? [];
+    let items: Product[] = payload?.products ?? [];
+    // Client-side fallback filtering by title/description if backend ignores q
+    if (params?.q) {
+      const q = params.q.toLowerCase();
+      items = items.filter(p =>
+        p.title.toLowerCase().includes(q) ||
+        (p.description?.toLowerCase().includes(q) ?? false)
+      );
+    }
+    return items;
   } catch (error) {
     console.error("Products fetch error", error);
     return [];
   }
 }
 
-export default async function ProductsPage() {
-  const products = await getProducts();
+export default async function ProductsPage({ searchParams }: { searchParams?: { q?: string } }) {
+  const q = searchParams?.q?.toString() || "";
+  const products = await getProducts({ q });
   const exchangeRate = await getExchangeRate();
   const rate = exchangeRate?.rate ?? 0;
 
@@ -116,7 +127,21 @@ export default async function ProductsPage() {
           </div>
         </div>
 
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Filters */}
+        <form action="/products" method="get" className="mt-8 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex-1 min-w-[240px]">
+            <label htmlFor="q" className="block text-sm font-medium text-slate-700">Ürün ara</label>
+            <input id="q" name="q" defaultValue={q} placeholder="Örn: pompa, sprey, şişe…" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500" />
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="submit" className="inline-flex items-center rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">Uygula</button>
+            {q && (
+              <Link href="/products" className="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Temizle</Link>
+            )}
+          </div>
+        </form>
+
+        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {products.length === 0 && (
             <div className="col-span-full rounded-2xl border border-dashed border-slate-200 p-10 text-center text-slate-500">
               Şu anda görüntülenecek ürün bulunamadı. Lütfen daha sonra tekrar deneyin.
