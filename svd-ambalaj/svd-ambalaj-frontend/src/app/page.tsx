@@ -8,6 +8,7 @@ import {
   resolveServerApiBase,
   resolveServerApiOrigin,
 } from "@/lib/server-api";
+import { formatDualPrice, type ExchangeRate } from "@/lib/currency";
 
 // Force dynamic rendering to always fetch fresh landing media
 export const dynamic = 'force-dynamic';
@@ -23,8 +24,10 @@ type Product = {
   slug: string;
   description: string;
   price: number;
+  priceUSD?: number;
   stock?: number;
   bulkPricing?: BulkTier[];
+  bulkPricingUSD?: BulkTier[];
   images?: string[];
   image?: string;
   packageInfo?: {
@@ -93,6 +96,22 @@ async function getCategories(apiBase: string): Promise<Category[]> {
   }
 }
 
+async function getExchangeRate(apiBase: string): Promise<ExchangeRate | null> {
+  try {
+    const response = await fetch(`${apiBase}/exchange-rate`, {
+      next: { revalidate: 300 }, // 5 dakika cache
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const data = await response.json();
+    return data?.exchangeRate ?? null;
+  } catch (error) {
+    console.error("Exchange rate fetch error", error);
+    return null;
+  }
+}
+
 export default async function Home() {
   const apiBase = resolveServerApiBase();
   const apiOrigin = resolveServerApiOrigin();
@@ -115,9 +134,10 @@ export default async function Home() {
   const resolveProductImage = (product: Product): string =>
     resolveMediaPath(product.images?.[0] ?? product.image) || '/images/placeholders/product.jpg';
 
-  const [products, categories, landingMediaPayload] = await Promise.all([
+  const [products, categories, exchangeRate, landingMediaPayload] = await Promise.all([
     getProducts(apiBase),
     getCategories(apiBase),
+    getExchangeRate(apiBase),
     fetch(`${apiBase}/landing-media`, { 
       cache: 'no-store',
       headers: {
@@ -615,18 +635,24 @@ export default async function Home() {
                     <div>
                       <span className="text-sm text-slate-500">Başlangıç fiyatı</span>
                       <p className="text-2xl font-bold text-amber-600">
-                        {formatCurrency(product.price)} <span className="text-sm font-normal text-slate-500">+KDV</span>
+                        {product.priceUSD && exchangeRate
+                          ? formatDualPrice(product.priceUSD, exchangeRate.rate, true)
+                          : formatCurrency(product.price)
+                        } <span className="text-sm font-normal text-slate-500">+KDV</span>
                       </p>
                     </div>
-                    {product.bulkPricing && product.bulkPricing.length > 0 && (
+                    {(product.bulkPricingUSD || product.bulkPricing) && (product.bulkPricingUSD?.length || product.bulkPricing?.length || 0) > 0 && (
                       <div className="rounded-xl bg-amber-50 p-4" id="pricing">
                         <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
                           Toplu Alım Avantajı
                         </p>
                         <ul className="mt-3 space-y-2 text-sm text-amber-800">
-                          {product.bulkPricing.map((tier) => {
+                          {(product.bulkPricingUSD || product.bulkPricing)?.map((tier) => {
                             const itemsPerBox = product.packageInfo?.itemsPerBox || 1;
                             const totalItems = tier.minQty * itemsPerBox;
+                            const priceDisplay = product.bulkPricingUSD && exchangeRate
+                              ? formatDualPrice(tier.price, exchangeRate.rate, true)
+                              : formatCurrency(tier.price);
                             return (
                               <li key={`${product.id}-tier-${tier.minQty}`} className="flex items-center justify-between">
                                 <span>
@@ -635,7 +661,7 @@ export default async function Home() {
                                     <span className="text-xs text-slate-600"> ({totalItems.toLocaleString('tr-TR')}+ adet)</span>
                                   )}
                                 </span>
-                                <span className="font-semibold">{formatCurrency(tier.price)} <span className="text-xs font-normal">+KDV</span></span>
+                                <span className="font-semibold">{priceDisplay} <span className="text-xs font-normal">+KDV</span></span>
                               </li>
                             );
                           })}

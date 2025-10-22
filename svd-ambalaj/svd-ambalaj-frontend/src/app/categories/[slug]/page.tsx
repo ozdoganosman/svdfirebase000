@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AddToCartButton } from "@/components/add-to-cart-button";
-import { resolveServerApiUrl } from "@/lib/server-api";
+import { resolveServerApiUrl, resolveServerApiBase } from "@/lib/server-api";
+import { formatDualPrice, type ExchangeRate } from "@/lib/currency";
 
 type Category = {
   id: string;
@@ -16,8 +17,10 @@ type Product = {
   slug: string;
   description: string;
   price: number;
+  priceUSD?: number;
   stock?: number;
   bulkPricing?: { minQty: number; price: number }[];
+  bulkPricingUSD?: { minQty: number; price: number }[];
   packageInfo?: {
     itemsPerBox: number;
     minBoxes: number;
@@ -73,6 +76,23 @@ async function getCategoryProducts(slug: string): Promise<Product[]> {
   }
 }
 
+async function getExchangeRate(): Promise<ExchangeRate | null> {
+  try {
+    const apiBase = resolveServerApiBase();
+    const response = await fetch(`${apiBase}/exchange-rate`, {
+      next: { revalidate: 300 },
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const data = await response.json();
+    return data?.exchangeRate ?? null;
+  } catch (error) {
+    console.error("Exchange rate fetch error", error);
+    return null;
+  }
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -99,8 +119,11 @@ export default async function CategoryDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const category = await getCategory(slug);
-  const products = await getCategoryProducts(slug);
+  const [category, products, exchangeRate] = await Promise.all([
+    getCategory(slug),
+    getCategoryProducts(slug),
+    getExchangeRate(),
+  ]);
 
   if (!category) {
     return (
@@ -174,16 +197,19 @@ export default async function CategoryDetailPage({
                     Başlangıç fiyatı
                   </span>
                   <p className="text-2xl font-bold text-amber-600">
-                    {formatCurrency(product.price)}
+                    {product.priceUSD && exchangeRate
+                      ? formatDualPrice(product.priceUSD, exchangeRate.rate, true)
+                      : formatCurrency(product.price)
+                    }
                   </p>
                 </div>
-                {product.bulkPricing && product.bulkPricing.length > 0 && (
+                {(product.bulkPricingUSD || product.bulkPricing) && (product.bulkPricingUSD?.length || product.bulkPricing?.length || 0) > 0 && (
                   <div className="rounded-xl bg-amber-50 p-4">
                     <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
                       Toplu alım avantajı
                     </p>
                     <ul className="mt-3 space-y-2 text-sm text-amber-800">
-                      {product.bulkPricing.map((tier) => {
+                      {(product.bulkPricingUSD || product.bulkPricing)?.map((tier) => {
                         const itemsPerBox = product.packageInfo?.itemsPerBox || 1;
                         const totalItems = tier.minQty * itemsPerBox;
                         return (
@@ -194,7 +220,12 @@ export default async function CategoryDetailPage({
                                 <span className="text-xs text-slate-600"> ({totalItems.toLocaleString('tr-TR')}+ adet)</span>
                               )}
                             </span>
-                            <span className="font-semibold">{formatCurrency(tier.price)}</span>
+                            <span className="font-semibold">
+                              {product.bulkPricingUSD && exchangeRate
+                                ? formatDualPrice(tier.price, exchangeRate.rate, true)
+                                : formatCurrency(tier.price)
+                              }
+                            </span>
                           </li>
                         );
                       })}
