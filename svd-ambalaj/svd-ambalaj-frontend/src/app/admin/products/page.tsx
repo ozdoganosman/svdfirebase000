@@ -193,6 +193,28 @@ export default function AdminProductsPage() {
     }));
   };
 
+  const handleCurrencyChange = (newCurrency: 'TRY' | 'USD') => {
+    // Eğer para birimi değişiyorsa ve mevcut fiyat doluysa, diğer alana kopyala
+    if (newCurrency !== priceCurrency) {
+      if (newCurrency === 'USD' && form.price) {
+        // TRY'den USD'ye geçiş - TRY değerini USD'ye kopyala (kullanıcı düzenleyecek)
+        setForm(prev => ({
+          ...prev,
+          priceUSD: prev.price,
+          price: undefined,
+        }));
+      } else if (newCurrency === 'TRY' && form.priceUSD) {
+        // USD'den TRY'ye geçiş - USD değerini TRY'ye kopyala
+        setForm(prev => ({
+          ...prev,
+          price: prev.priceUSD,
+          priceUSD: undefined,
+        }));
+      }
+    }
+    setPriceCurrency(newCurrency);
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!form.title || !form.category) {
@@ -229,22 +251,32 @@ export default function AdminProductsPage() {
     // Seçili para birimine göre fiyat ve bulk pricing ekle
     if (priceCurrency === 'USD') {
       // USD seçiliyse sadece USD alanlarını gönder
-      payload.priceUSD = form.priceUSD !== undefined && form.priceUSD !== null ? Number(form.priceUSD) : undefined;
+      const usdPriceStr = String(form.priceUSD || '').trim();
+      const usdPrice = usdPriceStr !== '' ? Number(usdPriceStr) : undefined;
+      payload.priceUSD = usdPrice;
       payload.bulkPricingUSD = parsedBulkPricingUSD.length > 0 ? JSON.stringify(parsedBulkPricingUSD) : undefined;
       // TRY alanlarını sıfırla/temizle
       payload.price = undefined;
       payload.bulkPricing = undefined;
+      
+      console.log('USD Mode - Raw:', form.priceUSD, 'String:', usdPriceStr, 'Final:', usdPrice);
+      console.log('USD bulk tiers:', parsedBulkPricingUSD);
     } else {
       // TRY seçiliyse sadece TRY alanlarını gönder
-      payload.price = form.price !== undefined && form.price !== null ? Number(form.price) : undefined;
+      const tryPriceStr = String(form.price || '').trim();
+      const tryPrice = tryPriceStr !== '' ? Number(tryPriceStr) : undefined;
+      payload.price = tryPrice;
       payload.bulkPricing = parsedBulkPricing.length > 0 ? JSON.stringify(parsedBulkPricing) : undefined;
       // USD alanlarını sıfırla/temizle
       payload.priceUSD = undefined;
       payload.bulkPricingUSD = undefined;
+      
+      console.log('TRY Mode - Raw:', form.price, 'String:', tryPriceStr, 'Final:', tryPrice);
+      console.log('TRY bulk tiers:', parsedBulkPricing);
     }
 
-    console.log('� Para birimi:', priceCurrency);
-    console.log('📦 Gönderilen payload:', payload);
+    console.log('Selected Currency:', priceCurrency);
+    console.log('Final Payload:', JSON.stringify(payload, null, 2));
 
     setSaving(true);
     setError(null);
@@ -683,7 +715,7 @@ export default function AdminProductsPage() {
             <div className="flex items-center gap-3 rounded-full bg-white p-1 shadow-md">
               <button
                 type="button"
-                onClick={() => setPriceCurrency('TRY')}
+                onClick={() => handleCurrencyChange('TRY')}
                 className={`rounded-full px-6 py-2.5 text-sm font-bold transition-all ${
                   priceCurrency === 'TRY'
                     ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg'
@@ -694,7 +726,7 @@ export default function AdminProductsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setPriceCurrency('USD')}
+                onClick={() => handleCurrencyChange('USD')}
                 className={`rounded-full px-6 py-2.5 text-sm font-bold transition-all ${
                   priceCurrency === 'USD'
                     ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg'
@@ -1262,5 +1294,7 @@ export default function AdminProductsPage() {
     </div>
   );
 }
+
+
 
 
