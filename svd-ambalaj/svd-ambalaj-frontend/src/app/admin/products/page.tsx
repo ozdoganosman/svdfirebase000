@@ -96,6 +96,7 @@ export default function AdminProductsPage() {
   const [isMediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [priceCurrency, setPriceCurrency] = useState<'TRY' | 'USD'>('USD'); // Para birimi seçimi
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchProducts = async () => {
@@ -129,6 +130,7 @@ export default function AdminProductsPage() {
     setForm(createEmptyForm());
     setEditingId(null);
     setShowForm(false);
+    setPriceCurrency('USD'); // Yeni ürün için USD varsayılan
   };
 
   const parsedBulkPricing = useMemo(() => {
@@ -264,6 +266,14 @@ export default function AdminProductsPage() {
 
   const handleEdit = (product: AdminProduct) => {
     setEditingId(product.id);
+    
+    // Ürünün USD fiyatı varsa USD modunda aç, yoksa TRY
+    if (product.priceUSD && product.priceUSD > 0) {
+      setPriceCurrency('USD');
+    } else {
+      setPriceCurrency('TRY');
+    }
+    
     setForm({
       title: product.title,
       slug: product.slug,
@@ -636,6 +646,48 @@ export default function AdminProductsPage() {
             {editingId ? 'Mevcut ürünü güncelleyin.' : 'Yeni bir ürün ekleyin.'}
           </p>
         </div>
+
+        {/* PARA BİRİMİ SEÇİCİ - SWITCH */}
+        <div className="rounded-xl border-2 border-amber-500 bg-gradient-to-r from-amber-50 to-orange-50 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-amber-900">💰 Fiyatlandırma Para Birimi</h3>
+              <p className="mt-1 text-sm text-amber-800">
+                Ürün fiyatlarını hangi para biriminde girmek istersiniz?
+              </p>
+            </div>
+            <div className="flex items-center gap-3 rounded-full bg-white p-1 shadow-md">
+              <button
+                type="button"
+                onClick={() => setPriceCurrency('TRY')}
+                className={`rounded-full px-6 py-2.5 text-sm font-bold transition-all ${
+                  priceCurrency === 'TRY'
+                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                ₺ TRY
+              </button>
+              <button
+                type="button"
+                onClick={() => setPriceCurrency('USD')}
+                className={`rounded-full px-6 py-2.5 text-sm font-bold transition-all ${
+                  priceCurrency === 'USD'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                $ USD
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 rounded-lg bg-amber-100 px-4 py-3 text-sm text-amber-900">
+            <strong>💡 Bilgi:</strong> {priceCurrency === 'USD' 
+              ? 'USD seçildiğinde fiyatlar dolar olarak girilir ve müşteriye güncel kurla TL olarak gösterilir.' 
+              : 'TRY seçildiğinde fiyatlar doğrudan Türk Lirası olarak girilir ve gösterilir.'}
+          </div>
+        </div>
+
         <form className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
           <div>
             <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.title}>Başlık</label>
@@ -673,39 +725,52 @@ export default function AdminProductsPage() {
               rows={3}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.price}>
-              Fiyat (TRY) <span className="text-xs text-slate-500">(opsiyonel - USD varsa otomatik hesaplanır)</span>
-            </label>
-            <input
-              id={FIELD_IDS.price}
-              name="price"
-              type="number"
-              step="0.01"
-              value={form.price ?? ""}
-              onChange={(event) => handleChange("price", event.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-amber-500"
-              placeholder="34.50"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="admin-product-price-usd">
-              Fiyat (USD) <span className="text-xs font-semibold text-amber-600">✓ Önerilen</span>
-            </label>
-            <input
-              id="admin-product-price-usd"
-              name="priceUSD"
-              type="number"
-              step="0.01"
-              value={form.priceUSD ?? ""}
-              onChange={(event) => handleChange("priceUSD", event.target.value)}
-              className="mt-1 w-full rounded-md border border-amber-500 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              placeholder="1.00"
-            />
-            <p className="mt-1 text-xs text-slate-600">
-              Dolar bazlı fiyat - Güncel kurla TL&apos;ye çevrilir
-            </p>
-          </div>
+
+          {/* FİYAT ALANI - Para birimine göre göster */}
+          {priceCurrency === 'TRY' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.price}>
+                Birim Fiyat (TRY) <span className="text-xs font-semibold text-green-600">✓ Aktif</span>
+              </label>
+              <input
+                id={FIELD_IDS.price}
+                name="price"
+                type="number"
+                step="0.01"
+                value={form.price ?? ""}
+                onChange={(event) => handleChange("price", event.target.value)}
+                className="mt-1 w-full rounded-md border border-green-500 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="34.50"
+                required
+              />
+              <p className="mt-1 text-xs text-slate-600">
+                Türk Lirası ile fiyat girişi - Müşteriye TL olarak gösterilir
+              </p>
+            </div>
+          )}
+
+          {priceCurrency === 'USD' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700" htmlFor="admin-product-price-usd">
+                Birim Fiyat (USD) <span className="text-xs font-semibold text-amber-600">✓ Aktif</span>
+              </label>
+              <input
+                id="admin-product-price-usd"
+                name="priceUSD"
+                type="number"
+                step="0.01"
+                value={form.priceUSD ?? ""}
+                onChange={(event) => handleChange("priceUSD", event.target.value)}
+                className="mt-1 w-full rounded-md border border-amber-500 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                placeholder="1.00"
+                required
+              />
+              <p className="mt-1 text-xs text-slate-600">
+                Dolar bazlı fiyat - Güncel kurla TL&apos;ye çevrilip müşteriye gösterilir
+              </p>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.stock}>Stok</label>
             <input
@@ -956,10 +1021,21 @@ export default function AdminProductsPage() {
               </div>
             )}
           </div>
+
+          {/* TOPLU FİYATLANDIRMA - Para birimine göre göster */}
+          {priceCurrency === 'TRY' && (
           <div className="md:col-span-2">
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium text-slate-700">Toplu Fiyatlandırma (Koli Bazlı)</label>
-              <div className="flex flex-wrap gap-2 text-xs">
+            <div className="rounded-xl border-2 border-green-200 bg-green-50 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="block text-sm font-semibold text-green-900">
+                    💵 Toplu Fiyatlandırma TRY (Koli Bazlı)
+                  </label>
+                  <p className="mt-1 text-xs text-green-800">
+                    💡 Fiyatlar <strong>KOLİ ADEDİNE</strong> göredir. TL bazlı kademeli fiyatlandırma.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs">
                 <button
                   type="button"
                   onClick={() => presetBulkPricing([
@@ -1056,9 +1132,12 @@ export default function AdminProductsPage() {
                 )}
               </div>
             </div>
+            </div>
           </div>
+          )}
 
-          {/* TOPLU FİYATLANDIRMA USD (ÖNERİLEN) */}
+          {/* TOPLU FİYATLANDIRMA USD */}
+          {priceCurrency === 'USD' && (
           <div className="md:col-span-2">
             <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-6">
               <div className="flex items-center justify-between">
@@ -1132,6 +1211,7 @@ export default function AdminProductsPage() {
               </div>
             </div>
           </div>
+          )}
 
           <div className="md:col-span-2 flex items-center gap-3">
             <button
