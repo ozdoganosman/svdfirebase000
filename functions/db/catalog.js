@@ -233,12 +233,8 @@ const updateProduct = async (id, payload) => {
     title: payload.title !== undefined ? payload.title : existing.title,
     slug: payload.title ? slugify(payload.title, { lower: true, strict: true }) : existing.slug,
     description: payload.description !== undefined ? payload.description : existing.description,
-    price: payload.price !== undefined ? Number(payload.price) : existing.price,
-    priceUSD: payload.priceUSD !== undefined ? Number(payload.priceUSD) : existing.priceUSD,
     category: payload.category !== undefined ? payload.category : existing.category,
     stock: payload.stock !== undefined ? Number(payload.stock) : existing.stock,
-    bulkPricing: payload.bulkPricing !== undefined ? normalizeBulkPricing(payload.bulkPricing) : existing.bulkPricing,
-    bulkPricingUSD: payload.bulkPricingUSD !== undefined ? normalizeBulkPricing(payload.bulkPricingUSD) : existing.bulkPricingUSD,
     images: payload.images !== undefined ? normalizeImages(payload.images) : existing.images,
     packageInfo: payload.packageInfo !== undefined ? {
       itemsPerBox: Number(payload.packageInfo?.itemsPerBox ?? existing.packageInfo?.itemsPerBox ?? 1),
@@ -248,6 +244,21 @@ const updateProduct = async (id, payload) => {
     specifications: payload.specifications !== undefined ? payload.specifications : existing.specifications,
     updatedAt: FieldValue.serverTimestamp(),
   };
+
+  // Para birimi alanlarını özel olarak işle
+  // payload'da açıkça belirtildiyse kullan, undefined ise sil
+  if ("price" in payload) {
+    updatedData.price = payload.price !== undefined ? Number(payload.price) : FieldValue.delete();
+  }
+  if ("priceUSD" in payload) {
+    updatedData.priceUSD = payload.priceUSD !== undefined ? Number(payload.priceUSD) : FieldValue.delete();
+  }
+  if ("bulkPricing" in payload) {
+    updatedData.bulkPricing = payload.bulkPricing !== undefined ? normalizeBulkPricing(payload.bulkPricing) : FieldValue.delete();
+  }
+  if ("bulkPricingUSD" in payload) {
+    updatedData.bulkPricingUSD = payload.bulkPricingUSD !== undefined ? normalizeBulkPricing(payload.bulkPricingUSD) : FieldValue.delete();
+  }
 
   await productsCollection.doc(id).update(updatedData);
   const doc = await productsCollection.doc(id).get();
