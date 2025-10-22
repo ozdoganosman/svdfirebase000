@@ -41,13 +41,6 @@ type Category = {
   slug: string;
 };
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("tr-TR", {
-    style: "currency",
-    currency: "TRY",
-    minimumFractionDigits: 2,
-  }).format(value);
-
 async function getProduct(slug: string): Promise<Product | undefined> {
   try {
     const response = await fetch(
@@ -152,10 +145,10 @@ export default async function ProductDetailPage({
 
   // Compute TRY prices from USD for cart interactions
   const rate = exchangeRate?.rate ?? 0;
-  const tryUnitPrice = product.priceUSD && rate > 0 ? product.priceUSD * rate : product.price;
+  const tryUnitPrice = product.priceUSD && rate > 0 ? product.priceUSD * rate : 0;
   const tryBulkPricing = (product.priceUSD && product.bulkPricingUSD && rate > 0)
     ? product.bulkPricingUSD.map((tier) => ({ minQty: tier.minQty, price: tier.price * rate }))
-    : product.bulkPricing;
+    : undefined;
 
   const galleryImages = product.images && product.images.length > 0
     ? product.images
@@ -243,26 +236,24 @@ export default async function ProductDetailPage({
                       <tbody className="divide-y divide-slate-100">
                         <tr className="hover:bg-amber-50">
                           <td className="py-3 font-medium text-amber-900">
-                            1-{(product.bulkPricingUSD || product.bulkPricing) && (product.bulkPricingUSD || product.bulkPricing)![0] ? (product.bulkPricingUSD || product.bulkPricing)![0].minQty - 1 : '∞'} koli
+                            1-{(product.bulkPricingUSD && product.bulkPricingUSD[0]) ? (product.bulkPricingUSD[0].minQty - 1) : '∞'} koli
                           </td>
                           <td className="py-3 text-slate-600">
-                            {product.packageInfo.itemsPerBox}-{(product.bulkPricingUSD || product.bulkPricing) && (product.bulkPricingUSD || product.bulkPricing)![0] ? ((product.bulkPricingUSD || product.bulkPricing)![0].minQty - 1) * product.packageInfo.itemsPerBox : '∞'} adet
+                            {product.packageInfo.itemsPerBox}-{(product.bulkPricingUSD && product.bulkPricingUSD[0]) ? ((product.bulkPricingUSD[0].minQty - 1) * product.packageInfo.itemsPerBox) : '∞'} adet
                           </td>
                           <td className="py-3 font-semibold text-slate-900">
                             {product.priceUSD && exchangeRate
                               ? formatDualPrice(product.priceUSD, exchangeRate.rate, true)
-                              : formatCurrency(product.price)
-                            }
+                              : 'Fiyat için iletişime geçin'}
                           </td>
                           <td className="py-3 text-right font-bold text-amber-600">
                             {product.priceUSD && exchangeRate
                               ? formatDualPrice(product.priceUSD * product.packageInfo.itemsPerBox, exchangeRate.rate, true)
-                              : formatCurrency(product.price * product.packageInfo.itemsPerBox)
-                            }
+                              : '—'}
                           </td>
                         </tr>
-                        {(product.bulkPricingUSD || product.bulkPricing)?.map((tier, index) => {
-                          const bulkList = product.bulkPricingUSD || product.bulkPricing;
+                        {(product.bulkPricingUSD ?? [])?.map((tier, index) => {
+                          const bulkList = product.bulkPricingUSD;
                           const nextTier = bulkList?.[index + 1];
                           const maxQty = nextTier ? nextTier.minQty - 1 : null;
                           const totalItems = tier.minQty * product.packageInfo!.itemsPerBox;
@@ -283,14 +274,12 @@ export default async function ProductDetailPage({
                               <td className="py-3 font-semibold text-slate-900">
                                 {product.bulkPricingUSD && exchangeRate
                                   ? formatDualPrice(tier.price, exchangeRate.rate, true)
-                                  : formatCurrency(tier.price)
-                                }
+                                  : '—'}
                               </td>
                               <td className="py-3 text-right font-bold text-amber-600">
                                 {product.bulkPricingUSD && exchangeRate
                                   ? formatDualPrice(tier.price * product.packageInfo!.itemsPerBox, exchangeRate.rate, true)
-                                  : formatCurrency(tier.price * product.packageInfo!.itemsPerBox)
-                                }
+                                  : '—'}
                               </td>
                             </tr>
                           );
@@ -305,18 +294,16 @@ export default async function ProductDetailPage({
                       <span className="font-semibold">
                         {product.priceUSD && exchangeRate
                           ? formatDualPrice(product.priceUSD, exchangeRate.rate, true)
-                          : formatCurrency(product.price)
-                        }
+                          : 'Fiyat için iletişime geçin'}
                       </span>
                     </li>
-                    {(product.bulkPricingUSD || product.bulkPricing)?.map((tier) => (
+                    {(product.bulkPricingUSD ?? []).map((tier) => (
                       <li key={`${product.id}-tier-${tier.minQty}`} className="flex items-center justify-between">
                         <span>{tier.minQty}+ adet</span>
                         <span className="font-semibold">
                           {product.bulkPricingUSD && exchangeRate
                             ? formatDualPrice(tier.price, exchangeRate.rate, true)
-                            : formatCurrency(tier.price)
-                          }
+                            : '—'}
                         </span>
                       </li>
                     ))}
@@ -382,8 +369,7 @@ export default async function ProductDetailPage({
               <p className="text-4xl font-bold text-amber-600">
                 {product.priceUSD && exchangeRate
                   ? formatDualPrice(product.priceUSD, exchangeRate.rate, true)
-                  : formatCurrency(product.price)
-                }
+                  : 'Fiyat için iletişime geçin'}
               </p>
               {product.packageInfo ? (
                 <div className="mt-2 space-y-1">
@@ -391,24 +377,22 @@ export default async function ProductDetailPage({
                     1 {product.packageInfo.boxLabel} = {
                       product.priceUSD && exchangeRate
                         ? formatDualPrice(product.priceUSD * product.packageInfo.itemsPerBox, exchangeRate.rate, true)
-                        : formatCurrency(product.price * product.packageInfo.itemsPerBox)
+                        : '—'
                     }
                   </p>
                   <p className="text-xs text-slate-500">
                     ({product.packageInfo.itemsPerBox} adet × {
                       product.priceUSD && exchangeRate
                         ? formatDualPrice(product.priceUSD, exchangeRate.rate, true)
-                        : formatCurrency(product.price)
+                        : '—'
                     })
                   </p>
-                  {(product.bulkPricingUSD || product.bulkPricing) && (product.bulkPricingUSD?.length || product.bulkPricing?.length || 0) > 0 && (
+                  {(product.bulkPricingUSD) && (product.bulkPricingUSD?.length || 0) > 0 && (
                     <p className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-xs font-semibold text-green-700">
-                      🎉 {(product.bulkPricingUSD || product.bulkPricing)![(product.bulkPricingUSD || product.bulkPricing)!.length - 1].minQty}+ koli alımında{' '}
-                      {
-                        product.bulkPricingUSD && exchangeRate
-                          ? formatDualPrice((product.bulkPricingUSD)[product.bulkPricingUSD.length - 1].price, exchangeRate.rate, true)
-                          : formatCurrency(product.bulkPricing![product.bulkPricing!.length - 1].price)
-                      } birim fiyat!
+                      🎉 {product.bulkPricingUSD![product.bulkPricingUSD!.length - 1].minQty}+ koli alımında{' '}
+                      {product.bulkPricingUSD && exchangeRate
+                        ? formatDualPrice((product.bulkPricingUSD)[product.bulkPricingUSD.length - 1].price, exchangeRate.rate, true)
+                        : '—'} birim fiyat!
                     </p>
                   )}
                 </div>

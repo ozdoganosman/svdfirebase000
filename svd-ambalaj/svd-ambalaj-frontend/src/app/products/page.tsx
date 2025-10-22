@@ -185,21 +185,21 @@ export default async function ProductsPage() {
                       {product.packageInfo ? "Birim fiyat" : "Başlangıç fiyatı"}
                     </span>
                     <p className="text-2xl font-bold text-amber-600">
-                      {formatDualPrice(product.priceUSD, rate, true, 1, product.price)} <span className="text-sm font-normal text-slate-500">+KDV</span>
+                      {product.priceUSD && rate > 0 ? formatDualPrice(product.priceUSD, rate, true) : 'Fiyat için iletişime geçin'} <span className="text-sm font-normal text-slate-500">+KDV</span>
                     </p>
                     {product.packageInfo && (
                       <p className="text-sm text-slate-600">
-                        1 {product.packageInfo.boxLabel.toLowerCase()} = {formatDualPrice(product.priceUSD, rate, false, product.packageInfo.itemsPerBox, product.price ? product.price * product.packageInfo.itemsPerBox : undefined)} <span className="text-xs text-slate-500">+KDV</span>
+                        1 {product.packageInfo.boxLabel.toLowerCase()} = {product.priceUSD && rate > 0 ? formatDualPrice(product.priceUSD, rate, false, product.packageInfo.itemsPerBox) : '—'} <span className="text-xs text-slate-500">+KDV</span>
                       </p>
                     )}
                   </div>
-                  {((product.priceUSD && product.bulkPricingUSD && product.bulkPricingUSD.length > 0) || (product.bulkPricing && product.bulkPricing.length > 0)) && (
+                  {(product.priceUSD && product.bulkPricingUSD && product.bulkPricingUSD.length > 0) && (
                     <div className="rounded-xl bg-amber-50 p-4">
                       <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
                         Toplu Alım Avantajı
                       </p>
                       <ul className="mt-3 space-y-2 text-sm text-amber-800">
-                        {(product.priceUSD ? product.bulkPricingUSD : product.bulkPricing)?.slice(0, 3).map((tier) => {
+                        {product.bulkPricingUSD?.slice(0, 3).map((tier) => {
                           const itemsPerBox = product.packageInfo?.itemsPerBox || 1;
                           const totalItems = tier.minQty * itemsPerBox;
                           return (
@@ -210,7 +210,7 @@ export default async function ProductsPage() {
                                   <span className="text-xs text-slate-600"> ({totalItems.toLocaleString('tr-TR')}+ adet)</span>
                                 )}
                               </span>
-                              <span className="font-semibold">{formatDualPrice(product.priceUSD ? tier.price : undefined, rate, true, 1, !product.priceUSD ? tier.price : undefined)} <span className="text-xs font-normal">+KDV</span></span>
+                              <span className="font-semibold">{formatDualPrice(tier.price, rate, true)} <span className="text-xs font-normal">+KDV</span></span>
                             </li>
                           );
                         })}
@@ -224,11 +224,11 @@ export default async function ProductsPage() {
                       id: product.id,
                       title: product.title,
                       slug: product.slug,
-                      price: product.priceUSD ? (product.priceUSD * rate) : (product.price ?? 0),
+                      price: product.priceUSD && rate > 0 ? (product.priceUSD * rate) : 0,
                       stock: product.stock,
                       bulkPricing: product.priceUSD && product.bulkPricingUSD
                         ? product.bulkPricingUSD.map(tier => ({ minQty: tier.minQty, price: tier.price * rate }))
-                        : product.bulkPricing,
+                        : undefined,
                       packageInfo: product.packageInfo,
                       specifications: product.specifications,
                     }}

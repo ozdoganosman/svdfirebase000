@@ -97,8 +97,6 @@ export default function AdminProductsPage() {
   const [isMediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  // USD-only mode: keep a cached exchange rate for display/conversion fallback
-  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchProducts = async () => {
@@ -126,18 +124,6 @@ export default function AdminProductsPage() {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
-    // Fetch current exchange rate for USD (for list fallback display)
-    (async () => {
-      try {
-        const data = await apiFetch<{ exchangeRate: { rate: number } }>("/exchange-rate");
-        const rate = Number(data?.exchangeRate?.rate);
-        if (Number.isFinite(rate) && rate > 0) {
-          setExchangeRate(rate);
-        }
-      } catch (err) {
-        console.warn("Failed to fetch exchange rate", err);
-      }
-    })();
   }, []);
 
   const resetForm = () => {
@@ -542,16 +528,6 @@ export default function AdminProductsPage() {
                           if (Number.isFinite(usd) && usd > 0) {
                             return (
                               <span className="text-amber-700 font-semibold">${usd.toFixed(2)} USD</span>
-                            );
-                          }
-                          const tryPrice = Number(product.price);
-                          const fx = Number(exchangeRate);
-                          if (Number.isFinite(tryPrice) && tryPrice > 0 && Number.isFinite(fx) && fx > 0) {
-                            const derivedUsd = tryPrice / fx;
-                            return (
-                              <span className="text-slate-700" title="TRY'den kura göre hesaplandı">
-                                ≈ ${derivedUsd.toFixed(2)} USD
-                              </span>
                             );
                           }
                           return <span className="text-slate-400">Fiyat girilmemiş</span>;

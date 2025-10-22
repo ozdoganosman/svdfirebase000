@@ -34,12 +34,7 @@ type Product = {
   };
 };
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("tr-TR", {
-    style: "currency",
-    currency: "TRY",
-    minimumFractionDigits: 2,
-  }).format(value);
+// TRY formatting removed in USD-only flow
 
 async function getCategory(slug: string): Promise<Category | undefined> {
   try {
@@ -199,17 +194,16 @@ export default async function CategoryDetailPage({
                   <p className="text-2xl font-bold text-amber-600">
                     {product.priceUSD && exchangeRate
                       ? formatDualPrice(product.priceUSD, exchangeRate.rate, true)
-                      : formatCurrency(product.price)
-                    }
+                      : 'Fiyat için iletişime geçin'}
                   </p>
                 </div>
-                {(product.bulkPricingUSD || product.bulkPricing) && (product.bulkPricingUSD?.length || product.bulkPricing?.length || 0) > 0 && (
+                {(product.bulkPricingUSD) && (product.bulkPricingUSD?.length || 0) > 0 && (
                   <div className="rounded-xl bg-amber-50 p-4">
                     <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
                       Toplu alım avantajı
                     </p>
                     <ul className="mt-3 space-y-2 text-sm text-amber-800">
-                      {(product.bulkPricingUSD || product.bulkPricing)?.map((tier) => {
+                      {product.bulkPricingUSD?.map((tier) => {
                         const itemsPerBox = product.packageInfo?.itemsPerBox || 1;
                         const totalItems = tier.minQty * itemsPerBox;
                         return (
@@ -223,9 +217,7 @@ export default async function CategoryDetailPage({
                             <span className="font-semibold">
                               {product.bulkPricingUSD && exchangeRate
                                 ? formatDualPrice(tier.price, exchangeRate.rate, true)
-                                : // TRY tier: still show USD in parens by providing tryAmount
-                                  formatDualPrice(undefined, exchangeRate?.rate ?? 0, true, 1, tier.price)
-                              }
+                                : '—'}
                             </span>
                           </li>
                         );
@@ -240,10 +232,10 @@ export default async function CategoryDetailPage({
                     id: product.id,
                     title: product.title,
                     slug: product.slug,
-                    price: product.priceUSD && exchangeRate ? (product.priceUSD * exchangeRate.rate) : (product.price ?? 0),
+                    price: product.priceUSD && exchangeRate ? (product.priceUSD * exchangeRate.rate) : 0,
                     bulkPricing: product.priceUSD && product.bulkPricingUSD && exchangeRate
                       ? product.bulkPricingUSD.map(tier => ({ minQty: tier.minQty, price: tier.price * exchangeRate.rate }))
-                      : product.bulkPricing,
+                      : undefined,
                     packageInfo: product.packageInfo,
                   }}
                 />

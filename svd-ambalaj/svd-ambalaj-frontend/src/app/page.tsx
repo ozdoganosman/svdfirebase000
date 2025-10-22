@@ -51,13 +51,6 @@ type Category = {
   image?: string;
 };
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('tr-TR', {
-    style: 'currency',
-    currency: 'TRY',
-    minimumFractionDigits: 2,
-  }).format(value);
-
 async function getProducts(apiBase: string): Promise<Product[]> {
   try {
     const response = await fetch(`${apiBase}/products`, {
@@ -704,22 +697,21 @@ export default async function Home() {
                       <p className="text-2xl font-bold text-amber-600">
                         {product.priceUSD && exchangeRate
                           ? formatDualPrice(product.priceUSD, exchangeRate.rate, true)
-                          : formatCurrency(product.price)
-                        } <span className="text-sm font-normal text-slate-500">+KDV</span>
+                          : 'Fiyat için iletişime geçin'} <span className="text-sm font-normal text-slate-500">+KDV</span>
                       </p>
                     </div>
-                    {(product.bulkPricingUSD || product.bulkPricing) && (product.bulkPricingUSD?.length || product.bulkPricing?.length || 0) > 0 && (
+                    {(product.bulkPricingUSD) && (product.bulkPricingUSD?.length || 0) > 0 && (
                       <div className="rounded-xl bg-amber-50 p-4" id="pricing">
                         <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
                           Toplu Alım Avantajı
                         </p>
                         <ul className="mt-3 space-y-2 text-sm text-amber-800">
-                          {(product.bulkPricingUSD || product.bulkPricing)?.map((tier) => {
+                          {product.bulkPricingUSD?.map((tier) => {
                             const itemsPerBox = product.packageInfo?.itemsPerBox || 1;
                             const totalItems = tier.minQty * itemsPerBox;
                             const priceDisplay = product.bulkPricingUSD && exchangeRate
                               ? formatDualPrice(tier.price, exchangeRate.rate, true)
-                              : formatCurrency(tier.price);
+                              : '—';
                             return (
                               <li key={`${product.id}-tier-${tier.minQty}`} className="flex items-center justify-between">
                                 <span>
@@ -742,9 +734,11 @@ export default async function Home() {
                         id: product.id,
                         title: product.title,
                         slug: product.slug,
-                        price: product.price,
+                        price: product.priceUSD && exchangeRate ? product.priceUSD * exchangeRate.rate : 0,
                         stock: product.stock,
-                        bulkPricing: product.bulkPricing,
+                        bulkPricing: product.priceUSD && product.bulkPricingUSD && exchangeRate
+                          ? product.bulkPricingUSD.map(tier => ({ minQty: tier.minQty, price: tier.price * exchangeRate.rate }))
+                          : undefined,
                         packageInfo: product.packageInfo,
                       }}
                     />
