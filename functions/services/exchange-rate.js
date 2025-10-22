@@ -38,16 +38,15 @@ async function fetchTCMBRate() {
 
     // Get effective selling rate (ForexSelling)
     const rate = parseFloat(usdData.ForexSelling[0]);
-    const date = result.Tarih_Date.$.Date;
+    const tcmbDate = result.Tarih_Date.$.Tarih; // DD.MM.YYYY format
 
-    console.log("[Exchange Rate] Successfully fetched from TCMB:", { rate, date });
+    console.log("[Exchange Rate] Successfully fetched from TCMB:", { rate, date: tcmbDate });
 
     return {
       currency: "USD",
       rate: rate,
-      date: date,
+      effectiveDate: formatDateToISO(tcmbDate),
       source: "TCMB",
-      effectiveDate: formatDateToISO(date),
     };
   } catch (error) {
     console.error("[Exchange Rate] TCMB fetch error:", error.message);
@@ -78,9 +77,8 @@ async function fetchFallbackRate() {
     return {
       currency: "USD",
       rate: rate,
-      date: today,
-      source: "doviz.com",
       effectiveDate: today,
+      source: "doviz.com",
     };
   } catch (error) {
     throw new Error("Fallback API failed: " + error.message);
