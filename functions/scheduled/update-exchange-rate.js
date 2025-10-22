@@ -5,7 +5,7 @@
 
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { fetchTCMBRate } from "../services/exchange-rate.js";
-import { saveExchangeRate, needsUpdate } from "../db/exchange-rates.js";
+import { saveExchangeRate, needsUpdate, getCurrentRate } from "../db/exchange-rates.js";
 
 /**
  * Scheduled function to update exchange rate
@@ -29,8 +29,28 @@ export const updateExchangeRate = onSchedule(
         return { success: true, message: "Rate is up to date" };
       }
 
-      // Fetch latest rate from TCMB
-      const rateData = await fetchTCMBRate();
+      // Try to fetch latest rate from TCMB
+      let rateData;
+      try {
+        rateData = await fetchTCMBRate();
+        console.log("[Scheduled Job] Fetched new rate from TCMB:", rateData.rate);
+      } catch (fetchError) {
+        console.warn("[Scheduled Job] Could not fetch from TCMB:", fetchError.message);
+        console.log("[Scheduled Job] Will continue using last saved rate");
+        
+        // Get the last saved rate
+        const lastRate = await getCurrentRate("USD");
+        if (lastRate) {
+          console.log("[Scheduled Job] Using last saved rate:", lastRate.rate);
+          return {
+            success: true,
+            message: "TCMB unavailable, using last saved rate",
+            data: lastRate,
+          };
+        } else {
+          throw new Error("No rate available - first run failed");
+        }
+      }
 
       // Save to Firestore
       const result = await saveExchangeRate(rateData);

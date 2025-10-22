@@ -12,36 +12,17 @@ import xml2js from "xml2js";
  */
 async function fetchTCMBRate() {
   try {
-    const today = new Date();
-    const dateStr = formatDateForTCMB(today);
+    // Use today.xml endpoint - always has the latest available rate
+    const url = "https://www.tcmb.gov.tr/kurlar/today.xml";
 
-    // Try today's rate first
-    let url = `https://www.tcmb.gov.tr/kurlar/${dateStr.yearMonth}/${dateStr.full}.xml`;
+    console.log("[Exchange Rate] Fetching from TCMB today.xml");
 
-    console.log("[Exchange Rate] Fetching from TCMB:", url);
-
-    let response;
-    try {
-      response = await axios.get(url, {
-        timeout: 10000,
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        },
-      });
-    } catch {
-      // If today's rate not available, try yesterday
-      console.log("[Exchange Rate] Today's rate not available, trying yesterday...");
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = formatDateForTCMB(yesterday);
-      url = `https://www.tcmb.gov.tr/kurlar/${yesterdayStr.yearMonth}/${yesterdayStr.full}.xml`;
-      response = await axios.get(url, {
-        timeout: 10000,
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        },
-      });
-    }
+    const response = await axios.get(url, {
+      timeout: 10000,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+    });
 
     // Parse XML
     const parser = new xml2js.Parser();
@@ -59,7 +40,7 @@ async function fetchTCMBRate() {
     const rate = parseFloat(usdData.ForexSelling[0]);
     const date = result.Tarih_Date.$.Date;
 
-    console.log("[Exchange Rate] Successfully fetched:", { rate, date });
+    console.log("[Exchange Rate] Successfully fetched from TCMB:", { rate, date });
 
     return {
       currency: "USD",
@@ -70,15 +51,7 @@ async function fetchTCMBRate() {
     };
   } catch (error) {
     console.error("[Exchange Rate] TCMB fetch error:", error.message);
-
-    // Fallback to alternative API
-    try {
-      console.log("[Exchange Rate] Trying fallback API...");
-      return await fetchFallbackRate();
-    } catch (fallbackError) {
-      console.error("[Exchange Rate] Fallback API also failed:", fallbackError.message);
-      throw new Error("Could not fetch exchange rate from any source");
-    }
+    throw error; // Let the caller handle fallback to last saved rate
   }
 }
 
@@ -112,22 +85,6 @@ async function fetchFallbackRate() {
   } catch (error) {
     throw new Error("Fallback API failed: " + error.message);
   }
-}
-
-/**
- * Format date for TCMB URL
- * @param {Date} date
- * @returns {{full: string, yearMonth: string}}
- */
-function formatDateForTCMB(date) {
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-
-  return {
-    full: `${day}${month}${year}`,
-    yearMonth: `${year}${month}`,
-  };
 }
 
 /**
