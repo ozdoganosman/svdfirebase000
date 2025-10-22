@@ -9,7 +9,9 @@ type ProductPayload = {
   slug?: string;
   description?: string;
   price?: number;
+  priceUSD?: number;
   bulkPricing?: ProductBulkRow[];
+  bulkPricingUSD?: ProductBulkRow[];
   category?: string;
   images?: string;
   stock?: number;
