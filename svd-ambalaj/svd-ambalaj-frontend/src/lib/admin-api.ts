@@ -231,7 +231,9 @@ export type AdminProduct = {
   slug: string;
   description?: string;
   price: number;
+  priceUSD?: number;
   bulkPricing: AdminBulkPricingTier[];
+  bulkPricingUSD?: AdminBulkPricingTier[];
   category: string;
   images: string[];
   stock: number;

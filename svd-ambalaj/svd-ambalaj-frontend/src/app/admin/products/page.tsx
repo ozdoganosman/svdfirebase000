@@ -147,6 +147,22 @@ export default function AdminProductsPage() {
       );
   }, [form.bulkPricing]);
 
+  const parsedBulkPricingUSD = useMemo(() => {
+    const rows = form.bulkPricingUSD ?? [];
+    return rows
+      .map((row) => ({
+        minQty: Number(row.minQty),
+        price: Number(row.price),
+      }))
+      .filter(
+        (row) =>
+          Number.isFinite(row.minQty) &&
+          Number.isFinite(row.price) &&
+          row.minQty > 0 &&
+          row.price > 0
+      );
+  }, [form.bulkPricingUSD]);
+
   const hasBulkPricingError = useMemo(() => {
     const rows = form.bulkPricing ?? [];
     if (rows.length === 0) {
@@ -192,7 +208,9 @@ export default function AdminProductsPage() {
       slug: form.slug?.trim() || undefined,
       description: form.description || "",
       price: form.price !== undefined && form.price !== null ? Number(form.price) : undefined,
+      priceUSD: form.priceUSD !== undefined && form.priceUSD !== null ? Number(form.priceUSD) : undefined,
       bulkPricing: parsedBulkPricing.length > 0 ? JSON.stringify(parsedBulkPricing) : undefined,
+      bulkPricingUSD: parsedBulkPricingUSD.length > 0 ? JSON.stringify(parsedBulkPricingUSD) : undefined,
       category: form.category,
       images: form.images,
       stock: form.stock !== undefined && form.stock !== null ? Number(form.stock) : undefined,
@@ -251,7 +269,13 @@ export default function AdminProductsPage() {
       slug: product.slug,
       description: product.description,
       price: product.price,
+      priceUSD: product.priceUSD,
       bulkPricing: (product.bulkPricing ?? []).map((tier) => ({
+        id: randomId(),
+        minQty: String(tier.minQty ?? ""),
+        price: String(tier.price ?? ""),
+      })),
+      bulkPricingUSD: (product.bulkPricingUSD ?? []).map((tier) => ({
         id: randomId(),
         minQty: String(tier.minQty ?? ""),
         price: String(tier.price ?? ""),
