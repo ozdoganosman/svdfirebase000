@@ -644,7 +644,7 @@ export default function AdminProductsPage() {
               placeholder="1.00"
             />
             <p className="mt-1 text-xs text-slate-600">
-              Dolar bazlı fiyat - Güncel kurla TL'ye çevrilir
+              Dolar bazlı fiyat - Güncel kurla TL&apos;ye çevrilir
             </p>
           </div>
           <div>
