@@ -2,7 +2,7 @@
  * Exchange Rates Database Operations
  */
 
-import admin from "../client.js";
+import admin from "./client.js";
 const db = admin.firestore();
 
 /**
