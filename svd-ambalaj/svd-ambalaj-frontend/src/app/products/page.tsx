@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AddToCartButton } from "@/components/add-to-cart-button";
-import { resolveServerApiUrl } from "@/lib/server-api";
+import { resolveServerApiUrl, resolveServerApiBase } from "@/lib/server-api";
+import { formatDualPrice, type ExchangeRate } from "@/lib/currency";
 
 export const metadata: Metadata = {
   title: "Tüm Ürünler | SVD Ambalaj",
@@ -20,8 +21,10 @@ type Product = {
   title: string;
   slug: string;
   description: string;
-  price: number;
+  price?: number;
+  priceUSD?: number;
   bulkPricing?: BulkTier[];
+  bulkPricingUSD?: BulkTier[];
   images?: string[];
   image?: string;
   category?: string;
@@ -46,6 +49,23 @@ const formatCurrency = (value: number) =>
     minimumFractionDigits: 2,
   }).format(value);
 
+async function getExchangeRate(): Promise<ExchangeRate | null> {
+  try {
+    const apiBase = resolveServerApiBase();
+    const response = await fetch(`${apiBase}/exchange-rate`, {
+      next: { revalidate: 300 },
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const data = await response.json();
+    return data?.exchangeRate ?? null;
+  } catch (error) {
+    console.error("Exchange rate fetch error", error);
+    return null;
+  }
+}
+
 async function getProducts(): Promise<Product[]> {
   try {
     const response = await fetch(resolveServerApiUrl("/products"), {
@@ -64,6 +84,8 @@ async function getProducts(): Promise<Product[]> {
 
 export default async function ProductsPage() {
   const products = await getProducts();
+  const exchangeRate = await getExchangeRate();
+  const rate = exchangeRate?.rate ?? 0;
 
   const resolveProductImage = (product: Product): string => {
     const imagePath = product.images?.[0] ?? product.image;
@@ -165,21 +187,21 @@ export default async function ProductsPage() {
                       {product.packageInfo ? "Birim fiyat" : "Başlangıç fiyatı"}
                     </span>
                     <p className="text-2xl font-bold text-amber-600">
-                      {formatCurrency(product.price)} <span className="text-sm font-normal text-slate-500">+KDV</span>
+                      {formatDualPrice(product.priceUSD, rate, false, 1, product.price)} <span className="text-sm font-normal text-slate-500">+KDV</span>
                     </p>
                     {product.packageInfo && (
                       <p className="text-sm text-slate-600">
-                        1 {product.packageInfo.boxLabel.toLowerCase()} = {formatCurrency(product.price * product.packageInfo.itemsPerBox)} <span className="text-xs text-slate-500">+KDV</span>
+                        1 {product.packageInfo.boxLabel.toLowerCase()} = {formatDualPrice(product.priceUSD, rate, false, product.packageInfo.itemsPerBox, product.price ? product.price * product.packageInfo.itemsPerBox : undefined)} <span className="text-xs text-slate-500">+KDV</span>
                       </p>
                     )}
                   </div>
-                  {product.bulkPricing && product.bulkPricing.length > 0 && (
+                  {((product.priceUSD && product.bulkPricingUSD && product.bulkPricingUSD.length > 0) || (product.bulkPricing && product.bulkPricing.length > 0)) && (
                     <div className="rounded-xl bg-amber-50 p-4">
                       <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
                         Toplu Alım Avantajı
                       </p>
                       <ul className="mt-3 space-y-2 text-sm text-amber-800">
-                        {product.bulkPricing.slice(0, 3).map((tier) => {
+                        {(product.priceUSD ? product.bulkPricingUSD : product.bulkPricing)?.slice(0, 3).map((tier) => {
                           const itemsPerBox = product.packageInfo?.itemsPerBox || 1;
                           const totalItems = tier.minQty * itemsPerBox;
                           return (
@@ -190,7 +212,7 @@ export default async function ProductsPage() {
                                   <span className="text-xs text-slate-600"> ({totalItems.toLocaleString('tr-TR')}+ adet)</span>
                                 )}
                               </span>
-                              <span className="font-semibold">{formatCurrency(tier.price)} <span className="text-xs font-normal">+KDV</span></span>
+                              <span className="font-semibold">{formatDualPrice(product.priceUSD ? tier.price : undefined, rate, false, 1, !product.priceUSD ? tier.price : undefined)} <span className="text-xs font-normal">+KDV</span></span>
                             </li>
                           );
                         })}
@@ -204,7 +226,7 @@ export default async function ProductsPage() {
                       id: product.id,
                       title: product.title,
                       slug: product.slug,
-                      price: product.price,
+                      price: product.priceUSD ? (product.priceUSD * rate) : (product.price ?? 0),
                       stock: product.stock,
                       bulkPricing: product.bulkPricing,
                       packageInfo: product.packageInfo,

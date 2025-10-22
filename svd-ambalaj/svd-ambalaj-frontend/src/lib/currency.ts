@@ -92,18 +92,32 @@ export function formatCurrency(
 
 /**
  * Format price with dual currency display
- * Example: "₺5,00 ($0.15)"
+ * If usdAmount is provided, convert to TRY and optionally show both
+ * If tryAmount is provided, use it directly
+ * Example: "₺5,00 ($0.15)" or just "₺5,00"
  */
 export function formatDualPrice(
-  usdAmount: number,
+  usdAmount: number | undefined,
   rate: number,
-  showUSD = true
+  showUSD = true,
+  multiplier = 1,
+  tryAmount?: number
 ): string {
-  const tryAmount = convertUSDToTRY(usdAmount, rate);
-  const tryFormatted = formatCurrency(tryAmount, "TRY");
+  // If TRY amount is provided directly, use it
+  if (tryAmount !== undefined && tryAmount !== null) {
+    return formatCurrency(tryAmount * multiplier, "TRY");
+  }
+
+  // If no USD amount, return zero formatted as TRY
+  if (usdAmount === undefined || usdAmount === null) {
+    return formatCurrency(0, "TRY");
+  }
+
+  const converted = convertUSDToTRY(usdAmount * multiplier, rate);
+  const tryFormatted = formatCurrency(converted, "TRY");
 
   if (showUSD) {
-    const usdFormatted = formatCurrency(usdAmount, "USD");
+    const usdFormatted = formatCurrency(usdAmount * multiplier, "USD");
     return `${tryFormatted} (${usdFormatted})`;
   }
 
