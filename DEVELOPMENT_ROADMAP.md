@@ -6,11 +6,20 @@
 
 ---
 
+## 🆕 Son Eklenen Özellikler
+
+### 22 Ekim 2025
+1. **💵 Döviz Kuru Sistemi (Faz 1.1)** - USD bazlı fiyatlandırma, TCMB entegrasyonu
+2. **🔄 Başlık-Şişe Kombinasyon İndirimi (Faz 2.2)** - Ağız ölçüsü eşleştirmeli otomatik indirim
+3. **⚙️ Süper Admin Panel (Faz 2.3)** - Tüm site ayarlarını admin panelden yönetme
+
+---
+
 ## 📊 Durum Özeti
 
-- ✅ Tamamlandı: 0/51
-- 🔄 Devam Ediyor: 0/51
-- ⏳ Beklemede: 51/51
+- ✅ Tamamlandı: 0/53
+- 🔄 Devam Ediyor: 0/53
+- ⏳ Beklemede: 53/53
 - **İlerleme:** 0%
 
 ---
@@ -370,9 +379,294 @@ Genel Toplam: $176.98 (₺6,127.20)
 
 ---
 
-### 2.2 Promosyon ve Kampanya Kodu Sistemi 🎁
+### 2.2 Başlık-Şişe Kombinasyon İndirimi 🔄
 **Durum:** ⏳ Beklemede
 **Tahmini Süre:** 4-5 gün
+**Bağımlılık:** 1.1 tamamlanmalı (indirim USD üzerinden hesaplanacak)
+**Öncelik:** Yüksek
+
+#### Görevler:
+- [ ] Ürünlere `productType` alanı ekle (başlık/şişe/nötr)
+- [ ] Ürünlere `neckSize` alanı ekle (24/410, 28/410, vb.)
+- [ ] Kombinasyon indirim kuralları (admin ayarlanabilir)
+- [ ] Sepette otomatik kombinasyon algılama
+- [ ] Eşleşen ağız ölçüsü kontrolü
+- [ ] Az olan miktara göre indirim uygulama
+- [ ] Sepette kombinasyon indirimi gösterimi
+- [ ] Admin panelinde kombinasyon ayarları
+
+#### Product Schema Güncellemesi:
+```javascript
+{
+  // ... diğer alanlar
+  productType: "başlık" | "şişe" | "nötr",
+  neckSize: "24/410" | "28/410" | "custom",
+  // Kombinasyon indirimi varsa
+  comboPriceUSD: 0.13, // Normal: 0.15, Kombo: 0.13
+}
+```
+
+#### Firestore Koleksiyon (Admin Ayarları):
+```javascript
+comboDiscountSettings/
+  - isActive: true
+  - discountType: "percentage" | "fixed" // %10 veya sabit $0.02
+  - discountValue: 10 // %10 veya $0.02
+  - applicableTypes: ["başlık", "şişe"]
+  - requireSameNeckSize: true
+  - minQuantity: 1000 // minimum kaç adet olmalı
+```
+
+#### Sepet Hesaplama Mantığı:
+```javascript
+// Örnek: 4500 başlık (24/410) + 3000 şişe (24/410)
+// Eşleşme: 3000 adet (az olan)
+// İndirim: 3000 başlık + 3000 şişe için
+
+Cart:
+- Başlık 24/410: 4500 adet
+  * İlk 3000 adet: $0.13 (kombo fiyat) = $390
+  * Kalan 1500 adet: $0.15 (normal fiyat) = $225
+  * Toplam: $615
+
+- Şişe 24/410: 3000 adet
+  * 3000 adet: $0.80 (kombo fiyat) = $2,400
+  * Toplam: $2,400
+
+Kombinasyon İndirimi: $90 tasarruf! 🎉
+```
+
+#### Dosyalar:
+- `functions/db/catalog.js` (güncelle - productType, neckSize)
+- `functions/db/combo-settings.js` (yeni)
+- `src/context/CartContext.tsx` (güncelle - combo hesaplama)
+- `src/app/cart/page.tsx` (güncelle - combo gösterimi)
+- `src/app/admin/products/page.tsx` (güncelle - yeni alanlar)
+- `src/app/admin/combo-settings/page.tsx` (yeni)
+- `src/lib/combo-calculator.ts` (yeni - hesaplama mantığı)
+
+#### Sepette Gösterim:
+```
+🔄 BAŞLIK-ŞİŞE KOMBİNASYONU BULUNDU!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Ağız Ölçüsü: 24/410
+Eşleşen Miktar: 3,000 adet
+
+✅ 3,000 Başlık → Kombo Fiyat
+✅ 3,000 Şişe → Kombo Fiyat
+
+💰 Kombinasyon İndirimi: $90.00 (₺3,111.00)
+```
+
+---
+
+### 2.3 Süper Admin Panel - Tam Kontrol Sistemi ⚙️
+**Durum:** ⏳ Beklemede
+**Tahmini Süre:** 8-10 gün
+**Öncelik:** Kritik
+
+#### Görevler:
+- [ ] **Site Ayarları Yönetimi**
+  - [ ] Site başlığı, açıklama, logo
+  - [ ] İletişim bilgileri (tel, email, adres)
+  - [ ] Sosyal medya linkleri
+  - [ ] Çalışma saatleri
+  
+- [ ] **Fiyatlandırma Ayarları**
+  - [ ] KDV oranı (değiştirilebilir)
+  - [ ] Kargo ücreti (koli başına)
+  - [ ] Ücretsiz kargo limiti (adet)
+  - [ ] Minimum sipariş miktarı
+  
+- [ ] **Döviz Kuru Yönetimi**
+  - [ ] Manuel kur güncelleme
+  - [ ] Otomatik güncelleme açma/kapama
+  - [ ] Kur geçmişi görüntüleme
+  - [ ] Kur değişim bildirimleri
+  
+- [ ] **Kombinasyon İndirimi Ayarları**
+  - [ ] İndirim oranı/tutarı
+  - [ ] Aktif/pasif
+  - [ ] Minimum miktar koşulu
+  - [ ] Geçerli ürün tipleri
+  
+- [ ] **E-posta Ayarları**
+  - [ ] SMTP ayarları
+  - [ ] E-posta şablonları düzenleme
+  - [ ] Otomatik email açma/kapama
+  - [ ] Test email gönderme
+  
+- [ ] **Ödeme Ayarları**
+  - [ ] İyzico API anahtarları
+  - [ ] Test/Production modu
+  - [ ] Ödeme yöntemleri (aktif/pasif)
+  - [ ] Taksit seçenekleri
+  
+- [ ] **Stok Yönetimi**
+  - [ ] Düşük stok uyarı seviyesi
+  - [ ] Stok sıfırda sipariş alınma durumu
+  - [ ] Toplu stok güncelleme
+  - [ ] Stok geçmişi
+  
+- [ ] **Promosyon/Kampanya Yönetimi**
+  - [ ] Kampanya kodu oluştur/düzenle/sil
+  - [ ] Aktif kampanyaları görüntüle
+  - [ ] Kullanım istatistikleri
+  
+- [ ] **Kullanıcı Yönetimi**
+  - [ ] Tüm kullanıcıları listele
+  - [ ] Kullanıcı detayları ve sipariş geçmişi
+  - [ ] Kullanıcı engelleme/aktifleştirme
+  - [ ] Admin rolleri (Super Admin, Editor, Viewer)
+  
+- [ ] **İçerik Yönetimi**
+  - [ ] Landing page banner/içerik düzenleme
+  - [ ] Footer içeriği düzenleme
+  - [ ] SSS (FAQ) yönetimi
+  - [ ] Hakkımızda sayfası düzenleme
+  
+- [ ] **SEO Ayarları**
+  - [ ] Meta başlıklar
+  - [ ] Meta açıklamalar
+  - [ ] Open Graph ayarları
+  - [ ] Sitemap yönetimi
+  
+- [ ] **Raporlama ve Analitik**
+  - [ ] Satış raporları (günlük, haftalık, aylık)
+  - [ ] En çok satan ürünler
+  - [ ] Kategori bazlı analiz
+  - [ ] Müşteri analitiği
+  - [ ] PDF/Excel export
+
+#### Firestore Koleksiyonlar:
+```javascript
+siteSettings/
+  global/
+    - siteName: "SVD Ambalaj"
+    - tagline: "..."
+    - logo: "..."
+    - phone: "..."
+    - email: "..."
+    - address: "..."
+    - socialMedia: {}
+    - workingHours: "..."
+    
+  pricing/
+    - kdvRate: 20 // %
+    - cargoPerBox: 120 // TL
+    - freeShippingLimit: 50000 // adet
+    - minOrderQuantity: 96 // adet
+    
+  exchangeRate/
+    - autoUpdate: true
+    - updateTime: "16:00"
+    - alertOnChange: true
+    - manualOverride: false
+    
+  combo/
+    - isActive: true
+    - discountType: "percentage"
+    - discountValue: 10
+    - minQuantity: 1000
+    
+  email/
+    - smtpHost: "..."
+    - smtpPort: 587
+    - smtpUser: "..."
+    - smtpPass: "..." (encrypted)
+    - enabled: true
+    - templates: {}
+    
+  payment/
+    - iyzico: {
+        apiKey: "..." (encrypted)
+        secretKey: "..." (encrypted)
+        mode: "test" | "production"
+      }
+    - methods: {
+        creditCard: true,
+        eft: true
+      }
+    
+  stock/
+    - lowStockThreshold: 100
+    - allowZeroStock: false
+    - notifyOnLowStock: true
+```
+
+#### Dosyalar:
+- `functions/db/settings.js` (yeni - settings CRUD)
+- `src/app/admin/settings/page.tsx` (yeni - ana ayarlar)
+- `src/app/admin/settings/site/page.tsx` (yeni)
+- `src/app/admin/settings/pricing/page.tsx` (yeni)
+- `src/app/admin/settings/exchange-rate/page.tsx` (yeni)
+- `src/app/admin/settings/combo/page.tsx` (yeni)
+- `src/app/admin/settings/email/page.tsx` (yeni)
+- `src/app/admin/settings/payment/page.tsx` (yeni)
+- `src/app/admin/settings/stock/page.tsx` (yeni)
+- `src/app/admin/users/page.tsx` (yeni - kullanıcı yönetimi)
+- `src/app/admin/content/page.tsx` (yeni - içerik yönetimi)
+- `src/app/admin/reports/page.tsx` (yeni - raporlar)
+- `src/lib/settings-context.tsx` (yeni - global settings)
+- `src/components/admin/settings-sidebar.tsx` (yeni)
+
+#### Admin Panel Menü Yapısı:
+```
+Admin Panel
+├── Dashboard
+├── Siparişler
+├── Ürünler
+├── Kategoriler
+├── Medya
+├── Teklifler
+├── İstatistikler
+├── Kullanıcılar (YENİ)
+│   ├── Tüm Kullanıcılar
+│   ├── Admin Rolleri
+│   └── Engellenen Kullanıcılar
+├── İçerik (YENİ)
+│   ├── Ana Sayfa
+│   ├── Hakkımızda
+│   ├── İletişim
+│   └── SSS
+├── Raporlar (YENİ)
+│   ├── Satış Raporu
+│   ├── Ürün Analizi
+│   ├── Müşteri Analizi
+│   └── Stok Raporu
+└── Ayarlar (YENİ)
+    ├── Site Ayarları
+    ├── Fiyatlandırma
+    ├── Döviz Kuru
+    ├── Kombinasyon İndirimi
+    ├── E-posta
+    ├── Ödeme Sistemleri
+    ├── Stok Yönetimi
+    ├── Kampanyalar
+    └── SEO
+```
+
+#### Güvenlik:
+```javascript
+// Firebase Security Rules güncelleme
+// Sadece superAdmin ayarlara erişebilir
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /siteSettings/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superAdmin';
+    }
+  }
+}
+```
+
+---
+
+### 2.4 Promosyon ve Kampanya Kodu Sistemi 🎁
+**Durum:** ⏳ Beklemede
+**Tahmini Süre:** 3-4 gün
 **Öncelik:** Orta
 
 #### Görevler:
@@ -409,10 +703,10 @@ promotions/
 
 ---
 
-### 2.3 Ürün Varyantları (Renk, Boyut) 🎨
+### 2.5 Ürün Varyantları (Renk, Boyut) 🎨
 **Durum:** ⏳ Beklemede
 **Tahmini Süre:** 5-6 gün
-**Öncelik:** Orta
+**Öncelik:** Düşük (productType ve neckSize ile kısmen çözüldü)
 
 #### Görevler:
 - [ ] Ürün varyant yapısı oluştur
@@ -445,9 +739,10 @@ variants: [
 
 ---
 
-### 2.4 E-posta Bildirim Sistemi 📧
+### 2.6 E-posta Bildirim Sistemi 📧
 **Durum:** ⏳ Beklemede
 **Tahmini Süre:** 4 gün
+**Bağımlılık:** 2.3 tamamlanmalı (email ayarları admin panelden yapılacak)
 **Öncelik:** Orta
 
 #### Görevler:
