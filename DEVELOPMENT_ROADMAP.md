@@ -8,18 +8,125 @@
 
 ## 📊 Durum Özeti
 
-- ✅ Tamamlandı: 0/50
-- 🔄 Devam Ediyor: 0/50
-- ⏳ Beklemede: 50/50
+- ✅ Tamamlandı: 0/51
+- 🔄 Devam Ediyor: 0/51
+- ⏳ Beklemede: 51/51
 - **İlerleme:** 0%
 
 ---
 
 ## 🎯 FAZ 1: ACİL ÖNCELİKLER (1-2 Hafta)
 
-### 1.1 Ürün Arama ve Filtreleme Sistemi 🔍
+### 1.1 Döviz Kuru Sistemi (USD Bazlı Fiyatlandırma) 💵
 **Durum:** ⏳ Beklemede
 **Tahmini Süre:** 3-4 gün
+**Öncelik:** Kritik
+
+#### Görevler:
+- [ ] TCMB (Merkez Bankası) API entegrasyonu
+- [ ] Günlük kur güncelleme (cron job)
+- [ ] Kur bilgisini Firestore'da saklama
+- [ ] Header'da anlık kur gösterimi
+- [ ] Ürün fiyatlarını USD olarak veritabanında tutma
+- [ ] Frontend'de TL'ye çevirme (USD × Kur)
+- [ ] Ürün detaylarında hem USD hem TL fiyat gösterimi
+- [ ] Landing page'de kur bilgisi ve açıklama
+- [ ] Admin panelinde USD fiyat girişi
+- [ ] Kur geçmişi takibi (isteğe bağlı)
+
+#### API Detayları:
+```javascript
+// TCMB API (XML formatında)
+// https://www.tcmb.gov.tr/kurlar/today.xml
+// veya
+// https://www.tcmb.gov.tr/kurlar/YYYYMM/DDMMYYYY.xml
+
+// Alternatif: doviz.com API
+// https://api.genelpara.com/embed/doviz.json
+```
+
+#### Firestore Koleksiyonu:
+```javascript
+exchangeRates/
+  - currency: "USD"
+  - rate: 34.5678
+  - effectiveDate: "2025-10-22"
+  - source: "TCMB"
+  - lastUpdated: timestamp
+  - isActive: true
+```
+
+#### Product Schema Değişikliği:
+```javascript
+// Mevcut products koleksiyonuna ekleme:
+{
+  // ... diğer alanlar
+  priceUSD: 0.15,  // USD fiyat (ana fiyat)
+  priceTL: null,   // Hesaplanacak (USD × kur)
+  bulkPricingUSD: [ // Toplu alım da USD olacak
+    { minQty: 50, priceUSD: 0.14 },
+    { minQty: 100, priceUSD: 0.13 }
+  ]
+}
+```
+
+#### Dosyalar:
+- `functions/services/exchange-rate.js` (yeni - TCMB API)
+- `functions/scheduled/update-exchange-rate.js` (yeni - cron job)
+- `functions/db/exchange-rates.js` (yeni - DB işlemleri)
+- `src/lib/currency.ts` (yeni - kur helpers)
+- `src/components/exchange-rate-banner.tsx` (yeni - header banner)
+- `src/app/page.tsx` (güncelle - landing page açıklama)
+- `src/app/products/[slug]/page.tsx` (güncelle - dual fiyat)
+- `src/app/admin/products/page.tsx` (güncelle - USD giriş)
+- `src/app/admin/exchange-rates/page.tsx` (yeni - kur yönetimi)
+
+#### Örnek Gösterim:
+```typescript
+// Header'da:
+"💵 Güncel Dolar Kuru: ₺34.5678 (TCMB - 22.10.2025)"
+
+// Ürün kartında:
+"₺5,00 +KDV"
+"($0.15 × 34.5678)"
+
+// Ürün detayında:
+"Birim Fiyat: $0.15 (₺5,00) +KDV"
+"Koli Fiyatı: $14.40 (₺498,98) +KDV"
+"* Fiyatlar güncel TCMB efektif satış kuruna göre hesaplanmaktadır."
+
+// Landing page'de:
+"💰 Fiyatlandırma Politikamız
+Tüm ürünlerimiz USD bazlı fiyatlandırılmaktadır. 
+TL fiyatlar, TCMB'nin günlük efektif satış kuruna göre hesaplanır.
+Güncel kur: $1 = ₺34.5678 (22.10.2025)"
+```
+
+#### Cron Job (Firebase Scheduled Functions):
+```javascript
+// Her gün saat 16:00'da (TCMB güncelleme sonrası) kur çek
+exports.updateExchangeRate = functions.pubsub
+  .schedule('0 16 * * *')
+  .timeZone('Europe/Istanbul')
+  .onRun(async (context) => {
+    // TCMB'den kur çek
+    // Firestore'a kaydet
+    // Admin'e bildirim gönder (isteğe bağlı)
+  });
+```
+
+#### Notlar:
+- Manuel kur güncelleme özelliği de olmalı (admin paneli)
+- Kur değişmediğinde eski kuru kullan
+- Hata durumunda yedek API'ye geç
+- Hafta sonu/tatil günleri son iş günü kuru kullan
+
+---
+
+### 1.2 Ürün Arama ve Filtreleme Sistemi 🔍
+**Durum:** ⏳ Beklemede
+**Tahmini Süre:** 3-4 gün
+**Bağımlılık:** 1.1 tamamlanmalı (kur sistemi fiyat hesaplamaları için gerekli)
 **Öncelik:** Yüksek
 
 #### Görevler:
@@ -50,17 +157,43 @@ type ProductFilters = {
 
 ---
 
-### 1.2 Sipariş Takip Numarası Sistemi 📦
+### 1.2 Ürün Arama ve Filtreleme Sistemi 🔍
+**Durum:** ⏳ Beklemede
+**Tahmini Süre:** 3-4 gün
+**Bağımlılık:** 1.1 tamamlanmalı (kur sistemi fiyat hesaplamaları için gerekli)
+**Öncelik:** Yüksek
+---
+
+### 1.3 Sipariş Takip Numarası Sistemi 📦
 **Durum:** ⏳ Beklemede
 **Tahmini Süre:** 2 gün
+**Bağımlılık:** 1.1 tamamlanmalı (siparişlerde kur bilgisi saklanacak)
 **Öncelik:** Yüksek
 
 #### Görevler:
 - [ ] Benzersiz sipariş numarası oluşturma (SVD-YYYYMMDD-XXXX formatı)
 - [ ] Backend'de orderNumber alanı ekle
+- [ ] Sipariş kaydında USD/TL kur bilgisi sakla
 - [ ] Frontend sipariş listesinde göster
 - [ ] Sipariş detay sayfasında göster
 - [ ] E-posta bildirimlerine ekle
+
+#### Order Schema Güncellemesi:
+```javascript
+{
+  orderNumber: "SVD-20251022-0001",
+  exchangeRate: 34.5678,  // Sipariş anındaki kur
+  currency: "USD",
+  items: [
+    {
+      priceUSD: 0.15,  // USD fiyat
+      priceTL: 5.00,   // TL karşılığı (sipariş anında)
+      // ...
+    }
+  ],
+  // ...
+}
+```
 
 #### Dosyalar:
 - `functions/db/orders.js` (güncelle - createOrder fonksiyonu)
@@ -80,7 +213,7 @@ const generateOrderNumber = () => {
 
 ---
 
-### 1.3 Müşteri Hesap Sistemi (Firebase Auth) 👤
+### 1.4 Müşteri Hesap Sistemi (Firebase Auth) 👤
 **Durum:** ⏳ Beklemede
 **Tahmini Süre:** 5-6 gün
 **Öncelik:** Yüksek
@@ -134,20 +267,22 @@ userAddresses/
 
 ---
 
-### 1.4 Ödeme Entegrasyonu (İyzico) 💳
+### 1.5 Ödeme Entegrasyonu (İyzico) 💳
 **Durum:** ⏳ Beklemede
 **Tahmini Süre:** 4-5 gün
+**Bağımlılık:** 1.1 tamamlanmalı (ödeme tutarı kur ile hesaplanacak)
 **Öncelik:** Yüksek
 
 #### Görevler:
 - [ ] İyzico hesap açma ve API anahtarları
 - [ ] iyzipay npm paketi kurulumu
-- [ ] Ödeme başlatma endpoint'i
+- [ ] Ödeme başlatma endpoint'i (TL tutarı ile)
 - [ ] Callback/webhook handler
 - [ ] Ödeme sonuç sayfası
 - [ ] Başarısız ödeme yönetimi
 - [ ] Test ortamı kurulumu
 - [ ] Ödeme logları
+- [ ] Ödeme kaydında USD/TL dönüşüm bilgisi
 
 #### Dosyalar:
 - `functions/payment/iyzico.js` (yeni)
@@ -162,6 +297,10 @@ userAddresses/
 IYZICO_API_KEY=your_api_key
 IYZICO_SECRET_KEY=your_secret_key
 IYZICO_BASE_URL=https://sandbox-api.iyzipay.com (test)
+
+// Ödeme tutarı hesaplama:
+// USD fiyat × güncel kur = TL tutarı
+// İyzico'ya TL gönderilecek
 ```
 
 ---
@@ -171,14 +310,15 @@ IYZICO_BASE_URL=https://sandbox-api.iyzipay.com (test)
 ### 2.1 B2B Teklif Sistemi 🏢
 **Durum:** ⏳ Beklemede
 **Tahmini Süre:** 6-7 gün
+**Bağımlılık:** 1.1 tamamlanmalı (teklif USD ve TL olarak gösterilecek)
 **Öncelik:** Orta
 
 #### Görevler:
 - [ ] Sepetten teklif oluşturma butonu
 - [ ] Teklif formu (müşteri bilgileri, notlar)
-- [ ] Backend teklif kaydetme
+- [ ] Backend teklif kaydetme (USD ve TL)
 - [ ] Admin teklif onay/reddetme
-- [ ] Teklif PDF oluşturma
+- [ ] Teklif PDF oluşturma (dual currency)
 - [ ] E-posta ile teklif gönderme
 - [ ] Teklif geçerlilik süresi (30 gün)
 - [ ] Onaylı teklifi siparişe dönüştürme
@@ -189,8 +329,14 @@ quotations/
   - quotationNumber (TEK-20251022-0001)
   - userId
   - customerInfo {}
-  - items[]
-  - totals {}
+  - items[] (priceUSD ve priceTL ile)
+  - exchangeRate (teklif anındaki kur)
+  - totals {
+      subtotalUSD, subtotalTL,
+      cargoUSD, cargoTL,
+      kdvUSD, kdvTL,
+      totalUSD, totalTL
+    }
   - status (pending/approved/rejected/converted)
   - validUntil
   - adminNotes
@@ -203,6 +349,24 @@ quotations/
 - `src/app/quotation/request/page.tsx` (yeni)
 - `src/app/admin/quotations/page.tsx` (yeni)
 - `src/components/quotation-pdf.tsx` (yeni)
+
+#### PDF İçeriği:
+```
+SVD Ambalaj - Teklif No: TEK-20251022-0001
+Geçerlilik: 30 gün
+Kur: $1 = ₺34.5678 (22.10.2025)
+
+Ürünler:
+- ... $0.15 (₺5.00) +KDV × 960 adet = $144.00 (₺4,986.00)
+
+Ara Toplam: $144.00 (₺4,986.00)
+Kargo: $3.48 (₺120.00)
+Toplam: $147.48 (₺5,106.00) +KDV
+KDV (%20): $29.50 (₺1,021.20)
+Genel Toplam: $176.98 (₺6,127.20)
+
+* Fiyatlar belirtilen kurdan hesaplanmıştır.
+```
 
 ---
 
