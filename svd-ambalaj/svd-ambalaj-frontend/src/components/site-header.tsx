@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import ProductSearch from "@/components/product-search";
 
 const links = [
@@ -15,10 +16,21 @@ const links = [
 
 export function SiteHeader() {
   const { items, totalBoxes } = useCart();
+  const { user, signOut } = useAuth();
   const [showSearch, setShowSearch] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   
   // Show total boxes for packaged products, or item count for regular products
   const badgeCount = totalBoxes > 0 ? totalBoxes : items.length;
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setShowUserMenu(false);
+    } catch (error) {
+      console.error("Sign out error:", error);
+    }
+  };
   
   return (
     <header className="border-b border-slate-200 bg-white/90 backdrop-blur sticky top-0 z-50">
@@ -98,6 +110,69 @@ export function SiteHeader() {
           >
             0850 123 45 67
           </a>
+          
+          {/* Auth Buttons */}
+          {user ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-amber-400 hover:bg-amber-50"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span className="hidden lg:inline">{user.displayName || "Hesabım"}</span>
+              </button>
+              
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 rounded-lg bg-white shadow-lg border border-slate-200 py-1 z-50">
+                  <Link
+                    href="/account"
+                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-amber-50"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    Hesabım
+                  </Link>
+                  <Link
+                    href="/account/orders"
+                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-amber-50"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    Siparişlerim
+                  </Link>
+                  <Link
+                    href="/account/addresses"
+                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-amber-50"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    Adreslerim
+                  </Link>
+                  <hr className="my-1 border-slate-200" />
+                  <button
+                    onClick={handleSignOut}
+                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  >
+                    Çıkış Yap
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <Link
+                href="/auth/login"
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-amber-400 hover:bg-amber-50"
+              >
+                Giriş
+              </Link>
+              <Link
+                href="/auth/register"
+                className="rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-sm font-semibold text-white transition hover:from-amber-600 hover:to-amber-700"
+              >
+                Kayıt Ol
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
