@@ -2,7 +2,7 @@
 
 **Proje:** SVD Ambalaj E-Ticaret Platformu
 **Başlangıç Tarihi:** 22 Ekim 2025
-**Son Güncelleme:** 23 Ekim 2025
+**Son Güncelleme:** 23 Ekim 2025, 22:55
 
 ---
 
@@ -39,32 +39,22 @@
 
 ## 📊 Durum Özeti
 
-- ✅ Tamamlandı: Faz 1.1 çekirdek + USD-Only Admin + Görsel optimizasyon (kritik ekranlar)
-- 🔄 Devam Ediyor: Görsel optimizasyonun kalan sayfaları (minör), TRY kalıntılarının temizlik kontrolü
-- ⏳ Beklemede: Faz 1.2–1.5 ve Faz 2+ (aşağıda listelenenler)
+- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon
+- 🔄 Devam Ediyor: -
+- ⏳ Beklemede: Faz 1.4 (Müşteri Hesabı), Faz 1.5 (İyzico Ödeme) ve Faz 2+ (aşağıda listelenenler)
 - Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı durumda
 
-**Son Deployment:** 22 Ekim 2025, 21:00
-**Son Commit:** 22 Ekim 2025, 22:30 (Landing page currency policy)
+**Son Deployment:** 23 Ekim 2025, 22:53
+**Son Commit:** 23 Ekim 2025, 22:52 (PDF thousand separator formatting)
 **Deployed Functions:**
 - ✅ api (us-central1) - Main API endpoint - https://api-tfi7rlxtca-uc.a.run.app
 - ✅ updateExchangeRate (us-central1) - Daily cron at 16:00
 - ✅ forceUpdateExchangeRate (us-central1) - Manual update
 
-**Faz 1.1 Tamamlanan Alt Görevler (11/13):**
-- ✅ TCMB API entegrasyonu (XML + fallback)
-- ✅ Scheduled cron job (günlük 16:00)
-- ✅ Firestore exchange rates collection
-- ✅ Exchange rate API endpoints
-- ✅ Product schema USD support
-- ✅ Currency helper utilities
-- ✅ ExchangeRateBanner component
-- ✅ Dual currency display (all pages)
-- ✅ Admin USD price input
-- ✅ Landing page currency policy
-- ✅ Kur geçmişi takibi
-- ⏳ Cart USD calculations (optional) — Not: Sepet TL, USD→TL kurla hesaplanıyor (USD parantezli gösterim eklenebilir)
-- ⏳ Admin rate management (optional)
+**Tamamlanan Fazlar:**
+- ✅ **Faz 1.1** - Döviz Kuru Sistemi (13/13 görev)
+- ✅ **Faz 1.2** - Ürün Arama ve Filtreleme (6/6 görev)
+- ✅ **Faz 1.3** - Sipariş Takip Numarası (6/6 görev)
 
 ---
 
@@ -247,25 +237,58 @@ type ProductFilters = {
 ---
 
 ### 1.2 Ürün Arama ve Filtreleme Sistemi 🔍
-**Durum:** ⏳ Beklemede
+### 1.2 Ürün Arama ve Filtreleme Sistemi 🔍
+**Durum:** ✅ TAMAMLANDI
 **Tahmini Süre:** 3-4 gün
-**Bağımlılık:** 1.1 tamamlanmalı (kur sistemi fiyat hesaplamaları için gerekli)
-**Öncelik:** Yüksek
----
-
-### 1.3 Sipariş Takip Numarası Sistemi 📦
-**Durum:** ⏳ Beklemede
-**Tahmini Süre:** 2 gün
-**Bağımlılık:** 1.1 tamamlanmalı (siparişlerde kur bilgisi saklanacak)
+**Başlangıç:** 23 Ekim 2025
+**Bitiş:** 23 Ekim 2025
 **Öncelik:** Yüksek
 
 #### Görevler:
-- [ ] Benzersiz sipariş numarası oluşturma (SVD-YYYYMMDD-XXXX formatı)
-- [ ] Backend'de orderNumber alanı ekle
-- [ ] Sipariş kaydında USD/TL kur bilgisi sakla
-- [ ] Frontend sipariş listesinde göster
-- [ ] Sipariş detay sayfasında göster
-- [ ] E-posta bildirimlerine ekle
+- [x] Backend search endpoint (/products/search)
+- [x] Backend specifications endpoint (/products/specifications)
+- [x] Text search (ürün adı/açıklama)
+- [x] Kategori filtresi
+- [x] Fiyat aralığı filtresi (USD)
+- [x] Teknik özellik filtreleri (hoseLength, volume, color, neckSize)
+- [x] Sıralama seçenekleri (Fiyat artan/azalan, En yeni)
+- [x] Header search button redesign (gradient amber styling)
+- [x] Products page filter UI (accordion)
+- [x] URL query parametreleri ile filtreleme
+
+#### Tamamlanan Dosyalar:
+Backend:
+- ✅ `functions/db/catalog.js` - searchProducts() with specification filters
+- ✅ `functions/index.js` - /products/search and /products/specifications endpoints
+
+Frontend:
+- ✅ `src/app/products/page.tsx` - Complete filter UI with specifications
+- ✅ `src/components/site-header.tsx` - Search button redesign
+
+---
+
+### 1.3 Sipariş Takip Numarası Sistemi 📦
+**Durum:** ✅ TAMAMLANDI
+**Tahmini Süre:** 2 gün
+**Başlangıç:** 23 Ekim 2025
+**Bitiş:** 23 Ekim 2025
+**Öncelik:** Yüksek
+
+#### Görevler:
+- [x] Benzersiz sipariş numarası oluşturma (SVD-YYYYMMDD-XXXX formatı)
+- [x] Backend'de orderNumber alanı ekle
+- [x] Backend generateOrderNumber fonksiyonu
+- [x] Sipariş kaydında exchange rate ve order number kaydetme
+- [x] Admin orders page'de tracking number gösterimi
+- [x] Checkout success page'de sipariş no gösterimi
+
+#### Tamamlanan Dosyalar:
+Backend:
+- ✅ `functions/db/orders.js` - generateOrderNumber() ve createOrder() güncellemesi
+
+Frontend:
+- ✅ `src/app/admin/orders/page.tsx` - Order number display
+- ✅ `src/app/checkout/success/page.tsx` - Order number confirmation
 
 #### Order Schema Güncellemesi:
 ```javascript
@@ -1105,26 +1128,37 @@ Gerekli yeni koleksiyonlar:
 
 ## 🎯 Aktif Sprint (Güncel Odak)
 
-**Sprint:** Sprint 1 - Acil Öncelikler
-**Başlangıç:** 22 Ekim 2025
-**Bitiş:** 5 Kasım 2025
+**Sprint:** Sprint 2 - Kullanıcı Sistemi ve Ödeme
+**Başlangıç:** 23 Ekim 2025
+**Bitiş:** 10 Kasım 2025
+**Tamamlanan:**
+- ✅ Faz 1.1 - Döviz Kuru Sistemi
+- ✅ Faz 1.2 - Ürün Arama ve Filtreleme
+- ✅ Faz 1.3 - Sipariş Takip Numarası
+- ✅ PDF Export Sistemi
+- ✅ Checkout Sayfası İyileştirmesi
+
 **Odak (güncel):**
-- Ürün arama ve filtreleme (1.2)
-- Sipariş takip numarası (1.3)
 - Firebase Auth entegrasyonu (1.4)
 - İyzico ödeme entegrasyonu (1.5)
 
 ### Bir Sonraki Adımlar (Önümüzde Neler Var?)
 Kısa vadeli (bu sprint):
-- [ ] Ürün arama/filtreleme UI + URL parametreleri (app/products, app/categories)
-- [ ] Sipariş numarası üretimi ve order şemasında kur bilgisinin saklanması (functions/db/orders.js, ilgili admin ve success sayfaları)
-- [ ] Auth akışları (kayıt/giriş/şifre sıfırlama) ve korumalı sayfalar
-- [ ] Ödeme başlangıcı (iyzico sandbox), callback ve sonuç ekranı
+- [ ] Firebase Auth kurulumu ve kayıt/giriş sayfaları
+- [ ] Kullanıcı profil ve sipariş geçmişi sayfaları
+- [ ] Protected routes (korumalı sayfalar)
+- [ ] İyzico sandbox entegrasyonu
+- [ ] Ödeme callback ve sonuç ekranı
+
+Orta vadeli (sonraki sprint):
+- [ ] B2B Teklif Sistemi (Faz 2.1)
+- [ ] Başlık-Şişe Kombinasyon İndirimi (Faz 2.2)
+- [ ] Süper Admin Panel (Faz 2.3)
 
 Tamamlayıcı iyileştirmeler:
 - [ ] Kalan minör sayfalarda next/image dönüşümleri ve lazy loading
-- [ ] Sepette (TL) USD parantez gösterimi (opsiyonel)
-- [ ] TRY kalıntıları için son kontrol ve temizlik (migrasyon sonrası)
+- [ ] E-posta bildirim sistemi
+- [ ] Promosyon/kampanya kodu sistemi
 
 ---
 
