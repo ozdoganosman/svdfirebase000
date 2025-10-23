@@ -20,6 +20,7 @@ type ProductSummary = {
     boxLabel: string;
   };
   stock?: number;
+  images?: string[];
   specifications?: {
     hoseLength?: string;
     volume?: string;
@@ -179,7 +180,7 @@ export function CartProvider({ children }: CartProviderProps) {
         setToastMessage(`${product.title} sepete eklendi! (${newQuantity} ${product.packageInfo?.boxLabel.toLowerCase() || 'adet'})`);
         return prev.map((item) =>
           item.id === product.id
-            ? { ...item, quantity: newQuantity }
+            ? { ...product, quantity: newQuantity } // Always use fresh product data
             : item
         );
       }

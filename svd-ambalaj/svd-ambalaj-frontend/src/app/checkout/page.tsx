@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
@@ -9,12 +9,23 @@ const apiBase =
   process.env.NEXT_PUBLIC_API_URL ??
   "http://localhost:5000/svdfirebase000/us-central1/api";
 
+
+import { getCurrentRate, formatDualPrice } from "@/lib/currency";
+
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("tr-TR", {
     style: "currency",
     currency: "TRY",
     minimumFractionDigits: 2,
   }).format(value);
+
+function useExchangeRate() {
+  const [rate, setRate] = useState<number | null>(null);
+  useEffect(() => {
+    getCurrentRate().then((r) => setRate(r.rate)).catch(() => setRate(null));
+  }, []);
+  return rate;
+}
 
 type CheckoutFormState = {
   name: string;
@@ -38,12 +49,14 @@ const defaultState: CheckoutFormState = {
   notes: "",
 };
 
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, subtotal, clearCart } = useCart();
   const [form, setForm] = useState<CheckoutFormState>(defaultState);
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
   const [message, setMessage] = useState<string>("");
+  const rate = useExchangeRate();
 
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -267,7 +280,7 @@ export default function CheckoutPage() {
                     <span className="text-slate-400"> × {item.quantity}</span>
                   </span>
                   <span className="font-semibold text-amber-600">
-                    {formatCurrency(item.price * item.quantity)}
+                    {rate ? formatDualPrice(item.price, rate, true, item.quantity) : formatCurrency(item.price * item.quantity)}
                   </span>
                 </li>
               ))}
@@ -275,7 +288,7 @@ export default function CheckoutPage() {
             <div className="border-t border-slate-200 pt-4">
               <div className="flex items-center justify-between text-base font-bold text-amber-700">
                 <span>Genel Toplam</span>
-                <span>{formatCurrency(subtotal)}</span>
+                <span>{rate ? formatDualPrice(subtotal, rate, true) : formatCurrency(subtotal)}</span>
               </div>
               <p className="mt-2 text-xs text-slate-500">
                 Kargo ve ödeme detayları satış ekibimiz tarafından onay sürecinde paylaşılacaktır.

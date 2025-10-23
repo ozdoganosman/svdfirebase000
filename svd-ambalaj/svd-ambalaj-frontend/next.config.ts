@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_ADMIN_API_URL: process.env.NEXT_PUBLIC_ADMIN_API_URL || "https://api-tfi7rlxtca-uc.a.run.app",
   },
   images: {
+    unoptimized: true, // Disable image optimization for Firebase Storage URLs
     remotePatterns: [
       {
         protocol: "http",

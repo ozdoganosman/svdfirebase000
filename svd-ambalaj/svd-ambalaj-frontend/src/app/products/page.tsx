@@ -88,8 +88,9 @@ async function getProducts(params?: { q?: string }): Promise<Product[]> {
   }
 }
 
-export default async function ProductsPage({ searchParams }: { searchParams?: { q?: string } }) {
-  const q = searchParams?.q?.toString() || "";
+export default async function ProductsPage({ searchParams }: { searchParams?: Promise<{ q?: string }> }) {
+  const resolvedSearchParams = await searchParams;
+  const q = resolvedSearchParams?.q?.toString() || "";
   const products = await getProducts({ q });
   const exchangeRate = await getExchangeRate();
   const rate = exchangeRate?.rate ?? 0;
@@ -99,10 +100,7 @@ export default async function ProductsPage({ searchParams }: { searchParams?: { 
     if (!imagePath) {
       return "/images/placeholders/product.jpg";
     }
-    // If it's already a full URL, return as-is
-    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-      return imagePath;
-    }
+    // Return URL as-is (unoptimized mode will handle it)
     return imagePath;
   };
 
@@ -251,6 +249,7 @@ export default async function ProductsPage({ searchParams }: { searchParams?: { 
                       slug: product.slug,
                       price: product.priceUSD && rate > 0 ? (product.priceUSD * rate) : 0,
                       stock: product.stock,
+                      images: product.images,
                       bulkPricing: product.priceUSD && product.bulkPricingUSD
                         ? product.bulkPricingUSD.map(tier => ({ minQty: tier.minQty, price: tier.price * rate }))
                         : undefined,

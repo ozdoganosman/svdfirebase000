@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useCart } from "@/context/CartContext";
 import { useEffect, useState } from "react";
 import { resolveServerApiUrl } from "@/lib/server-api";
+import { getCurrentRate, formatDualPrice } from "@/lib/currency";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { jsPDF } from "jspdf";
 
@@ -29,14 +30,10 @@ type Product = {
   };
 };
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("tr-TR", {
-    style: "currency",
-    currency: "TRY",
-    minimumFractionDigits: 2,
-  }).format(value);
+
 
 export default function CartPage() {
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const { 
     items, 
     updateQuantity, 
@@ -54,6 +51,8 @@ export default function CartPage() {
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
 
   useEffect(() => {
+    // Fetch exchange rate on mount
+    getCurrentRate().then(rate => setExchangeRate(rate.rate)).catch(() => setExchangeRate(null));
     if (items.length === 0) {
       fetch(resolveServerApiUrl("/products"))
         .then((res) => res.json())
@@ -65,7 +64,7 @@ export default function CartPage() {
         })
         .catch(console.error);
     }
-  }, [items.length]);
+  }, [items]);
 
   const handleQuantityChange = (productId: string, value: string, packageInfo?: { itemsPerBox: number; minBoxes: number; boxLabel: string }) => {
     const parsed = parseInt(value, 10);
@@ -121,20 +120,20 @@ export default function CartPage() {
       // Details
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
-      
+      const rate = exchangeRate || 0;
       if (item.packageInfo) {
         doc.text(`${item.quantity} ${item.packageInfo.boxLabel} x ${totalItemCount / item.quantity} adet = ${totalItemCount} adet`, 20, yPos);
         yPos += 6;
-        doc.text(`Birim fiyat: ${formatCurrency(effectivePrice)}`, 20, yPos);
+        doc.text(`Birim fiyat: ${rate ? formatDualPrice(undefined, rate, true, 1, effectivePrice) : "₺" + effectivePrice.toLocaleString("tr-TR")}`, 20, yPos);
       } else {
         doc.text(`Miktar: ${item.quantity} adet`, 20, yPos);
         yPos += 6;
-        doc.text(`Birim fiyat: ${formatCurrency(effectivePrice)}`, 20, yPos);
+        doc.text(`Birim fiyat: ${rate ? formatDualPrice(undefined, rate, true, 1, effectivePrice) : "₺" + effectivePrice.toLocaleString("tr-TR")}`, 20, yPos);
       }
       
       yPos += 6;
       doc.setFont("helvetica", "bold");
-      doc.text(`Toplam: ${formatCurrency(itemTotal)}`, 20, yPos);
+      doc.text(`Toplam: ${rate ? formatDualPrice(undefined, rate, true, 1, itemTotal) : "₺" + itemTotal.toLocaleString("tr-TR")}`, 20, yPos);
       
       yPos += 10;
       doc.setDrawColor(230, 230, 230);
@@ -152,7 +151,7 @@ export default function CartPage() {
     yPos += 5;
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
-    
+    const rate = exchangeRate || 0;
     if (totalBoxes > 0) {
       doc.text(`Toplam Koli: ${totalBoxes}`, 15, yPos);
       yPos += 7;
@@ -165,15 +164,15 @@ export default function CartPage() {
     const kdvHaricTutar = subtotal / (1 + kdvOrani);
     const kdvTutari = subtotal - kdvHaricTutar;
     
-    doc.text(`KDV Hariç Tutar: ${formatCurrency(kdvHaricTutar)}`, 15, yPos);
+    doc.text(`KDV Hariç Tutar: ${rate ? formatDualPrice(undefined, rate, true, 1, kdvHaricTutar) : "₺" + kdvHaricTutar.toLocaleString("tr-TR")}`, 15, yPos);
     yPos += 7;
-    doc.text(`KDV (%20): ${formatCurrency(kdvTutari)}`, 15, yPos);
+    doc.text(`KDV (%20): ${rate ? formatDualPrice(undefined, rate, true, 1, kdvTutari) : "₺" + kdvTutari.toLocaleString("tr-TR")}`, 15, yPos);
     yPos += 7;
     
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(217, 119, 6);
-    doc.text(`Genel Toplam: ${formatCurrency(subtotal)}`, 15, yPos);
+    doc.text(`Genel Toplam: ${rate ? formatDualPrice(undefined, rate, true, 1, subtotal) : "₺" + subtotal.toLocaleString("tr-TR")}`, 15, yPos);
 
     // Save
     doc.save(`SVD-Sepet-${new Date().getTime()}.pdf`);
@@ -266,7 +265,8 @@ export default function CartPage() {
                               </h3>
                             </Link>
                             <p className="mt-2 text-xl font-bold text-amber-600">
-                              {formatCurrency(product.price)} <span className="text-sm font-normal text-slate-500">+KDV</span>
+                              {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, product.price) : "₺" + product.price.toLocaleString("tr-TR")}
+                              <span className="text-sm font-normal text-slate-500">+KDV</span>
                             </p>
                             <div className="mt-4">
                               <AddToCartButton
@@ -301,13 +301,50 @@ export default function CartPage() {
               >
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
-                    <div>
-                      <h2 className="text-lg font-semibold text-slate-900">{item.title}</h2>
-                      {item.packageInfo && (
-                        <p className="mt-1 text-xs text-slate-500">
-                          📦 {item.packageInfo.itemsPerBox} adet/{item.packageInfo.boxLabel.toLowerCase()}
-                        </p>
+                    <div className="flex gap-4 items-start">
+                      {/* Product Image */}
+                      {item.images && item.images[0] ? (
+                        <div className="relative h-20 w-20 flex-shrink-0">
+                          <Image
+                            src={item.images[0]}
+                            alt={item.title}
+                            fill
+                            sizes="80px"
+                            className="object-contain rounded-lg border border-slate-100 bg-slate-50 p-1"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-lg border border-slate-100 bg-slate-50 text-slate-300">
+                          <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
                       )}
+                      <div>
+                        <h2 className="text-lg font-semibold text-slate-900">{item.title}</h2>
+                        {item.packageInfo && (
+                          <p className="mt-1 text-xs text-slate-500">
+                            📦 {item.packageInfo.itemsPerBox} adet/{item.packageInfo.boxLabel.toLowerCase()}
+                          </p>
+                        )}
+                        {/* Teknik Özellikler */}
+                        {(item.specifications?.hoseLength || item.specifications?.volume || item.specifications?.color || item.specifications?.neckSize) && (
+                          <ul className="mt-1 text-xs text-slate-600">
+                            {item.specifications?.hoseLength && (
+                              <li>• Hortum Boyu: {item.specifications.hoseLength}</li>
+                            )}
+                            {item.specifications?.volume && (
+                              <li>• Hacim: {item.specifications.volume}</li>
+                            )}
+                            {item.specifications?.color && (
+                              <li>• Renk: {item.specifications.color}</li>
+                            )}
+                            {item.specifications?.neckSize && (
+                              <li>• Boyun Ölçüsü: {item.specifications.neckSize}</li>
+                            )}
+                          </ul>
+                        )}
+                      </div>
                     </div>
                     <button
                       type="button"
@@ -324,41 +361,23 @@ export default function CartPage() {
                         {item.packageInfo ? 'Birim Fiyat' : 'Fiyat'}
                       </p>
                       <p className="text-sm font-semibold text-slate-700">
-                        {formatCurrency(effectivePrice)} <span className="text-xs font-normal text-slate-500">+KDV</span>
+                        {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, effectivePrice) : "₺" + effectivePrice.toLocaleString("tr-TR")}
+                        <span className="text-xs font-normal text-slate-500">+KDV</span>
                         {effectivePrice < item.price && (
                           <span className="ml-2 text-xs text-green-600 line-through">
-                            {formatCurrency(item.price)}
+                            {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, item.price) : "₺" + item.price.toLocaleString("tr-TR")}
                           </span>
                         )}
                       </p>
                     </div>
-                    {/* Teknik Özellikler */}
-                    {(item.specifications?.hoseLength || item.specifications?.volume || item.specifications?.color || item.specifications?.neckSize) && (
-                      <div className="sm:col-span-2">
-                        <p className="text-xs font-semibold text-slate-700">Teknik Özellikler</p>
-                        <ul className="mt-1 text-xs text-slate-600">
-                          {item.specifications?.hoseLength && (
-                            <li>• Hortum Boyu: {item.specifications.hoseLength}</li>
-                          )}
-                          {item.specifications?.volume && (
-                            <li>• Hacim: {item.specifications.volume}</li>
-                          )}
-                          {item.specifications?.color && (
-                            <li>• Renk: {item.specifications.color}</li>
-                          )}
-                          {item.specifications?.neckSize && (
-                            <li>• Boyun Ölçüsü: {item.specifications.neckSize}</li>
-                          )}
-                        </ul>
-                      </div>
-                    )}
                     {item.packageInfo && (
                       <div>
                         <p className="text-xs text-slate-500">
                           {item.packageInfo.boxLabel} Fiyatı
                         </p>
                         <p className="text-sm font-semibold text-slate-700">
-                          {formatCurrency(effectivePrice * item.packageInfo.itemsPerBox)} <span className="text-xs font-normal text-slate-500">+KDV</span>
+                          {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, item.packageInfo.itemsPerBox, effectivePrice) : "₺" + (effectivePrice * item.packageInfo.itemsPerBox).toLocaleString("tr-TR")}
+                          <span className="text-xs font-normal text-slate-500">+KDV</span>
                         </p>
                       </div>
                     )}
@@ -385,14 +404,14 @@ export default function CartPage() {
                   {appliedTier && (
                     <div className="rounded-lg bg-green-50 px-3 py-2 text-xs text-green-700">
                       ✅ Toplu alım indirimi uygulandı! ({appliedTier.minQty}+ {item.packageInfo?.boxLabel.toLowerCase() || 'adet'})
-                      {savings > 0 && ` - ${formatCurrency(savings)} tasarruf`}
+                      {savings > 0 && ` - ${exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, savings) : "₺" + savings.toLocaleString("tr-TR")} tasarruf`}
                     </div>
                   )}
 
                   {nextTier && (
                     <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
                       💡 {nextTier.minQty - item.quantity} {item.packageInfo?.boxLabel.toLowerCase() || 'adet'} daha ekleyin, 
-                      birim fiyat {formatCurrency(nextTier.price)} +KDV olsun!
+                      birim fiyat {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, nextTier.price) : "₺" + nextTier.price.toLocaleString("tr-TR")} +KDV olsun!
                     </div>
                   )}
                 </div>
@@ -400,7 +419,8 @@ export default function CartPage() {
                 <div className="flex items-center justify-between border-t border-slate-100 pt-4">
                   <span className="text-sm font-semibold text-slate-700">Toplam (KDV Hariç)</span>
                   <span className="text-xl font-bold text-amber-600">
-                    {formatCurrency(itemTotal)} <span className="text-sm font-normal text-slate-500">+KDV</span>
+                    {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, itemTotal) : "₺" + itemTotal.toLocaleString("tr-TR")}
+                    <span className="text-sm font-normal text-slate-500">+KDV</span>
                   </span>
                 </div>
               </div>
@@ -423,11 +443,11 @@ export default function CartPage() {
               </div>
               <div className="flex items-center justify-between text-slate-700">
                 <dt>Ara toplam (KDV Hariç)</dt>
-                <dd className="font-semibold">{formatCurrency(subtotal)} <span className="text-xs font-normal text-slate-500">+KDV</span></dd>
+                <dd className="font-semibold">{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, subtotal) : "₺" + subtotal.toLocaleString("tr-TR")} <span className="text-xs font-normal text-slate-500">+KDV</span></dd>
               </div>
               <div className="flex items-center justify-between text-slate-500">
                 <dt>KDV (%20)</dt>
-                <dd>{formatCurrency(subtotal * 0.20)}</dd>
+                <dd>{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, subtotal * 0.20) : "₺" + (subtotal * 0.20).toLocaleString("tr-TR")}</dd>
               </div>
               <div className="flex items-center justify-between text-slate-700">
                 <dt className="flex items-center gap-1">
@@ -438,10 +458,10 @@ export default function CartPage() {
                 </dt>
                 <dd className="font-semibold">
                   {totalItems >= 50000 ? (
-                    <span className="text-green-600">{formatCurrency(0)}</span>
+                    <span className="text-green-600">{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, 0) : "₺0"}</span>
                   ) : (
                     <>
-                      {formatCurrency(totalBoxes * 120)}
+                      {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, totalBoxes * 120) : "₺" + (totalBoxes * 120).toLocaleString("tr-TR")}
                       <span className="ml-1 text-xs font-normal text-slate-500">
                         ({totalBoxes} koli × ₺120)
                       </span>
@@ -461,10 +481,10 @@ export default function CartPage() {
             <div className="mt-6 border-t border-amber-100 pt-4">
               <div className="flex items-center justify-between text-base font-bold text-amber-700">
                 <span>Genel Toplam (KDV Dahil)</span>
-                <span>{formatCurrency((subtotal * 1.20) + (totalItems >= 50000 ? 0 : totalBoxes * 120))}</span>
+                <span>{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (subtotal * 1.20) + (totalItems >= 50000 ? 0 : totalBoxes * 120)) : "₺" + ((subtotal * 1.20) + (totalItems >= 50000 ? 0 : totalBoxes * 120)).toLocaleString("tr-TR")}</span>
               </div>
               <p className="mt-2 text-xs text-slate-600">
-                KDV hariç: {formatCurrency(subtotal + (totalItems >= 50000 ? 0 : totalBoxes * 120))} +KDV
+                KDV hariç: {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, subtotal + (totalItems >= 50000 ? 0 : totalBoxes * 120)) : "₺" + (subtotal + (totalItems >= 50000 ? 0 : totalBoxes * 120)).toLocaleString("tr-TR")} +KDV
               </p>
             </div>
             <Link

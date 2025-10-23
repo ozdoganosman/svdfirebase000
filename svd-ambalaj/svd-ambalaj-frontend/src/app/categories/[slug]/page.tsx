@@ -113,10 +113,11 @@ export default async function CategoryDetailPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams?: { q?: string };
+  searchParams?: Promise<{ q?: string }>;
 }) {
   const { slug } = await params;
-  const q = searchParams?.q?.toString() || "";
+  const resolvedSearchParams = await searchParams;
+  const q = resolvedSearchParams?.q?.toString() || "";
   const [category, allProducts, exchangeRate] = await Promise.all([
     getCategory(slug),
     getCategoryProducts(slug),

@@ -736,10 +736,12 @@ export default async function Home() {
                         slug: product.slug,
                         price: product.priceUSD && exchangeRate ? product.priceUSD * exchangeRate.rate : 0,
                         stock: product.stock,
+                        images: product.images,
                         bulkPricing: product.priceUSD && product.bulkPricingUSD && exchangeRate
                           ? product.bulkPricingUSD.map(tier => ({ minQty: tier.minQty, price: tier.price * exchangeRate.rate }))
                           : undefined,
                         packageInfo: product.packageInfo,
+                        specifications: product.specifications,
                       }}
                     />
                     <Link
