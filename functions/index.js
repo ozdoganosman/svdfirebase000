@@ -583,6 +583,22 @@ app.get("/products", async (_req, res) => {
   }
 });
 
+app.get("/products/search", async (req, res) => {
+  try {
+    const filters = {
+      q: req.query.q,
+      category: req.query.category,
+      minPrice: req.query.minPrice ? Number(req.query.minPrice) : undefined,
+      maxPrice: req.query.maxPrice ? Number(req.query.maxPrice) : undefined,
+      sort: req.query.sort,
+    };
+    const products = await catalog.searchProducts(filters);
+    res.status(200).send({ products });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
 app.get("/products/:id", async (req, res) => {
   try {
     const product = await catalog.getProductById(req.params.id);

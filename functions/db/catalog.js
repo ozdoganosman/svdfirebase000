@@ -195,6 +195,82 @@ const listProductsByCategory = async (categoryId) => {
   return snapshot.docs.map(mapProductDoc);
 };
 
+/**
+ * Search and filter products
+ * @param {Object} filters - Search and filter options
+ * @param {string} filters.q - Search query (searches in title, description)
+ * @param {string} filters.category - Category ID to filter by
+ * @param {number} filters.minPrice - Minimum price (USD)
+ * @param {number} filters.maxPrice - Maximum price (USD)
+ * @param {string} filters.sort - Sort option: 'title-asc', 'title-desc', 'price-asc', 'price-desc'
+ * @returns {Promise<Array>} Filtered and sorted products
+ */
+const searchProducts = async (filters = {}) => {
+  let queryRef = productsCollection;
+
+  // Apply category filter at database level if provided
+  if (filters.category && filters.category !== "all") {
+    queryRef = queryRef.where("category", "==", filters.category);
+  }
+
+  const snapshot = await queryRef.get();
+  let products = snapshot.docs.map(mapProductDoc).filter(Boolean);
+
+  // Apply text search filter
+  if (filters.q && filters.q.trim()) {
+    const searchTerm = filters.q.toLowerCase().trim();
+    products = products.filter((product) => {
+      const titleMatch = product.title?.toLowerCase().includes(searchTerm);
+      const descMatch = product.description?.toLowerCase().includes(searchTerm);
+      return titleMatch || descMatch;
+    });
+  }
+
+  // Apply price range filters (using USD prices)
+  if (filters.minPrice !== undefined && filters.minPrice !== null) {
+    const minPrice = Number(filters.minPrice);
+    if (Number.isFinite(minPrice)) {
+      products = products.filter((product) => {
+        const price = product.priceUSD ?? 0;
+        return price >= minPrice;
+      });
+    }
+  }
+
+  if (filters.maxPrice !== undefined && filters.maxPrice !== null) {
+    const maxPrice = Number(filters.maxPrice);
+    if (Number.isFinite(maxPrice)) {
+      products = products.filter((product) => {
+        const price = product.priceUSD ?? 0;
+        return price <= maxPrice;
+      });
+    }
+  }
+
+  // Apply sorting
+  if (filters.sort) {
+    switch (filters.sort) {
+      case "title-asc":
+        products.sort((a, b) => (a.title || "").localeCompare(b.title || "", "tr"));
+        break;
+      case "title-desc":
+        products.sort((a, b) => (b.title || "").localeCompare(a.title || "", "tr"));
+        break;
+      case "price-asc":
+        products.sort((a, b) => (a.priceUSD ?? 0) - (b.priceUSD ?? 0));
+        break;
+      case "price-desc":
+        products.sort((a, b) => (b.priceUSD ?? 0) - (a.priceUSD ?? 0));
+        break;
+      default:
+        // Default: order by createdAt desc (already from query)
+        break;
+    }
+  }
+
+  return products;
+};
+
 const createProduct = async (payload) => {
   const now = FieldValue.serverTimestamp();
   const productData = {
@@ -304,6 +380,7 @@ export {
   getProductById,
   getProductBySlug,
   listProductsByCategory,
+  searchProducts,
   createProduct,
   updateProduct,
   deleteProduct,
