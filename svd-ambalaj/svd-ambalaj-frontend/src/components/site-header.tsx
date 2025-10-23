@@ -11,7 +11,6 @@ const links = [
   { href: "/products", label: "Ürünler" },
   { href: "/categories", label: "Kategoriler" },
   { href: "/cart", label: "Sepet" },
-  { href: "/checkout", label: "Sipariş" },
 ];
 
 export function SiteHeader() {
@@ -92,25 +91,6 @@ export function SiteHeader() {
         </button>
 
         <div className="hidden md:flex items-center gap-3">
-          <Link
-            href="/checkout"
-            className="hidden rounded-full border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-600 transition hover:border-amber-400 hover:bg-amber-50 lg:inline-flex"
-          >
-            Hızlı Satın Al
-          </Link>
-          <Link
-            href="/#sample"
-            className="hidden rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-amber-600 shadow-sm shadow-amber-200/50 transition hover:border-amber-400 hover:bg-amber-50 md:inline-flex"
-          >
-            Numune Talep Et
-          </Link>
-          <a
-            href="tel:+908501234567"
-            className="hidden rounded-full border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-600 transition hover:border-amber-400 hover:bg-amber-50 sm:inline-flex"
-          >
-            0850 123 45 67
-          </a>
-          
           {/* Auth Buttons */}
           {user ? (
             <div className="relative">
