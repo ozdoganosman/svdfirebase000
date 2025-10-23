@@ -40,7 +40,7 @@ function SuccessContent() {
             Alışverişe Devam Et
           </Link>
           <Link
-            href="/orders"
+            href="/account/orders"
             className="inline-flex items-center rounded-full border border-emerald-500 px-6 py-3 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-50"
           >
             Siparişlerimi Görüntüle

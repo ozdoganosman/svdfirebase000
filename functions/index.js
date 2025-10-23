@@ -833,6 +833,23 @@ app.post("/orders", async (req, res) => {
   }
 });
 
+// Public endpoint for users to get their own orders
+app.get("/user/orders", async (req, res) => {
+  try {
+    const { userId } = req.query;
+    
+    if (!userId) {
+      return res.status(400).json({ error: "userId parameter is required" });
+    }
+    
+    const orderList = await orders.listOrders({ userId });
+    res.status(200).send({ orders: orderList });
+  } catch (error) {
+    functions.logger.error("Error fetching user orders", error);
+    res.status(500).json({ error: "Failed to fetch orders." });
+  }
+});
+
 app.get("/orders", requireAuth, async (req, res) => {
   try {
     const orderList = await orders.listOrders(req.query || {});

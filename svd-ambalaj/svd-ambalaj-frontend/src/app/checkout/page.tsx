@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { getCurrentRate, formatDualPrice } from "@/lib/currency";
 
 const apiBase =
@@ -21,6 +22,18 @@ type CheckoutFormState = {
   notes: string;
 };
 
+interface SavedAddress {
+  id: string;
+  title: string;
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  district: string;
+  postalCode: string;
+  isDefault: boolean;
+}
+
 const defaultState: CheckoutFormState = {
   name: "",
   company: "",
@@ -34,6 +47,7 @@ const defaultState: CheckoutFormState = {
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { 
     items, 
     subtotal,
@@ -48,10 +62,98 @@ export default function CheckoutPage() {
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
   const [message, setMessage] = useState<string>("");
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const [useNewAddress, setUseNewAddress] = useState(false);
 
   useEffect(() => {
     getCurrentRate().then(rate => setExchangeRate(rate.rate)).catch(() => setExchangeRate(null));
   }, []);
+
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      if (!user) return;
+      
+      try {
+        // TODO: Implement backend API call
+        // const response = await fetch(`/api/addresses?userId=${user.uid}`);
+        // const data = await response.json();
+        // setSavedAddresses(data);
+        
+        // Temporary mock data
+        const mockAddresses: SavedAddress[] = [
+          {
+            id: "1",
+            title: "Ev Adresi",
+            fullName: "Ahmet Yılmaz",
+            phone: "+90 555 123 4567",
+            address: "Atatürk Mahallesi, İnönü Caddesi No:45 Daire:5",
+            city: "İstanbul",
+            district: "Kadıköy",
+            postalCode: "34710",
+            isDefault: true
+          },
+          {
+            id: "2",
+            title: "İş Adresi",
+            fullName: "Ahmet Yılmaz",
+            phone: "+90 555 123 4567",
+            address: "Büyükdere Caddesi, Tekstil Plaza Kat:8 No:102",
+            city: "İstanbul",
+            district: "Şişli",
+            postalCode: "34394",
+            isDefault: false
+          }
+        ];
+        
+        setSavedAddresses(mockAddresses);
+        
+        // Auto-select default address
+        const defaultAddr = mockAddresses.find(a => a.isDefault);
+        if (defaultAddr && !useNewAddress) {
+          setSelectedAddressId(defaultAddr.id);
+          setForm(prev => ({
+            ...prev,
+            name: defaultAddr.fullName,
+            phone: defaultAddr.phone,
+            address: `${defaultAddr.address}, ${defaultAddr.district}`,
+            city: defaultAddr.city,
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching addresses:", error);
+      }
+    };
+
+    fetchAddresses();
+  }, [user, useNewAddress]);
+
+  const handleAddressSelect = (addressId: string) => {
+    if (addressId === "new") {
+      setUseNewAddress(true);
+      setSelectedAddressId("");
+      setForm(prev => ({
+        ...prev,
+        name: "",
+        phone: "",
+        address: "",
+        city: "",
+      }));
+    } else {
+      setUseNewAddress(false);
+      setSelectedAddressId(addressId);
+      const selected = savedAddresses.find(a => a.id === addressId);
+      if (selected) {
+        setForm(prev => ({
+          ...prev,
+          name: selected.fullName,
+          phone: selected.phone,
+          address: `${selected.address}, ${selected.district}`,
+          city: selected.city,
+        }));
+      }
+    }
+  };
 
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -72,7 +174,10 @@ export default function CheckoutPage() {
     setMessage("");
 
     const payload = {
-      customer: form,
+      customer: {
+        ...form,
+        userId: user?.uid || null, // Add user ID if authenticated
+      },
       items: items.map((item) => ({
         id: item.id,
         title: item.title,
@@ -139,6 +244,42 @@ export default function CheckoutPage() {
             onSubmit={handleSubmit}
             className="space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/60"
           >
+            {/* Address Selector */}
+            {savedAddresses.length > 0 && (
+              <div className="space-y-2 rounded-xl bg-slate-50 p-4 border border-slate-200">
+                <label htmlFor="addressSelect" className="text-sm font-semibold text-slate-700">
+                  Teslimat Adresi Seçin
+                </label>
+                <select
+                  id="addressSelect"
+                  value={useNewAddress ? "new" : selectedAddressId}
+                  onChange={(e) => handleAddressSelect(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                >
+                  <option value="">Adres seçin...</option>
+                  {savedAddresses.map((addr) => (
+                    <option key={addr.id} value={addr.id}>
+                      {addr.title} - {addr.city}, {addr.district}
+                    </option>
+                  ))}
+                  <option value="new">+ Yeni Adres Ekle</option>
+                </select>
+                {selectedAddressId && !useNewAddress && (
+                  <div className="mt-3 rounded-lg bg-white p-3 text-sm text-slate-600 border border-slate-100">
+                    <p className="font-semibold text-slate-800">
+                      {savedAddresses.find(a => a.id === selectedAddressId)?.fullName}
+                    </p>
+                    <p>{savedAddresses.find(a => a.id === selectedAddressId)?.phone}</p>
+                    <p>{savedAddresses.find(a => a.id === selectedAddressId)?.address}</p>
+                    <p>
+                      {savedAddresses.find(a => a.id === selectedAddressId)?.district} / 
+                      {savedAddresses.find(a => a.id === selectedAddressId)?.city}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
                 <label htmlFor="name" className="text-sm font-semibold text-slate-700">
@@ -150,7 +291,8 @@ export default function CheckoutPage() {
                   value={form.name}
                   onChange={handleChange}
                   required
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  disabled={selectedAddressId !== "" && !useNewAddress}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:bg-slate-50 disabled:text-slate-500"
                 />
               </div>
               <div className="space-y-2">
@@ -190,9 +332,10 @@ export default function CheckoutPage() {
                   value={form.phone}
                   onChange={handleChange}
                   required
+                  disabled={selectedAddressId !== "" && !useNewAddress}
                   pattern="^\+?\d{10,15}$"
                   title="Lütfen geçerli bir telefon numarası girin"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:bg-slate-50 disabled:text-slate-500"
                 />
               </div>
               <div className="space-y-2">
@@ -218,7 +361,8 @@ export default function CheckoutPage() {
                   value={form.city}
                   onChange={handleChange}
                   required
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  disabled={selectedAddressId !== "" && !useNewAddress}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:bg-slate-50 disabled:text-slate-500"
                 />
               </div>
             </div>
@@ -234,7 +378,8 @@ export default function CheckoutPage() {
                 value={form.address}
                 onChange={handleChange}
                 required
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                disabled={selectedAddressId !== "" && !useNewAddress}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:bg-slate-50 disabled:text-slate-500"
                 placeholder="Sokak, mahalle, ilçe ve posta kodu bilgilerini yazınız"
               />
             </div>

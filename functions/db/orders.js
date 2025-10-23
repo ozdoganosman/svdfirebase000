@@ -101,6 +101,10 @@ const listOrders = async (filters = {}) => {
     queryRef = queryRef.where("status", "==", normalizeStatus(filters.status));
   }
 
+  if (filters.userId) {
+    queryRef = queryRef.where("customer.userId", "==", filters.userId);
+  }
+
   const snapshot = await queryRef.get();
   return snapshot.docs.map(mapOrderDoc);
 };
@@ -119,6 +123,7 @@ const upsertCustomer = async (customer = {}) => {
   const address = (customer.address || "").trim();
   const city = (customer.city || "").trim();
   const notes = (customer.notes || "").trim();
+  const userId = customer.userId || null;
 
   const customerData = {
     name,
@@ -129,6 +134,7 @@ const upsertCustomer = async (customer = {}) => {
     address,
     city,
     notes,
+    userId,
     updatedAt: FieldValue.serverTimestamp(),
   };
 

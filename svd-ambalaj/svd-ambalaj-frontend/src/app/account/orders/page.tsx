@@ -5,14 +5,26 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { AuthGuard } from "@/components/auth/auth-guard";
 
+const apiBase =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:5000/svdfirebase000/us-central1/api";
+
 interface Order {
   id: string;
   orderNumber: string;
-  date: string;
+  createdAt: string;
   status: string;
-  total: number;
-  currency: string;
-  items: number;
+  totals: {
+    subtotal: number;
+    currency: string;
+    total: number;
+  };
+  items: Array<{
+    id: string;
+    title: string;
+    quantity: number;
+    price: number;
+  }>;
 }
 
 export default function OrdersPage() {
@@ -22,57 +34,64 @@ export default function OrdersPage() {
 
   useEffect(() => {
     const fetchOrders = async () => {
-      try {
-        // TODO: Implement backend API call
-        // const response = await fetch(`/api/orders?userId=${user?.uid}`);
-        // const data = await response.json();
-        // setOrders(data);
-        
-        // Temporary mock data
-        setOrders([
-          {
-            id: "1",
-            orderNumber: "ORD-2024-0001",
-            date: "2024-01-15",
-            status: "Teslim Edildi",
-            total: 1250.00,
-            currency: "TRY",
-            items: 3
-          },
-          {
-            id: "2",
-            orderNumber: "ORD-2024-0002",
-            date: "2024-01-20",
-            status: "Kargoda",
-            total: 850.00,
-            currency: "TRY",
-            items: 2
-          }
-        ]);
+      if (!user) {
         setLoading(false);
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${apiBase}/user/orders?userId=${user.uid}`);
+        
+        if (!response.ok) {
+          throw new Error("Failed to fetch orders");
+        }
+        
+        const data = await response.json();
+        setOrders(data.orders || []);
       } catch (error) {
         console.error("Error fetching orders:", error);
+      } finally {
         setLoading(false);
       }
     };
 
-    if (user) {
-      fetchOrders();
-    }
+    fetchOrders();
   }, [user]);
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Teslim Edildi":
+    const normalizedStatus = status.toLowerCase();
+    switch (normalizedStatus) {
+      case "completed":
+      case "teslim edildi":
         return "bg-green-100 text-green-700 border-green-200";
-      case "Kargoda":
+      case "shipped":
+      case "kargoda":
         return "bg-blue-100 text-blue-700 border-blue-200";
-      case "Hazırlanıyor":
+      case "pending":
+      case "hazırlanıyor":
+      case "beklemede":
         return "bg-yellow-100 text-yellow-700 border-yellow-200";
-      case "İptal Edildi":
+      case "cancelled":
+      case "iptal edildi":
         return "bg-red-100 text-red-700 border-red-200";
       default:
         return "bg-slate-100 text-slate-700 border-slate-200";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    const normalizedStatus = status.toLowerCase();
+    switch (normalizedStatus) {
+      case "completed":
+        return "Teslim Edildi";
+      case "shipped":
+        return "Kargoda";
+      case "pending":
+        return "Beklemede";
+      case "cancelled":
+        return "İptal Edildi";
+      default:
+        return status;
     }
   };
 
@@ -148,7 +167,7 @@ export default function OrdersPage() {
                             order.status
                           )}`}
                         >
-                          {order.status}
+                          {getStatusLabel(order.status)}
                         </span>
                       </div>
                       <div className="flex flex-col gap-1 text-sm text-slate-600">
@@ -162,7 +181,7 @@ export default function OrdersPage() {
                             />
                           </svg>
                           <span>
-                            {new Date(order.date).toLocaleDateString("tr-TR", {
+                            {new Date(order.createdAt).toLocaleDateString("tr-TR", {
                               year: "numeric",
                               month: "long",
                               day: "numeric"
@@ -178,19 +197,19 @@ export default function OrdersPage() {
                               d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
                             />
                           </svg>
-                          <span>{order.items} ürün</span>
+                          <span>{order.items.length} ürün</span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-col sm:items-end gap-3">
+                      <div className="flex flex-col sm:items-end gap-3">
                       <div className="text-right">
                         <div className="text-2xl font-bold text-slate-800">
-                          {order.total.toLocaleString("tr-TR", {
+                          {order.totals.total.toLocaleString("tr-TR", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2
                           })}{" "}
                           <span className="text-lg font-semibold text-slate-600">
-                            {order.currency}
+                            {order.totals.currency}
                           </span>
                         </div>
                       </div>
