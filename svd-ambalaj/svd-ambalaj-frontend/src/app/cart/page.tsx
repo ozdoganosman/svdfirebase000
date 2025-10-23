@@ -146,9 +146,9 @@ export default function CartPage() {
     doc.setTextColor(0, 0, 0);
     doc.setFont("helvetica", "bold");
     addText("URUN", margin + 2, yPos + 5);
-    addText("MIKTAR", pageWidth - margin - 80, yPos + 5);
-    addText("BIRIM", pageWidth - margin - 50, yPos + 5);
-    addText("TOPLAM", pageWidth - margin - 2, yPos + 5, { align: "right" });
+    addText("MIKTAR", margin + 100, yPos + 5);
+    addText("BIRIM FIYAT", margin + 135, yPos + 5);
+    addText("TOPLAM", pageWidth - margin - 30, yPos + 5);
     
     yPos += 12;
 
@@ -178,36 +178,34 @@ export default function CartPage() {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
-      const titleLines = doc.splitTextToSize(item.title, 80);
+      const maxTitleWidth = 90;
+      const titleLines = doc.splitTextToSize(item.title, maxTitleWidth);
       addText(titleLines[0], margin + 2, yPos);
       
       // Quantity details
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.setTextColor(80, 80, 80);
-      let qtyText = "";
       if (item.packageInfo) {
-        qtyText = `${item.quantity} ${item.packageInfo.boxLabel}`;
-        addText(qtyText, pageWidth - margin - 80, yPos);
-        addText(`(${totalItemCount} adet)`, pageWidth - margin - 80, yPos + 4);
+        addText(`${item.quantity} ${item.packageInfo.boxLabel}`, margin + 100, yPos);
+        addText(`(${totalItemCount.toLocaleString('tr-TR')} adet)`, margin + 100, yPos + 4);
       } else {
-        qtyText = `${item.quantity} adet`;
-        addText(qtyText, pageWidth - margin - 80, yPos);
+        addText(`${item.quantity} adet`, margin + 100, yPos);
       }
       
       // Unit price
       doc.setFontSize(8);
       const unitPriceText = rate ? 
-        `${effectivePrice.toFixed(2)} USD` : 
+        `$${effectivePrice.toFixed(2)}` : 
         `${effectivePrice.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
-      addText(unitPriceText, pageWidth - margin - 50, yPos);
+      addText(unitPriceText, margin + 135, yPos);
       
       // Total price
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.setTextColor(217, 119, 6);
       const totalPriceText = rate ? 
-        `${itemTotal.toFixed(2)} USD` : 
+        `$${itemTotal.toFixed(2)}` : 
         `${itemTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
       addText(totalPriceText, pageWidth - margin - 2, yPos, { align: "right" });
       
@@ -246,14 +244,14 @@ export default function CartPage() {
     
     addText(`KDV Haric Tutar:`, margin, yPos);
     const subtotalText = rate ? 
-      `${kdvHaricTutar.toFixed(2)} USD` : 
+      `$${kdvHaricTutar.toFixed(2)}` : 
       `${kdvHaricTutar.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
     addText(subtotalText, pageWidth - margin - 2, yPos, { align: "right" });
     yPos += 6;
     
     addText(`KDV (%20):`, margin, yPos);
     const kdvText = rate ? 
-      `${kdvTutari.toFixed(2)} USD` : 
+      `$${kdvTutari.toFixed(2)}` : 
       `${kdvTutari.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
     addText(kdvText, pageWidth - margin - 2, yPos, { align: "right" });
     yPos += 10;
@@ -266,7 +264,7 @@ export default function CartPage() {
     doc.setTextColor(255, 255, 255);
     addText(`GENEL TOPLAM:`, margin + 2, yPos + 4);
     const grandTotalText = rate ? 
-      `${subtotal.toFixed(2)} USD` : 
+      `$${subtotal.toFixed(2)}` : 
       `${subtotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
     addText(grandTotalText, pageWidth - margin - 2, yPos + 4, { align: "right" });
 
