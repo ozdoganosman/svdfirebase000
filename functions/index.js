@@ -583,6 +583,37 @@ app.get("/products", async (_req, res) => {
   }
 });
 
+// Get unique specification values for filtering
+app.get("/products/specifications", async (_req, res) => {
+  try {
+    const products = await catalog.listProducts();
+    const specs = {
+      hoseLengths: new Set(),
+      volumes: new Set(),
+      colors: new Set(),
+      neckSizes: new Set(),
+    };
+
+    products.forEach(product => {
+      if (product.specifications) {
+        if (product.specifications.hoseLength) specs.hoseLengths.add(product.specifications.hoseLength);
+        if (product.specifications.volume) specs.volumes.add(product.specifications.volume);
+        if (product.specifications.color) specs.colors.add(product.specifications.color);
+        if (product.specifications.neckSize) specs.neckSizes.add(product.specifications.neckSize);
+      }
+    });
+
+    res.status(200).send({
+      hoseLengths: Array.from(specs.hoseLengths).sort(),
+      volumes: Array.from(specs.volumes).sort(),
+      colors: Array.from(specs.colors).sort(),
+      neckSizes: Array.from(specs.neckSizes).sort(),
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
 app.get("/products/search", async (req, res) => {
   try {
     const filters = {
@@ -591,6 +622,10 @@ app.get("/products/search", async (req, res) => {
       minPrice: req.query.minPrice ? Number(req.query.minPrice) : undefined,
       maxPrice: req.query.maxPrice ? Number(req.query.maxPrice) : undefined,
       sort: req.query.sort,
+      hoseLength: req.query.hoseLength,
+      volume: req.query.volume,
+      color: req.query.color,
+      neckSize: req.query.neckSize,
     };
     const products = await catalog.searchProducts(filters);
     res.status(200).send({ products });

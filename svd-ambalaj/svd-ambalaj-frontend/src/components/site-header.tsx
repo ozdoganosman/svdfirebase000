@@ -41,12 +41,12 @@ export function SiteHeader() {
         <button
           type="button"
           onClick={() => setShowSearch(!showSearch)}
-          className="hidden lg:flex items-center gap-2 rounded-full border border-slate-300 bg-slate-50 px-4 py-2 text-sm text-slate-500 transition hover:border-amber-400 hover:bg-white flex-1 max-w-md"
+          className="hidden lg:flex items-center gap-2 rounded-full border-2 border-amber-500 bg-gradient-to-r from-amber-50 to-amber-100 px-5 py-2.5 text-sm font-bold text-amber-700 shadow-sm transition hover:border-amber-600 hover:bg-gradient-to-r hover:from-amber-100 hover:to-amber-200 hover:shadow-md active:scale-95 cursor-pointer"
         >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <span>Ürün ara...</span>
+          <span>Ürün Ara</span>
         </button>
 
         {/* Desktop Navigation */}

@@ -1,20 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
+import { getCurrentRate, formatDualPrice } from "@/lib/currency";
 
 const apiBase =
   process.env.NEXT_PUBLIC_API_URL ??
   "http://localhost:5000/svdfirebase000/us-central1/api";
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("tr-TR", {
-    style: "currency",
-    currency: "TRY",
-    minimumFractionDigits: 2,
-  }).format(value);
 
 type CheckoutFormState = {
   name: string;
@@ -40,10 +34,24 @@ const defaultState: CheckoutFormState = {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotal, clearCart } = useCart();
+  const { 
+    items, 
+    subtotal,
+    totalBoxes,
+    totalItems,
+    getEffectivePrice,
+    getTotalItemCount,
+    calculateItemTotal,
+    clearCart 
+  } = useCart();
   const [form, setForm] = useState<CheckoutFormState>(defaultState);
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
   const [message, setMessage] = useState<string>("");
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+
+  useEffect(() => {
+    getCurrentRate().then(rate => setExchangeRate(rate.rate)).catch(() => setExchangeRate(null));
+  }, []);
 
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -263,23 +271,70 @@ export default function CheckoutPage() {
 
           <aside className="space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/60">
             <h2 className="text-lg font-semibold text-slate-900">Sipariş Özeti</h2>
-            <ul className="space-y-4 text-sm text-slate-600">
-              {items.map((item) => (
-                <li key={item.id} className="flex items-center justify-between">
-                  <span>
-                    {item.title}
-                    <span className="text-slate-400"> × {item.quantity}</span>
-                  </span>
-                  <span className="font-semibold text-amber-600">
-                    {formatCurrency(item.price * item.quantity)}
-                  </span>
-                </li>
-              ))}
+            <ul className="space-y-4 text-sm">
+              {items.map((item) => {
+                const effectivePrice = getEffectivePrice(item);
+                const itemTotal = calculateItemTotal(item);
+                const totalItemCount = getTotalItemCount(item);
+                
+                return (
+                  <li key={item.id} className="space-y-2 border-b border-slate-100 pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-semibold text-slate-900">{item.title}</p>
+                        {item.packageInfo && (
+                          <p className="text-xs text-slate-500">
+                            {item.quantity} {item.packageInfo.boxLabel} × {item.packageInfo.itemsPerBox} adet = {totalItemCount} adet
+                          </p>
+                        )}
+                        {!item.packageInfo && (
+                          <p className="text-xs text-slate-500">
+                            {item.quantity} adet
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600">
+                        Birim: {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, effectivePrice) : `$${effectivePrice.toFixed(2)}`}
+                      </span>
+                      <span className="font-bold text-amber-600">
+                        {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, itemTotal) : `$${itemTotal.toFixed(2)}`}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
-            <div className="border-t border-slate-200 pt-4">
-              <div className="flex items-center justify-between text-base font-bold text-amber-700">
-                <span>Genel Toplam</span>
-                <span>{formatCurrency(subtotal)}</span>
+            
+            <div className="space-y-3 border-t border-slate-200 pt-4">
+              {totalBoxes > 0 && (
+                <div className="flex items-center justify-between text-sm text-slate-700">
+                  <span>Toplam Koli</span>
+                  <span className="font-semibold">{totalBoxes}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-sm text-slate-700">
+                <span>Toplam Ürün</span>
+                <span className="font-semibold">{totalItems.toLocaleString('tr-TR')} adet</span>
+              </div>
+              <div className="flex items-center justify-between text-sm text-slate-700">
+                <span>Ara Toplam (KDV Hariç)</span>
+                <span className="font-semibold">
+                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, subtotal) : `$${subtotal.toFixed(2)}`}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm text-slate-500">
+                <span>KDV (%20)</span>
+                <span>
+                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, subtotal * 0.20) : `$${(subtotal * 0.20).toFixed(2)}`}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-t border-slate-200 pt-3 text-base font-bold text-amber-700">
+                <span>Genel Toplam (KDV Dahil)</span>
+                <span>
+                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, subtotal * 1.20) : `$${(subtotal * 1.20).toFixed(2)}`}
+                </span>
               </div>
               <p className="mt-2 text-xs text-slate-500">
                 Kargo ve ödeme detayları satış ekibimiz tarafından onay sürecinde paylaşılacaktır.

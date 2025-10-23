@@ -203,6 +203,10 @@ const listProductsByCategory = async (categoryId) => {
  * @param {number} filters.minPrice - Minimum price (USD)
  * @param {number} filters.maxPrice - Maximum price (USD)
  * @param {string} filters.sort - Sort option: 'title-asc', 'title-desc', 'price-asc', 'price-desc'
+ * @param {string} filters.hoseLength - Filter by hose length
+ * @param {string} filters.volume - Filter by volume
+ * @param {string} filters.color - Filter by color
+ * @param {string} filters.neckSize - Filter by neck size
  * @returns {Promise<Array>} Filtered and sorted products
  */
 const searchProducts = async (filters = {}) => {
@@ -224,6 +228,31 @@ const searchProducts = async (filters = {}) => {
       const descMatch = product.description?.toLowerCase().includes(searchTerm);
       return titleMatch || descMatch;
     });
+  }
+
+  // Apply specification filters
+  if (filters.hoseLength) {
+    products = products.filter((product) => 
+      product.specifications?.hoseLength === filters.hoseLength
+    );
+  }
+
+  if (filters.volume) {
+    products = products.filter((product) => 
+      product.specifications?.volume === filters.volume
+    );
+  }
+
+  if (filters.color) {
+    products = products.filter((product) => 
+      product.specifications?.color === filters.color
+    );
+  }
+
+  if (filters.neckSize) {
+    products = products.filter((product) => 
+      product.specifications?.neckSize === filters.neckSize
+    );
   }
 
   // Apply price range filters (using USD prices)

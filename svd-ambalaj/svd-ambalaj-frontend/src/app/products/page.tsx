@@ -43,7 +43,57 @@ type Product = {
   };
 };
 
+type Category = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+type Specifications = {
+  hoseLengths: string[];
+  volumes: string[];
+  colors: string[];
+  neckSizes: string[];
+};
+
 // formatCurrency unused here; rely on formatDualPrice for display
+
+async function getCategories(): Promise<Category[]> {
+  try {
+    const response = await fetch(resolveServerApiUrl("/categories"), {
+      cache: 'no-store'
+    });
+    if (!response.ok) {
+      return [];
+    }
+    const payload = await response.json();
+    return payload?.categories ?? [];
+  } catch (error) {
+    console.error("Categories fetch error", error);
+    return [];
+  }
+}
+
+async function getSpecifications(): Promise<Specifications> {
+  try {
+    const response = await fetch(resolveServerApiUrl("/products/specifications"), {
+      cache: 'no-store'
+    });
+    if (!response.ok) {
+      return { hoseLengths: [], volumes: [], colors: [], neckSizes: [] };
+    }
+    const payload = await response.json();
+    return {
+      hoseLengths: payload?.hoseLengths ?? [],
+      volumes: payload?.volumes ?? [],
+      colors: payload?.colors ?? [],
+      neckSizes: payload?.neckSizes ?? [],
+    };
+  } catch (error) {
+    console.error("Specifications fetch error", error);
+    return { hoseLengths: [], volumes: [], colors: [], neckSizes: [] };
+  }
+}
 
 async function getExchangeRate(): Promise<ExchangeRate | null> {
   try {
@@ -62,37 +112,77 @@ async function getExchangeRate(): Promise<ExchangeRate | null> {
   }
 }
 
-async function getProducts(params?: { q?: string }): Promise<Product[]> {
+async function getProducts(params?: { 
+  q?: string; 
+  category?: string; 
+  sort?: string; 
+  minPrice?: string; 
+  maxPrice?: string;
+  hoseLength?: string;
+  volume?: string;
+  color?: string;
+  neckSize?: string;
+}): Promise<Product[]> {
   try {
-    const query = params?.q ? `?q=${encodeURIComponent(params.q)}` : "";
-    const response = await fetch(resolveServerApiUrl(`/products${query}`), {
+    const searchParams = new URLSearchParams();
+    if (params?.q) searchParams.set("q", params.q);
+    if (params?.category && params.category !== "all") searchParams.set("category", params.category);
+    if (params?.sort) searchParams.set("sort", params.sort);
+    if (params?.minPrice) searchParams.set("minPrice", params.minPrice);
+    if (params?.maxPrice) searchParams.set("maxPrice", params.maxPrice);
+    if (params?.hoseLength) searchParams.set("hoseLength", params.hoseLength);
+    if (params?.volume) searchParams.set("volume", params.volume);
+    if (params?.color) searchParams.set("color", params.color);
+    if (params?.neckSize) searchParams.set("neckSize", params.neckSize);
+    
+    const query = searchParams.toString();
+    const endpoint = query ? `/products/search?${query}` : "/products";
+    
+    const response = await fetch(resolveServerApiUrl(endpoint), {
       cache: 'no-store'
     });
     if (!response.ok) {
       return [];
     }
     const payload = await response.json();
-    let items: Product[] = payload?.products ?? [];
-    // Client-side fallback filtering by title/description if backend ignores q
-    if (params?.q) {
-      const q = params.q.toLowerCase();
-      items = items.filter(p =>
-        p.title.toLowerCase().includes(q) ||
-        (p.description?.toLowerCase().includes(q) ?? false)
-      );
-    }
-    return items;
+    return payload?.products ?? [];
   } catch (error) {
     console.error("Products fetch error", error);
     return [];
   }
 }
 
-export default async function ProductsPage({ searchParams }: { searchParams?: Promise<{ q?: string }> }) {
+export default async function ProductsPage({ searchParams }: { 
+  searchParams?: Promise<{ 
+    q?: string; 
+    category?: string; 
+    sort?: string; 
+    minPrice?: string; 
+    maxPrice?: string;
+    hoseLength?: string;
+    volume?: string;
+    color?: string;
+    neckSize?: string;
+  }> 
+}) {
   const resolvedSearchParams = await searchParams;
   const q = resolvedSearchParams?.q?.toString() || "";
-  const products = await getProducts({ q });
-  const exchangeRate = await getExchangeRate();
+  const category = resolvedSearchParams?.category?.toString() || "";
+  const sort = resolvedSearchParams?.sort?.toString() || "";
+  const minPrice = resolvedSearchParams?.minPrice?.toString() || "";
+  const maxPrice = resolvedSearchParams?.maxPrice?.toString() || "";
+  const hoseLength = resolvedSearchParams?.hoseLength?.toString() || "";
+  const volume = resolvedSearchParams?.volume?.toString() || "";
+  const color = resolvedSearchParams?.color?.toString() || "";
+  const neckSize = resolvedSearchParams?.neckSize?.toString() || "";
+  
+  const [products, categories, specifications, exchangeRate] = await Promise.all([
+    getProducts({ q, category, sort, minPrice, maxPrice, hoseLength, volume, color, neckSize }),
+    getCategories(),
+    getSpecifications(),
+    getExchangeRate()
+  ]);
+  
   const rate = exchangeRate?.rate ?? 0;
 
   const resolveProductImage = (product: Product): string => {
@@ -126,17 +216,175 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
         </div>
 
         {/* Filters */}
-        <form action="/products" method="get" className="mt-8 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex-1 min-w-[240px]">
-            <label htmlFor="q" className="block text-sm font-medium text-slate-700">Ürün ara</label>
-            <input id="q" name="q" defaultValue={q} placeholder="Örn: pompa, sprey, şişe…" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500" />
+        <form action="/products" method="get" className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+            {/* Search */}
+            <div className="lg:col-span-2">
+              <label htmlFor="q" className="block text-sm font-medium text-slate-700 mb-2">Ürün Ara</label>
+              <input 
+                id="q" 
+                name="q" 
+                defaultValue={q} 
+                placeholder="Ürün adı veya açıklama..." 
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20" 
+              />
+            </div>
+
+            {/* Category */}
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium text-slate-700 mb-2">Kategori</label>
+              <select 
+                id="category" 
+                name="category" 
+                defaultValue={category}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+              >
+                <option value="">Tümü</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sort */}
+            <div>
+              <label htmlFor="sort" className="block text-sm font-medium text-slate-700 mb-2">Sıralama</label>
+              <select 
+                id="sort" 
+                name="sort" 
+                defaultValue={sort}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+              >
+                <option value="">Varsayılan</option>
+                <option value="title-asc">İsim (A-Z)</option>
+                <option value="title-desc">İsim (Z-A)</option>
+                <option value="price-asc">Fiyat (Düşük-Yüksek)</option>
+                <option value="price-desc">Fiyat (Yüksek-Düşük)</option>
+              </select>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-end gap-2">
+              <button 
+                type="submit" 
+                className="flex-1 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-700"
+              >
+                Filtrele
+              </button>
+              {(q || category || sort || minPrice || maxPrice || hoseLength || volume || color || neckSize) && (
+                <Link 
+                  href="/products" 
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Temizle
+                </Link>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button type="submit" className="inline-flex items-center rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">Uygula</button>
-            {q && (
-              <Link href="/products" className="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Temizle</Link>
-            )}
-          </div>
+
+          {/* Technical Specifications - Always visible for now */}
+          <details className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <summary className="cursor-pointer text-sm font-medium text-slate-700">
+              Teknik Özellikler
+              {(specifications.hoseLengths.length > 0 || specifications.volumes.length > 0 || specifications.colors.length > 0 || specifications.neckSizes.length > 0) && (
+                <span className="ml-2 text-xs text-amber-600">
+                  ({[specifications.hoseLengths.length, specifications.volumes.length, specifications.colors.length, specifications.neckSizes.length].filter(n => n > 0).length} kategori)
+                </span>
+              )}
+            </summary>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label htmlFor="hoseLength" className="block text-xs text-slate-600 mb-1">Hortum Boyu</label>
+                <select 
+                  id="hoseLength" 
+                  name="hoseLength" 
+                  defaultValue={hoseLength}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                >
+                  <option value="">Tümü</option>
+                  {specifications.hoseLengths.map(length => (
+                    <option key={length} value={length}>{length}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="volume" className="block text-xs text-slate-600 mb-1">Hacim</label>
+                <select 
+                  id="volume" 
+                  name="volume" 
+                  defaultValue={volume}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                >
+                  <option value="">Tümü</option>
+                  {specifications.volumes.map(vol => (
+                    <option key={vol} value={vol}>{vol}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="color" className="block text-xs text-slate-600 mb-1">Renk</label>
+                <select 
+                  id="color" 
+                  name="color" 
+                  defaultValue={color}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                >
+                  <option value="">Tümü</option>
+                  {specifications.colors.map(col => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="neckSize" className="block text-xs text-slate-600 mb-1">Boyun Ölçüsü</label>
+                <select 
+                  id="neckSize" 
+                  name="neckSize" 
+                  defaultValue={neckSize}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                >
+                  <option value="">Tümü</option>
+                  {specifications.neckSizes.map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </details>
+
+          {/* Price Range - Collapsible on mobile */}
+          <details className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <summary className="cursor-pointer text-sm font-medium text-slate-700">Fiyat Aralığı (USD)</summary>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="minPrice" className="block text-xs text-slate-600 mb-1">Min</label>
+                <input 
+                  type="number" 
+                  id="minPrice" 
+                  name="minPrice" 
+                  defaultValue={minPrice}
+                  placeholder="0" 
+                  step="0.01"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                />
+              </div>
+              <div>
+                <label htmlFor="maxPrice" className="block text-xs text-slate-600 mb-1">Max</label>
+                <input 
+                  type="number" 
+                  id="maxPrice" 
+                  name="maxPrice" 
+                  defaultValue={maxPrice}
+                  placeholder="999" 
+                  step="0.01"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                />
+              </div>
+            </div>
+          </details>
         </form>
 
         <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
