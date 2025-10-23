@@ -91,6 +91,14 @@ export default function CartPage() {
     const contentWidth = pageWidth - (2 * margin);
     let yPos = margin;
 
+    // Helper function to format USD amounts with thousand separators
+    const formatUSD = (amount: number): string => {
+      return amount.toLocaleString('en-US', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      }).replace(/,/g, '.');
+    };
+
     // Helper function for Turkish text
     const addText = (text: string, x: number, y: number, options?: { align?: "left" | "center" | "right" }) => {
       // Convert Turkish characters to ASCII equivalents for better rendering
@@ -147,8 +155,8 @@ export default function CartPage() {
     doc.setFont("helvetica", "bold");
     addText("URUN", margin + 2, yPos + 5);
     addText("MIKTAR", margin + 100, yPos + 5);
-    addText("BIRIM FIYAT", margin + 135, yPos + 5);
-    addText("TOPLAM", pageWidth - margin - 30, yPos + 5);
+    addText("BIRIM FIYAT", margin + 130, yPos + 5);
+    addText("TOPLAM", pageWidth - margin -15, yPos + 5);
     
     yPos += 12;
 
@@ -196,7 +204,7 @@ export default function CartPage() {
       // Unit price
       doc.setFontSize(8);
       const unitPriceText = rate ? 
-        `$${effectivePrice.toFixed(2)}` : 
+        `$${formatUSD(effectivePrice)}` : 
         `${effectivePrice.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
       addText(unitPriceText, margin + 135, yPos);
       
@@ -205,7 +213,7 @@ export default function CartPage() {
       doc.setFontSize(9);
       doc.setTextColor(217, 119, 6);
       const totalPriceText = rate ? 
-        `$${itemTotal.toFixed(2)}` : 
+        `$${formatUSD(itemTotal)}` : 
         `${itemTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
       addText(totalPriceText, pageWidth - margin - 2, yPos, { align: "right" });
       
@@ -244,14 +252,14 @@ export default function CartPage() {
     
     addText(`KDV Haric Tutar:`, margin, yPos);
     const subtotalText = rate ? 
-      `$${kdvHaricTutar.toFixed(2)}` : 
+      `$${formatUSD(kdvHaricTutar)}` : 
       `${kdvHaricTutar.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
     addText(subtotalText, pageWidth - margin - 2, yPos, { align: "right" });
     yPos += 6;
     
     addText(`KDV (%20):`, margin, yPos);
     const kdvText = rate ? 
-      `$${kdvTutari.toFixed(2)}` : 
+      `$${formatUSD(kdvTutari)}` : 
       `${kdvTutari.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
     addText(kdvText, pageWidth - margin - 2, yPos, { align: "right" });
     yPos += 10;
@@ -264,7 +272,7 @@ export default function CartPage() {
     doc.setTextColor(255, 255, 255);
     addText(`GENEL TOPLAM:`, margin + 2, yPos + 4);
     const grandTotalText = rate ? 
-      `$${subtotal.toFixed(2)}` : 
+      `$${formatUSD(subtotal)}` : 
       `${subtotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
     addText(grandTotalText, pageWidth - margin - 2, yPos + 4, { align: "right" });
 
