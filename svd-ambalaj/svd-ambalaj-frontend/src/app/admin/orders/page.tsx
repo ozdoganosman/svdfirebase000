@@ -128,13 +128,20 @@ export default function AdminOrdersPage() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-3">
-                      <span className="text-sm font-semibold text-slate-900">#{order.id}</span>
+                      <span className="text-sm font-semibold text-slate-900">
+                        {order.orderNumber || `#${order.id}`}
+                      </span>
                       <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
                         {statusLabels[order.status] ?? order.status}
                       </span>
                       <span className="text-xs text-slate-400">
                         {new Date(order.createdAt).toLocaleString("tr-TR")}
                       </span>
+                      {order.exchangeRate && (
+                        <span className="text-xs text-slate-500">
+                          USD: ₺{order.exchangeRate.toFixed(2)}
+                        </span>
+                      )}
                     </div>
                     <div className="text-sm text-slate-600">
                       <p className="font-medium text-slate-900">{order.customer?.name ?? "Müşteri"}</p>

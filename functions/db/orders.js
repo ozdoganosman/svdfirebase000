@@ -1,5 +1,6 @@
 import { db } from "./client.js";
 import { FieldValue } from "firebase-admin/firestore";
+import { getCurrentRate } from "./exchange-rates.js";
 
 // Collection references
 const ordersCollection = db.collection("orders");
@@ -30,6 +31,26 @@ const parseNumber = (value, fallback = 0) => {
 
 const normalizeStatus = (status) => (status || "").toLowerCase();
 
+// Benzersiz sipariş numarası oluştur (SVD-YYYYMMDD-XXXX)
+const generateOrderNumber = async () => {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(0, 10).replace(/-/g, "");
+  
+  // Bugünün siparişlerini say
+  const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+  
+  const todayOrders = await ordersCollection
+    .where("createdAt", ">=", startOfDay)
+    .where("createdAt", "<", endOfDay)
+    .get();
+  
+  const orderCount = todayOrders.size + 1;
+  const paddedCount = orderCount.toString().padStart(4, "0");
+  
+  return `SVD-${dateStr}-${paddedCount}`;
+};
+
 const mapOrderDoc = (doc) => {
   if (!doc.exists) {
     return null;
@@ -47,6 +68,8 @@ const mapOrderDoc = (doc) => {
 
   return {
     id: doc.id,
+    orderNumber: data.orderNumber || null,
+    exchangeRate: data.exchangeRate || null,
     status: data.status,
     createdAt: mapTimestamp(data.createdAt),
     updatedAt: mapTimestamp(data.updatedAt),
@@ -149,11 +172,25 @@ const createOrder = async (payload) => {
 
   const now = FieldValue.serverTimestamp();
 
+  // Generate order number
+  const orderNumber = await generateOrderNumber();
+
+  // Get current exchange rate
+  let exchangeRate = null;
+  try {
+    const rateData = await getCurrentRate("USD");
+    exchangeRate = rateData.rate;
+  } catch (error) {
+    console.warn("[Orders] Could not fetch exchange rate:", error.message);
+  }
+
   const customerId = await upsertCustomer(payload.customer);
   const customerDoc = await customersCollection.doc(customerId).get();
   const customerData = customerDoc.exists ? customerDoc.data() : {};
 
   const orderData = {
+    orderNumber,
+    exchangeRate,
     status,
     createdAt: now,
     updatedAt: now,

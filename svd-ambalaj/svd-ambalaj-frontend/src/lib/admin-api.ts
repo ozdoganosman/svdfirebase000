@@ -295,6 +295,8 @@ export type AdminOrderItem = {
 
 export type AdminOrder = {
   id: string;
+  orderNumber?: string | null;
+  exchangeRate?: number | null;
   status: string;
   createdAt: string;
   updatedAt?: string;
