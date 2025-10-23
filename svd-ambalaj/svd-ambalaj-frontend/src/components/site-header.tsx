@@ -21,7 +21,7 @@ export function SiteHeader() {
   const badgeCount = totalBoxes > 0 ? totalBoxes : items.length;
   
   return (
-    <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
+    <header className="border-b border-slate-200 bg-white/90 backdrop-blur sticky top-0 z-50">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4 sm:px-10">
         <Link href="/" className="flex items-center gap-3 flex-shrink-0">
           <Image
@@ -37,10 +37,17 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        {/* Desktop Search */}
-        <div className="hidden lg:block flex-1 max-w-md">
-          <ProductSearch placeholder="Ürün ara..." />
-        </div>
+        {/* Search Button - Desktop */}
+        <button
+          type="button"
+          onClick={() => setShowSearch(!showSearch)}
+          className="hidden lg:flex items-center gap-2 rounded-full border border-slate-300 bg-slate-50 px-4 py-2 text-sm text-slate-500 transition hover:border-amber-400 hover:bg-white flex-1 max-w-md"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <span>Ürün ara...</span>
+        </button>
 
         {/* Desktop Navigation */}
         <nav className="hidden items-center gap-6 text-sm font-semibold text-slate-700 md:flex">
@@ -94,10 +101,26 @@ export function SiteHeader() {
         </div>
       </div>
 
-      {/* Mobile Search Bar */}
+      {/* Full Width Search Overlay - Shows when button clicked */}
       {showSearch && (
-        <div className="lg:hidden border-t border-slate-200 px-6 py-3">
-          <ProductSearch placeholder="Ürün ara..." autoFocus />
+        <div className="border-t border-slate-200 bg-white shadow-lg">
+          <div className="mx-auto max-w-6xl px-6 py-4 sm:px-10">
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <ProductSearch placeholder="Ürün, kategori veya özellik ara..." autoFocus />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSearch(false)}
+                className="flex items-center justify-center h-10 w-10 rounded-full text-slate-500 hover:bg-slate-100 transition"
+                aria-label="Kapat"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
