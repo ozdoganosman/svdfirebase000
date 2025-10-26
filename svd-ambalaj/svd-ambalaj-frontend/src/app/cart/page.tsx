@@ -862,9 +862,9 @@ export default function CartPage() {
                       <p className="text-sm font-semibold text-slate-700">
                         {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, effectivePrice) : "₺" + effectivePrice.toLocaleString("tr-TR")}
                         <span className="text-xs font-normal text-slate-500">+KDV</span>
-                        {effectivePrice < item.price && (
+                        {effectivePrice < basePrice && basePrice > 0 && (
                           <span className="ml-2 text-xs text-green-600 line-through">
-                            {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, item.price) : "₺" + item.price.toLocaleString("tr-TR")}
+                            {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, basePrice) : "₺" + basePrice.toLocaleString("tr-TR")}
                           </span>
                         )}
                       </p>
