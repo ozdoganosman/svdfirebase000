@@ -73,43 +73,20 @@ export default function CheckoutPage() {
   useEffect(() => {
     const fetchAddresses = async () => {
       if (!user) return;
-      
+
       try {
-        // TODO: Implement backend API call
-        // const response = await fetch(`/api/addresses?userId=${user.uid}`);
-        // const data = await response.json();
-        // setSavedAddresses(data);
-        
-        // Temporary mock data
-        const mockAddresses: SavedAddress[] = [
-          {
-            id: "1",
-            title: "Ev Adresi",
-            fullName: "Ahmet Yılmaz",
-            phone: "+90 555 123 4567",
-            address: "Atatürk Mahallesi, İnönü Caddesi No:45 Daire:5",
-            city: "İstanbul",
-            district: "Kadıköy",
-            postalCode: "34710",
-            isDefault: true
-          },
-          {
-            id: "2",
-            title: "İş Adresi",
-            fullName: "Ahmet Yılmaz",
-            phone: "+90 555 123 4567",
-            address: "Büyükdere Caddesi, Tekstil Plaza Kat:8 No:102",
-            city: "İstanbul",
-            district: "Şişli",
-            postalCode: "34394",
-            isDefault: false
-          }
-        ];
-        
-        setSavedAddresses(mockAddresses);
-        
+        const response = await fetch(`${apiBase}/user/addresses?userId=${user.uid}`);
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch addresses");
+        }
+
+        const data = await response.json();
+        const addresses = data.addresses || [];
+        setSavedAddresses(addresses);
+
         // Auto-select default address
-        const defaultAddr = mockAddresses.find(a => a.isDefault);
+        const defaultAddr = addresses.find((a: SavedAddress) => a.isDefault);
         if (defaultAddr && !useNewAddress) {
           setSelectedAddressId(defaultAddr.id);
           setForm(prev => ({
@@ -280,21 +257,8 @@ export default function CheckoutPage() {
               </div>
             )}
 
+            {/* Fatura Bilgileri - Always visible */}
             <div className="grid gap-6 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-semibold text-slate-700">
-                  Ad Soyad
-                </label>
-                <input
-                  id="name"
-                  name="name"
-                  value={form.name}
-                  onChange={handleChange}
-                  required
-                  disabled={selectedAddressId !== "" && !useNewAddress}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:bg-slate-50 disabled:text-slate-500"
-                />
-              </div>
               <div className="space-y-2">
                 <label htmlFor="company" className="text-sm font-semibold text-slate-700">
                   Firma Adı
@@ -323,22 +287,6 @@ export default function CheckoutPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="phone" className="text-sm font-semibold text-slate-700">
-                  Telefon
-                </label>
-                <input
-                  id="phone"
-                  name="phone"
-                  value={form.phone}
-                  onChange={handleChange}
-                  required
-                  disabled={selectedAddressId !== "" && !useNewAddress}
-                  pattern="^\+?\d{10,15}$"
-                  title="Lütfen geçerli bir telefon numarası girin"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:bg-slate-50 disabled:text-slate-500"
-                />
-              </div>
-              <div className="space-y-2">
                 <label htmlFor="taxNumber" className="text-sm font-semibold text-slate-700">
                   Vergi No / T.C.
                 </label>
@@ -351,38 +299,77 @@ export default function CheckoutPage() {
                   className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
                 />
               </div>
-              <div className="space-y-2">
-                <label htmlFor="city" className="text-sm font-semibold text-slate-700">
-                  Şehir
-                </label>
-                <input
-                  id="city"
-                  name="city"
-                  value={form.city}
-                  onChange={handleChange}
-                  required
-                  disabled={selectedAddressId !== "" && !useNewAddress}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:bg-slate-50 disabled:text-slate-500"
-                />
-              </div>
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="address" className="text-sm font-semibold text-slate-700">
-                Teslimat Adresi
-              </label>
-              <textarea
-                id="address"
-                name="address"
-                rows={4}
-                value={form.address}
-                onChange={handleChange}
-                required
-                disabled={selectedAddressId !== "" && !useNewAddress}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:bg-slate-50 disabled:text-slate-500"
-                placeholder="Sokak, mahalle, ilçe ve posta kodu bilgilerini yazınız"
-              />
-            </div>
+            {/* Teslimat Bilgileri - Only when no saved address selected */}
+            {(useNewAddress || !selectedAddressId) && (
+              <>
+                <div className="border-t pt-6 mt-6">
+                  <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                    Teslimat Bilgileri
+                  </h3>
+                </div>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label htmlFor="name" className="text-sm font-semibold text-slate-700">
+                      Ad Soyad
+                    </label>
+                    <input
+                      id="name"
+                      name="name"
+                      value={form.name}
+                      onChange={handleChange}
+                      required
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="phone" className="text-sm font-semibold text-slate-700">
+                      Telefon
+                    </label>
+                    <input
+                      id="phone"
+                      name="phone"
+                      value={form.phone}
+                      onChange={handleChange}
+                      required
+                      pattern="^\+?\d{10,15}$"
+                      title="Lütfen geçerli bir telefon numarası girin"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="city" className="text-sm font-semibold text-slate-700">
+                      Şehir
+                    </label>
+                    <input
+                      id="city"
+                      name="city"
+                      value={form.city}
+                      onChange={handleChange}
+                      required
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="address" className="text-sm font-semibold text-slate-700">
+                    Teslimat Adresi
+                  </label>
+                  <textarea
+                    id="address"
+                    name="address"
+                    rows={4}
+                    value={form.address}
+                    onChange={handleChange}
+                    required
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    placeholder="Sokak, mahalle, ilçe ve posta kodu bilgilerini yazınız"
+                  />
+                </div>
+              </>
+            )}
 
             <div className="space-y-2">
               <label htmlFor="notes" className="text-sm font-semibold text-slate-700">

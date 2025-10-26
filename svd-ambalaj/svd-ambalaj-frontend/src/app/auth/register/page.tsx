@@ -49,13 +49,42 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      // Create Firebase Auth user
       await signUp({
         email: formData.email,
         password: formData.password,
         name: formData.name,
         phone: formData.phone,
       });
-      
+
+      // Get the newly created user's UID
+      const auth = await import("@/lib/firebase-client");
+      const currentUser = auth.auth.currentUser;
+
+      if (currentUser) {
+        // Create user document in Firestore
+        const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/svdfirebase000/us-central1/api";
+
+        try {
+          await fetch(`${apiBase}/user/profile?userId=${currentUser.uid}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: formData.email,
+              displayName: formData.name,
+              phone: formData.phone || "",
+              company: "",
+              taxNumber: "",
+            }),
+          });
+        } catch (createError) {
+          console.error("Error creating user profile:", createError);
+          // Continue anyway - user can update profile later
+        }
+      }
+
       router.push("/account");
     } catch (err: unknown) {
       if (err instanceof Error) {

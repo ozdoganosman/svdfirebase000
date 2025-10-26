@@ -4,6 +4,9 @@ import {
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   updateProfile,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
   User,
   UserCredential,
 } from "firebase/auth";
@@ -77,4 +80,41 @@ export const getCurrentUser = (): User | null => {
  */
 export const isAuthenticated = (): boolean => {
   return auth.currentUser !== null;
+};
+
+/**
+ * Change user password
+ * Requires re-authentication for security
+ */
+export const changePassword = async (
+  currentPassword: string,
+  newPassword: string
+): Promise<void> => {
+  console.log("[changePassword] Function called");
+  const user = auth.currentUser;
+
+  if (!user || !user.email) {
+    console.error("[changePassword] No user signed in");
+    throw new Error("No user is currently signed in");
+  }
+
+  console.log("[changePassword] User found:", user.email);
+
+  try {
+    // Re-authenticate user with current password
+    console.log("[changePassword] Creating credential for re-authentication");
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+
+    console.log("[changePassword] Attempting to re-authenticate");
+    await reauthenticateWithCredential(user, credential);
+    console.log("[changePassword] Re-authentication successful");
+
+    // Update password
+    console.log("[changePassword] Attempting to update password");
+    await updatePassword(user, newPassword);
+    console.log("[changePassword] Password update successful");
+  } catch (error) {
+    console.error("[changePassword] Error occurred:", error);
+    throw error;
+  }
 };

@@ -16,6 +16,7 @@ import * as orders from "./db/orders.js";
 import * as samples from "./db/samples.js";
 import * as auth from "./db/auth.js";
 import * as exchangeRates from "./db/exchange-rates.js";
+import * as users from "./db/users.js";
 import { fetchTCMBRate } from "./services/exchange-rate.js";
 
 // Load environment variables
@@ -837,16 +838,162 @@ app.post("/orders", async (req, res) => {
 app.get("/user/orders", async (req, res) => {
   try {
     const { userId } = req.query;
-    
+
     if (!userId) {
       return res.status(400).json({ error: "userId parameter is required" });
     }
-    
+
     const orderList = await orders.listOrders({ userId });
     res.status(200).send({ orders: orderList });
   } catch (error) {
     functions.logger.error("Error fetching user orders", error);
     res.status(500).json({ error: "Failed to fetch orders." });
+  }
+});
+
+// User profile endpoints
+app.get("/user/profile", async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId parameter is required" });
+    }
+
+    const user = await users.getUserById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json({ user });
+  } catch (error) {
+    functions.logger.error("Error fetching user profile", error);
+    res.status(500).json({ error: "Failed to fetch user profile." });
+  }
+});
+
+app.put("/user/profile", async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId parameter is required" });
+    }
+
+    const updates = req.body;
+    const updatedUser = await users.updateUser(userId, updates);
+
+    res.status(200).json({ user: updatedUser });
+  } catch (error) {
+    functions.logger.error("Error updating user profile", error);
+    res.status(500).json({ error: "Failed to update user profile." });
+  }
+});
+
+app.post("/user/profile", async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId parameter is required" });
+    }
+
+    const userData = req.body;
+    const newUser = await users.createUser(userId, userData);
+
+    res.status(201).json({ user: newUser });
+  } catch (error) {
+    functions.logger.error("Error creating user profile", error);
+    res.status(500).json({ error: "Failed to create user profile." });
+  }
+});
+
+// User address endpoints
+app.get("/user/addresses", async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId parameter is required" });
+    }
+
+    const addresses = await users.getUserAddresses(userId);
+    res.status(200).json({ addresses });
+  } catch (error) {
+    functions.logger.error("Error fetching user addresses", error);
+    res.status(500).json({ error: "Failed to fetch addresses." });
+  }
+});
+
+app.post("/user/addresses", async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId parameter is required" });
+    }
+
+    const addressData = req.body;
+    const newAddress = await users.createAddress(userId, addressData);
+
+    res.status(201).json({ address: newAddress });
+  } catch (error) {
+    functions.logger.error("Error creating address", error);
+    res.status(500).json({ error: "Failed to create address." });
+  }
+});
+
+app.put("/user/addresses/:addressId", async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const { addressId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId parameter is required" });
+    }
+
+    const updates = req.body;
+    const updatedAddress = await users.updateAddress(userId, addressId, updates);
+
+    res.status(200).json({ address: updatedAddress });
+  } catch (error) {
+    functions.logger.error("Error updating address", error);
+    res.status(500).json({ error: "Failed to update address." });
+  }
+});
+
+app.delete("/user/addresses/:addressId", async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const { addressId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId parameter is required" });
+    }
+
+    await users.deleteAddress(userId, addressId);
+    res.status(200).json({ success: true });
+  } catch (error) {
+    functions.logger.error("Error deleting address", error);
+    res.status(500).json({ error: "Failed to delete address." });
+  }
+});
+
+app.put("/user/addresses/:addressId/set-default", async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const { addressId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId parameter is required" });
+    }
+
+    const updatedAddress = await users.setDefaultAddress(userId, addressId);
+    res.status(200).json({ address: updatedAddress });
+  } catch (error) {
+    functions.logger.error("Error setting default address", error);
+    res.status(500).json({ error: "Failed to set default address." });
   }
 });
 

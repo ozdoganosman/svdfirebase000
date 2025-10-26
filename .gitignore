@@ -51,3 +51,9 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+# Claude IDE
+.claude/
+
+# System files
+nul
