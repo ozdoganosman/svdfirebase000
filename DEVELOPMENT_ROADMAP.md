@@ -67,15 +67,17 @@
 
 ## 📊 Durum Özeti
 
-- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), Faz 1.4 (Firebase Auth), PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon
+- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), Faz 1.4 (Firebase Auth), UX İyileştirmeleri, PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon
 - 🔄 Devam Ediyor: Faz 1.5 (PayTR Ödeme - Hazırlık Aşaması)
 - ⏳ Beklemede: Faz 1.5 (PayTR onay bekleniyor) ve Faz 2+ (aşağıda listelenenler)
 - Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı durumda
 
-**Son Deployment:** 26 Ekim 2025 (frontend running locally)
-**Son Commit:** 26 Ekim 2025 - feat: Complete Phase 1.4 (Firebase Auth + password management)
-**Deployed Functions:**
-- ✅ api (us-central1) - Main API endpoint - https://api-tfi7rlxtca-uc.a.run.app
+**Son Deployment:** 26 Ekim 2025, 16:20 - Production (Firebase Hosting + Functions)
+**Son Commit:** f6e395f - fix: Resolve TypeScript build errors and lint warnings
+**Deployed Services:**
+- ✅ Frontend - https://svdfirebase000.web.app
+- ✅ API (us-central1) - https://api-tfi7rlxtca-uc.a.run.app
+- ✅ SSR Function - https://ssrsvdfirebase000-tfi7rlxtca-uc.a.run.app
 - ✅ updateExchangeRate (us-central1) - Daily cron at 16:00
 - ✅ forceUpdateExchangeRate (us-central1) - Manual update
 
@@ -1235,20 +1237,23 @@ Gerekli yeni koleksiyonlar:
 - ✅ Faz 1.1 - Döviz Kuru Sistemi
 - ✅ Faz 1.2 - Ürün Arama ve Filtreleme
 - ✅ Faz 1.3 - Sipariş Takip Numarası
+- ✅ Faz 1.4 - Firebase Auth Sistemi (tam)
 - ✅ PDF Export Sistemi
 - ✅ Checkout Sayfası İyileştirmesi
+- ✅ UX İyileştirmeleri (cart fix, checkout auto-fill, modern quantity selector)
+- ✅ Production Deployment (Firebase Hosting + Functions)
 
 **Odak (güncel):**
-- Firebase Auth entegrasyonu (1.4)
-- İyzico ödeme entegrasyonu (1.5)
+- ⏳ PayTR ödeme entegrasyonu (1.5) - Onay bekleniyor
 
 ### Bir Sonraki Adımlar (Önümüzde Neler Var?)
-Kısa vadeli (bu sprint):
-- [ ] Firebase Auth kurulumu ve kayıt/giriş sayfaları
-- [ ] Kullanıcı profil ve sipariş geçmişi sayfaları
-- [ ] Protected routes (korumalı sayfalar)
-- [ ] İyzico sandbox entegrasyonu
-- [ ] Ödeme callback ve sonuç ekranı
+Kısa vadeli (PayTR onayı geldiğinde):
+- [ ] PayTR sandbox entegrasyonu
+- [ ] Ödeme token oluşturma ve iframe
+- [ ] Ödeme callback ve IPN handler
+- [ ] Ödeme sonuç sayfaları (success/fail)
+- [ ] Test kartları ile ödeme testleri
+- [ ] Production'a geçiş
 
 Orta vadeli (sonraki sprint):
 - [ ] B2B Teklif Sistemi (Faz 2.1)
