@@ -91,22 +91,30 @@ export default function CartPage() {
 
   // Fetch user profile and auto-fill forms
   useEffect(() => {
+    console.log('[Cart] User state:', user);
     if (user?.uid) {
+      console.log('[Cart] Fetching user profile for:', user.uid);
       // Fetch user profile
       fetch(resolveServerApiUrl(`/user/profile?userId=${user.uid}`))
         .then((res) => res.json())
         .then((data) => {
+          console.log('[Cart] User profile data:', data);
           if (data.user) {
             const userProfile = data.user;
+            console.log('[Cart] User profile:', userProfile);
 
             // Fetch default address
+            console.log('[Cart] Fetching addresses for:', user.uid);
             fetch(resolveServerApiUrl(`/user/addresses?userId=${user.uid}`))
               .then((res) => res.json())
               .then((addressData) => {
+                console.log('[Cart] Address data:', addressData);
                 const addresses = addressData.addresses || [];
                 const defaultAddress = addresses.find((addr: { isDefault?: boolean; fullName?: string; phone?: string; address?: string; city?: string }) => addr.isDefault) || addresses[0];
+                console.log('[Cart] Default address:', defaultAddress);
 
                 // Auto-fill quote form
+                console.log('[Cart] Auto-filling quote form');
                 setQuoteForm((prev) => ({
                   ...prev,
                   name: userProfile.displayName || defaultAddress?.fullName || prev.name,
@@ -119,6 +127,7 @@ export default function CartPage() {
                 }));
 
                 // Auto-fill sample form
+                console.log('[Cart] Auto-filling sample form');
                 setSampleForm((prev) => ({
                   ...prev,
                   name: userProfile.displayName || defaultAddress?.fullName || prev.name,
