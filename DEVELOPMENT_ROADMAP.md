@@ -2,7 +2,7 @@
 
 **Proje:** SVD Ambalaj E-Ticaret Platformu
 **Başlangıç Tarihi:** 22 Ekim 2025
-**Son Güncelleme:** 26 Ekim 2025, 14:30
+**Son Güncelleme:** 26 Ekim 2025, 16:00
 
 ---
 
@@ -22,6 +22,19 @@
    - İyzico'dan PayTR'ye değişiklik (daha düşük komisyon)
    - PayTR başvurusu yapıldı, hazırlık aşamasında
    - Payment altyapısı planlandı (iframe entegrasyon)
+3. **🛒 Kullanıcı Deneyimi İyileştirmeleri - ✅ TAMAMLANDI**
+   - Cart sayfası fetch hatası düzeltildi (Firebase Functions emulator başlatıldı)
+   - Checkout sayfasında profil bilgilerinin otomatik doldurulması
+     - Firma adı, email, vergi no kullanıcı profilinden otomatik doldurulur
+     - Görsel bildirim: "Fatura bilgileriniz profilinizden otomatik dolduruldu"
+     - "(Profilden)" etiketleri ile hangi alanların doldurulduğu gösterilir
+   - Modern ürün miktarı seçici (AddToCartButton komponenti)
+     - +/- butonları ile kolay miktar artırma/azaltma
+     - Direkt sayı girişi desteği
+     - Koli/adet dönüşüm bilgisi (örn: "5 koli = 500 adet")
+     - Loading spinner animasyonu
+     - Minimum miktar kontrolü
+     - Responsive ve erişilebilir tasarım
 
 ### 23 Ekim 2025
 1. Admin Ürünler sayfası USD-Only tamamlandı: TRY alanları kaldırıldı, 0.001 adımlı USD fiyat ve USD toplu fiyatlandırma (koli bazlı) aktif

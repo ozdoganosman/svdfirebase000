@@ -65,10 +65,44 @@ export default function CheckoutPage() {
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [useNewAddress, setUseNewAddress] = useState(false);
+  const [profileDataLoaded, setProfileDataLoaded] = useState(false);
 
   useEffect(() => {
     getCurrentRate().then(rate => setExchangeRate(rate.rate)).catch(() => setExchangeRate(null));
   }, []);
+
+  // Fetch user profile to auto-fill company info
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user || profileDataLoaded) return;
+
+      try {
+        const response = await fetch(`${apiBase}/user/profile?userId=${user.uid}`);
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch user profile");
+        }
+
+        const data = await response.json();
+        const profile = data.user;
+
+        // Auto-fill company, email, and tax number if they exist in profile
+        if (profile) {
+          setForm(prev => ({
+            ...prev,
+            company: profile.company || prev.company,
+            email: profile.email || prev.email,
+            taxNumber: profile.taxNumber || prev.taxNumber,
+          }));
+          setProfileDataLoaded(true);
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user, profileDataLoaded]);
 
   useEffect(() => {
     const fetchAddresses = async () => {
@@ -258,10 +292,24 @@ export default function CheckoutPage() {
             )}
 
             {/* Fatura Bilgileri - Always visible */}
+            {profileDataLoaded && (form.company || form.email || form.taxNumber) && (
+              <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700">
+                <div className="flex items-center gap-2">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-semibold">Fatura bilgileriniz profilinizden otomatik dolduruldu.</span>
+                </div>
+                <p className="mt-1 ml-7 text-xs">Değişiklik yapabilir veya olduğu gibi bırakabilirsiniz.</p>
+              </div>
+            )}
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
-                <label htmlFor="company" className="text-sm font-semibold text-slate-700">
+                <label htmlFor="company" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                   Firma Adı
+                  {profileDataLoaded && form.company && (
+                    <span className="text-xs font-normal text-green-600">(Profilden)</span>
+                  )}
                 </label>
                 <input
                   id="company"
@@ -273,8 +321,11 @@ export default function CheckoutPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-semibold text-slate-700">
+                <label htmlFor="email" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                   E-posta
+                  {profileDataLoaded && form.email && (
+                    <span className="text-xs font-normal text-green-600">(Profilden)</span>
+                  )}
                 </label>
                 <input
                   id="email"
@@ -287,8 +338,11 @@ export default function CheckoutPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="taxNumber" className="text-sm font-semibold text-slate-700">
+                <label htmlFor="taxNumber" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                   Vergi No / T.C.
+                  {profileDataLoaded && form.taxNumber && (
+                    <span className="text-xs font-normal text-green-600">(Profilden)</span>
+                  )}
                 </label>
                 <input
                   id="taxNumber"

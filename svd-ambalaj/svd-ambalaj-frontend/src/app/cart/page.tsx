@@ -383,6 +383,7 @@ export default function CartPage() {
                                 product={product}
                                 variant="primary"
                                 className="w-full"
+                                showQuantitySelector={false}
                               />
                             </div>
                           </div>
