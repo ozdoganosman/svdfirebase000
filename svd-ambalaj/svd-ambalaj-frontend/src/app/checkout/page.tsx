@@ -193,8 +193,8 @@ export default function CheckoutPage() {
         id: item.id,
         title: item.title,
         quantity: item.quantity,
-        price: item.price,
-        subtotal: item.price * item.quantity,
+        price: item.price ?? 0,
+        subtotal: (item.price ?? 0) * item.quantity,
       })),
       totals: {
         subtotal,
