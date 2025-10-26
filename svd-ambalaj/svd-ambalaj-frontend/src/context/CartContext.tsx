@@ -72,21 +72,21 @@ const getTotalItemCount = (item: CartItem): number => {
 
 const getEffectivePrice = (item: CartItem): number => {
   if (!item.bulkPricing || item.bulkPricing.length === 0) {
-    return item.price;
+    return item.price ?? 0;
   }
-  
+
   // For products with packageInfo, bulk pricing is based on box count
   const comparisonQty = item.packageInfo ? item.quantity : item.quantity;
-  
+
   const sortedTiers = [...item.bulkPricing].sort((a, b) => b.minQty - a.minQty);
-  
+
   for (const tier of sortedTiers) {
     if (comparisonQty >= tier.minQty) {
       return tier.price;
     }
   }
-  
-  return item.price;
+
+  return item.price ?? 0;
 };
 
 const getAppliedTier = (item: CartItem): BulkTier | null => {
