@@ -88,6 +88,72 @@ export default function CartPage() {
   const [sampleSuccess, setSampleSuccess] = useState(false);
   const [sampleError, setSampleError] = useState("");
 
+  // Fetch user profile and auto-fill forms
+  useEffect(() => {
+    if (user?.uid) {
+      // Fetch user profile
+      fetch(resolveServerApiUrl(`/user/profile?userId=${user.uid}`))
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.user) {
+            const userProfile = data.user;
+
+            // Fetch default address
+            fetch(resolveServerApiUrl(`/user/addresses?userId=${user.uid}`))
+              .then((res) => res.json())
+              .then((addressData) => {
+                const addresses = addressData.addresses || [];
+                const defaultAddress = addresses.find((addr: any) => addr.isDefault) || addresses[0];
+
+                // Auto-fill quote form
+                setQuoteForm((prev) => ({
+                  ...prev,
+                  name: userProfile.displayName || defaultAddress?.fullName || prev.name,
+                  company: userProfile.company || prev.company,
+                  email: userProfile.email || prev.email,
+                  phone: userProfile.phone || defaultAddress?.phone || prev.phone,
+                  taxNumber: userProfile.taxNumber || prev.taxNumber,
+                  address: defaultAddress?.address || prev.address,
+                  city: defaultAddress?.city || prev.city,
+                }));
+
+                // Auto-fill sample form
+                setSampleForm((prev) => ({
+                  ...prev,
+                  name: userProfile.displayName || defaultAddress?.fullName || prev.name,
+                  company: userProfile.company || prev.company,
+                  email: userProfile.email || prev.email,
+                  phone: userProfile.phone || defaultAddress?.phone || prev.phone,
+                }));
+              })
+              .catch((error) => {
+                console.error("Error fetching addresses:", error);
+                // Still auto-fill with user profile data
+                setQuoteForm((prev) => ({
+                  ...prev,
+                  name: userProfile.displayName || prev.name,
+                  company: userProfile.company || prev.company,
+                  email: userProfile.email || prev.email,
+                  phone: userProfile.phone || prev.phone,
+                  taxNumber: userProfile.taxNumber || prev.taxNumber,
+                }));
+
+                setSampleForm((prev) => ({
+                  ...prev,
+                  name: userProfile.displayName || prev.name,
+                  company: userProfile.company || prev.company,
+                  email: userProfile.email || prev.email,
+                  phone: userProfile.phone || prev.phone,
+                }));
+              });
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching user profile:", error);
+        });
+    }
+  }, [user]);
+
   useEffect(() => {
     // Fetch exchange rate on mount
     getCurrentRate().then(rate => setExchangeRate(rate.rate)).catch(() => setExchangeRate(null));
