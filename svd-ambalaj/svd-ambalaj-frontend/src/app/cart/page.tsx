@@ -103,7 +103,7 @@ export default function CartPage() {
               .then((res) => res.json())
               .then((addressData) => {
                 const addresses = addressData.addresses || [];
-                const defaultAddress = addresses.find((addr: any) => addr.isDefault) || addresses[0];
+                const defaultAddress = addresses.find((addr) => addr.isDefault) || addresses[0];
 
                 // Auto-fill quote form
                 setQuoteForm((prev) => ({
@@ -245,7 +245,7 @@ export default function CartPage() {
         throw new Error("Teklif gönderilirken bir hata oluştu.");
       }
 
-      const result = await response.json();
+      await response.json();
       setQuoteSuccess(true);
 
       // Reset form after 2 seconds
@@ -308,7 +308,7 @@ export default function CartPage() {
         throw new Error("Numune talebi gönderilirken bir hata oluştu.");
       }
 
-      const result = await response.json();
+      await response.json();
       setSampleSuccess(true);
 
       // Reset form after 2 seconds
@@ -600,7 +600,7 @@ export default function CartPage() {
                       <h4 className="text-lg font-semibold text-blue-900">Numune veya Teklif Talebinde Bulunmak İçin</h4>
                       <p className="mt-2 text-sm text-blue-800">
                         Numune talebi veya fiyat teklifi alabilmek için öncelikle ilgilendiğiniz ürünleri ve talep ettiğiniz miktarları sepete eklemeniz gerekmektedir.
-                        Sepetinize ürün ekledikten sonra <strong>"Numune Talebi"</strong> veya <strong>"Teklif Al"</strong> butonlarını kullanarak talebinizi oluşturabilirsiniz.
+                        Sepetinize ürün ekledikten sonra <strong>&quot;Numune Talebi&quot;</strong> veya <strong>&quot;Teklif Al&quot;</strong> butonlarını kullanarak talebinizi oluşturabilirsiniz.
                       </p>
                       <div className="mt-4">
                         <Link
@@ -1201,7 +1201,7 @@ export default function CartPage() {
                               name="guaranteeType"
                               value="check"
                               checked={quoteForm.guaranteeType === "check"}
-                              onChange={(e) => setQuoteForm({ ...quoteForm, guaranteeType: "check" })}
+                              onChange={() => setQuoteForm({ ...quoteForm, guaranteeType: "check" })}
                               className="mr-2 text-purple-600 focus:ring-purple-500"
                             />
                             <span className="text-sm text-slate-700">Çek</span>
@@ -1212,7 +1212,7 @@ export default function CartPage() {
                               name="guaranteeType"
                               value="teminat"
                               checked={quoteForm.guaranteeType === "teminat"}
-                              onChange={(e) => setQuoteForm({ ...quoteForm, guaranteeType: "teminat" })}
+                              onChange={() => setQuoteForm({ ...quoteForm, guaranteeType: "teminat" })}
                               className="mr-2 text-purple-600 focus:ring-purple-500"
                             />
                             <span className="text-sm text-slate-700">Teminat Mektubu</span>
@@ -1223,7 +1223,7 @@ export default function CartPage() {
                               name="guaranteeType"
                               value="açık"
                               checked={quoteForm.guaranteeType === "açık"}
-                              onChange={(e) => setQuoteForm({ ...quoteForm, guaranteeType: "açık" })}
+                              onChange={() => setQuoteForm({ ...quoteForm, guaranteeType: "açık" })}
                               className="mr-2 text-purple-600 focus:ring-purple-500"
                             />
                             <span className="text-sm text-slate-700">Açık Hesap</span>
