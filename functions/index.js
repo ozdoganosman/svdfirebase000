@@ -17,6 +17,7 @@ import * as samples from "./db/samples.js";
 import * as auth from "./db/auth.js";
 import * as exchangeRates from "./db/exchange-rates.js";
 import * as users from "./db/users.js";
+import * as quotes from "./db/quotes.js";
 import { fetchTCMBRate } from "./services/exchange-rate.js";
 
 // Load environment variables
@@ -997,6 +998,85 @@ app.put("/user/addresses/:addressId/set-default", async (req, res) => {
   }
 });
 
+// ============ QUOTES ENDPOINTS ============
+
+// Create new quote request
+app.post("/quotes", async (req, res) => {
+  try {
+    const quote = await quotes.createQuote(req.body);
+    res.status(201).json({ quote });
+  } catch (error) {
+    functions.logger.error("Error creating quote", error);
+    res.status(500).json({ error: "Failed to create quote request." });
+  }
+});
+
+// Get quote by ID
+app.get("/quotes/:id", async (req, res) => {
+  try {
+    const quote = await quotes.getQuoteById(req.params.id);
+    if (!quote) {
+      return res.status(404).json({ error: "Quote not found" });
+    }
+    res.status(200).json({ quote });
+  } catch (error) {
+    functions.logger.error("Error fetching quote", error);
+    res.status(500).json({ error: "Failed to fetch quote." });
+  }
+});
+
+// Get quotes by customer userId
+app.get("/quotes", async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId parameter is required" });
+    }
+
+    const userQuotes = await quotes.getQuotesByCustomer(userId);
+    res.status(200).json({ quotes: userQuotes });
+  } catch (error) {
+    functions.logger.error("Error fetching customer quotes", error);
+    res.status(500).json({ error: "Failed to fetch quotes." });
+  }
+});
+
+// Update quote (admin only)
+app.put("/quotes/:id", requireAuth, async (req, res) => {
+  try {
+    const updatedQuote = await quotes.updateQuote(req.params.id, req.body);
+    res.status(200).json({ quote: updatedQuote });
+  } catch (error) {
+    functions.logger.error("Error updating quote", error);
+    res.status(500).json({ error: "Failed to update quote." });
+  }
+});
+
+// List all quotes (admin only)
+app.get("/admin/quotes", requireAuth, async (req, res) => {
+  try {
+    const allQuotes = await quotes.listQuotes(req.query || {});
+    res.status(200).json({ quotes: allQuotes });
+  } catch (error) {
+    functions.logger.error("Error listing quotes", error);
+    res.status(500).json({ error: "Failed to list quotes." });
+  }
+});
+
+// Delete quote (admin only)
+app.delete("/quotes/:id", requireAuth, async (req, res) => {
+  try {
+    await quotes.deleteQuote(req.params.id);
+    res.status(200).json({ success: true });
+  } catch (error) {
+    functions.logger.error("Error deleting quote", error);
+    res.status(500).json({ error: "Failed to delete quote." });
+  }
+});
+
+// ============ ORDERS ENDPOINTS ============
+
 app.get("/orders", requireAuth, async (req, res) => {
   try {
     const orderList = await orders.listOrders(req.query || {});
@@ -1049,6 +1129,7 @@ const statsOverviewHandler = async (req, res) => {
 app.get("/orders/stats/overview", requireAuth, statsOverviewHandler);
 app.get("/stats/overview", requireAuth, statsOverviewHandler);
 
+// OLD: Single product sample request (legacy)
 const createSampleRequestHandler = async (req, res) => {
   try {
     const { name, email, product } = req.body || {};
@@ -1065,6 +1146,72 @@ const createSampleRequestHandler = async (req, res) => {
 
 app.post("/sample-requests", createSampleRequestHandler);
 app.post("/samples", createSampleRequestHandler);
+
+// ============ SAMPLES ENDPOINTS (NEW SYSTEM) ============
+
+// NEW: Create sample request from cart
+app.post("/samples/from-cart", async (req, res) => {
+  try {
+    const sample = await samples.createSampleFromCart(req.body);
+    res.status(201).json({ sample });
+  } catch (error) {
+    functions.logger.error("Error creating cart sample", error);
+    res.status(500).json({ error: "Failed to create sample request." });
+  }
+});
+
+// Get sample by ID
+app.get("/samples/:id", async (req, res) => {
+  try {
+    const sample = await samples.getSampleById(req.params.id);
+    if (!sample) {
+      return res.status(404).json({ error: "Sample not found" });
+    }
+    res.status(200).json({ sample });
+  } catch (error) {
+    functions.logger.error("Error fetching sample", error);
+    res.status(500).json({ error: "Failed to fetch sample." });
+  }
+});
+
+// Get samples by customer userId
+app.get("/samples/customer/:userId", async (req, res) => {
+  try {
+    const userSamples = await samples.getSamplesByCustomer(req.params.userId);
+    res.status(200).json({ samples: userSamples });
+  } catch (error) {
+    functions.logger.error("Error fetching customer samples", error);
+    res.status(500).json({ error: "Failed to fetch samples." });
+  }
+});
+
+// Update sample status (admin only)
+app.put("/samples/:id/status", requireAuth, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!status) {
+      return res.status(400).json({ error: "status is required" });
+    }
+    const updatedSample = await samples.updateSampleStatus(req.params.id, status);
+    res.status(200).json({ sample: updatedSample });
+  } catch (error) {
+    functions.logger.error("Error updating sample status", error);
+    res.status(500).json({ error: "Failed to update sample status." });
+  }
+});
+
+// List all samples (admin only)
+app.get("/admin/samples", requireAuth, async (req, res) => {
+  try {
+    const allSamples = await samples.listSamples(req.query || {});
+    res.status(200).json({ samples: allSamples });
+  } catch (error) {
+    functions.logger.error("Error listing samples", error);
+    res.status(500).json({ error: "Failed to list samples." });
+  }
+});
+
+// ============ EXCHANGE RATE ENDPOINTS ============
 
 // Exchange Rate endpoints
 app.get("/exchange-rate", async (_req, res) => {

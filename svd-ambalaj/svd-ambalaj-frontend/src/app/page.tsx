@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { SampleRequestForm } from "@/components/sample-request-form";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { LandingVideoSection } from "@/components/landing-video-section";
 import { LandingGallerySection } from "@/components/landing-gallery-section";
@@ -299,18 +298,18 @@ export default async function Home() {
             >
               Ürünleri İncele
             </a>
-            <a
-              href="mailto:info@svdambalaj.com"
+            <Link
+              href="/cart"
               className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-amber-400 hover:text-amber-600"
             >
               Teklif Talep Et
-            </a>
-            <a
-              href="#sample"
+            </Link>
+            <Link
+              href="/cart"
               className="rounded-full border border-transparent bg-white px-6 py-3 text-sm font-semibold text-amber-600 shadow-sm shadow-amber-200/50 transition hover:border-amber-400 hover:bg-amber-50"
             >
               Numune Talep Et
-            </a>
+            </Link>
           </div>
         </div>
         <div className="relative flex-1">
@@ -754,35 +753,6 @@ export default async function Home() {
                 </div>
               </article>
             ))}
-          </div>
-        </div>
-      </section>
-
-      <section
-        id="sample"
-        className="bg-slate-100 py-16"
-      >
-        <div className="mx-auto flex max-w-6xl flex-col gap-10 px-6 sm:flex-row sm:px-10">
-          <div className="flex-1 space-y-4">
-            <span className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-amber-600">
-              Numune Talebi
-            </span>
-            <h2 className="text-3xl font-bold text-slate-900">
-              Hattınıza uygun ürünü seçin, numunenizi aynı gün hazırlayalım
-            </h2>
-            <p className="text-slate-600">
-              Üretim hatlarınıza en uygun sprey, pompa veya şişeyi seçebilmeniz için ücretsiz numune gönderimi sunuyoruz. Formu doldurun, satış mühendislerimiz 24 saat içinde sizi arayarak ihtiyacınızı netleştirsin.
-            </p>
-            <ul className="space-y-3 text-sm text-slate-600">
-              <li>• Numune ve revize edilmiş fiyat teklifini birlikte alırsınız.</li>
-              <li>• Özel renk, boy ve aksesuar talepleri için kalıp danışmanlığı sunarız.</li>
-              <li>• Talebiniz CRM sistemimize düşer, süreci şeffaf şekilde takip edebilirsiniz.</li>
-            </ul>
-          </div>
-          <div className="flex-1">
-            <SampleRequestForm
-              categories={categories.map((category) => ({ id: category.id, name: category.name }))}
-            />
           </div>
         </div>
       </section>
