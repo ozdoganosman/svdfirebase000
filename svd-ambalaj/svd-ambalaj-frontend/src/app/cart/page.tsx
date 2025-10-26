@@ -788,9 +788,10 @@ export default function CartPage() {
               const nextTier = getNextTier(item);
               const itemTotal = calculateItemTotal(item);
               const totalItemCount = getTotalItemCount(item);
-              const savings = item.packageInfo 
-                ? (item.price - effectivePrice) * totalItemCount
-                : (item.price - effectivePrice) * item.quantity;
+              const basePrice = item.price ?? 0;
+              const savings = item.packageInfo
+                ? (basePrice - effectivePrice) * totalItemCount
+                : (basePrice - effectivePrice) * item.quantity;
 
               return (
               <div
