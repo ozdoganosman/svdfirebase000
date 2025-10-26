@@ -103,7 +103,7 @@ export default function CartPage() {
               .then((res) => res.json())
               .then((addressData) => {
                 const addresses = addressData.addresses || [];
-                const defaultAddress = addresses.find((addr) => addr.isDefault) || addresses[0];
+                const defaultAddress = addresses.find((addr: { isDefault?: boolean; fullName?: string; phone?: string; address?: string; city?: string }) => addr.isDefault) || addresses[0];
 
                 // Auto-fill quote form
                 setQuoteForm((prev) => ({
