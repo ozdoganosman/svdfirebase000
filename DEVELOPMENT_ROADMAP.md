@@ -2,11 +2,26 @@
 
 **Proje:** SVD Ambalaj E-Ticaret Platformu
 **Başlangıç Tarihi:** 22 Ekim 2025
-**Son Güncelleme:** 23 Ekim 2025, 22:55
+**Son Güncelleme:** 26 Ekim 2025, 14:30
 
 ---
 
 ## 🆕 Son Eklenen Özellikler
+
+### 26 Ekim 2025
+1. **👤 Faz 1.4 - Firebase Auth Sistemi - ✅ TAMAMLANDI**
+   - Firebase Authentication setup (email/password)
+   - Login ve Register sayfaları
+   - Şifre sıfırlama ve şifre değiştirme (re-authentication ile güvenlik)
+   - Enhanced profil düzenleme modal (avatar, metadata, kategorize edilmiş bölümler)
+   - Adres yönetimi - Full CRUD (otomatik varsayılan ilk adres)
+   - Backend: 8 user/address endpoint (GET/POST/PUT/DELETE)
+   - Checkout entegrasyonu (kayıtlı adreslerle)
+   - Korumalı sayfalar (AuthGuard component)
+2. **💳 Faz 1.5 - Ödeme Sistemi Seçimi**
+   - İyzico'dan PayTR'ye değişiklik (daha düşük komisyon)
+   - PayTR başvurusu yapıldı, hazırlık aşamasında
+   - Payment altyapısı planlandı (iframe entegrasyon)
 
 ### 23 Ekim 2025
 1. Admin Ürünler sayfası USD-Only tamamlandı: TRY alanları kaldırıldı, 0.001 adımlı USD fiyat ve USD toplu fiyatlandırma (koli bazlı) aktif
@@ -39,13 +54,13 @@
 
 ## 📊 Durum Özeti
 
-- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon
-- 🔄 Devam Ediyor: -
-- ⏳ Beklemede: Faz 1.4 (Müşteri Hesabı), Faz 1.5 (İyzico Ödeme) ve Faz 2+ (aşağıda listelenenler)
+- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), Faz 1.4 (Firebase Auth), PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon
+- 🔄 Devam Ediyor: Faz 1.5 (PayTR Ödeme - Hazırlık Aşaması)
+- ⏳ Beklemede: Faz 1.5 (PayTR onay bekleniyor) ve Faz 2+ (aşağıda listelenenler)
 - Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı durumda
 
-**Son Deployment:** 23 Ekim 2025, 22:53
-**Son Commit:** 23 Ekim 2025, 22:52 (PDF thousand separator formatting)
+**Son Deployment:** 26 Ekim 2025 (frontend running locally)
+**Son Commit:** 26 Ekim 2025 - feat: Complete Phase 1.4 (Firebase Auth + password management)
 **Deployed Functions:**
 - ✅ api (us-central1) - Main API endpoint - https://api-tfi7rlxtca-uc.a.run.app
 - ✅ updateExchangeRate (us-central1) - Daily cron at 16:00
@@ -55,6 +70,7 @@
 - ✅ **Faz 1.1** - Döviz Kuru Sistemi (13/13 görev)
 - ✅ **Faz 1.2** - Ürün Arama ve Filtreleme (6/6 görev)
 - ✅ **Faz 1.3** - Sipariş Takip Numarası (6/6 görev)
+- ✅ **Faz 1.4** - Firebase Auth Sistemi (13/13 görev)
 
 ---
 
@@ -326,20 +342,26 @@ const generateOrderNumber = () => {
 ---
 
 ### 1.4 Müşteri Hesap Sistemi (Firebase Auth) 👤
-**Durum:** ⏳ Beklemede
+**Durum:** ✅ TAMAMLANDI
 **Tahmini Süre:** 5-6 gün
+**Başlangıç:** 26 Ekim 2025
+**Bitiş:** 26 Ekim 2025
 **Öncelik:** Yüksek
 
 #### Görevler:
-- [ ] Firebase Authentication kurulumu
-- [ ] Kayıt olma sayfası oluştur
-- [ ] Giriş yapma sayfası oluştur
-- [ ] Şifre sıfırlama
-- [ ] Kullanıcı profil sayfası
-- [ ] Sipariş geçmişi sayfası
-- [ ] Adres defteri
-- [ ] Auth context ve hooks
-- [ ] Protected routes (korumalı sayfalar)
+- [x] Firebase Authentication kurulumu
+- [x] Kayıt olma sayfası oluştur
+- [x] Giriş yapma sayfası oluştur
+- [x] Şifre sıfırlama
+- [x] Şifre değiştirme (re-authentication ile)
+- [x] Kullanıcı profil sayfası (enhanced modal)
+- [x] Sipariş geçmişi sayfası
+- [x] Adres defteri (Full CRUD)
+- [x] Auth context ve hooks
+- [x] Protected routes (korumalı sayfalar)
+- [x] Backend user CRUD endpoints
+- [x] Backend address endpoints (auto-default first address)
+- [x] Checkout integration with saved addresses
 
 #### Dosyalar:
 - `src/lib/firebase-auth.ts` (yeni)
@@ -379,41 +401,106 @@ userAddresses/
 
 ---
 
-### 1.5 Ödeme Entegrasyonu (İyzico) 💳
-**Durum:** ⏳ Beklemede
+### 1.5 Ödeme Entegrasyonu (PayTR) 💳
+**Durum:** 🔄 Hazırlık Aşamasında
 **Tahmini Süre:** 4-5 gün
 **Bağımlılık:** 1.1 tamamlanmalı (ödeme tutarı kur ile hesaplanacak)
 **Öncelik:** Yüksek
+**Not:** PayTR başvurusu yapıldı, onay bekleniyor
 
 #### Görevler:
-- [ ] İyzico hesap açma ve API anahtarları
-- [ ] iyzipay npm paketi kurulumu
+- [ ] PayTR hesap onayı ve API anahtarları alma
+- [ ] PayTR iframe entegrasyon türü seçimi
 - [ ] Ödeme başlatma endpoint'i (TL tutarı ile)
-- [ ] Callback/webhook handler
+- [ ] PayTR iframe token oluşturma
+- [ ] Callback/IPN handler (PayTR bildirimleri)
 - [ ] Ödeme sonuç sayfası
 - [ ] Başarısız ödeme yönetimi
-- [ ] Test ortamı kurulumu
+- [ ] Test ortamı kurulumu (test kartları)
 - [ ] Ödeme logları
 - [ ] Ödeme kaydında USD/TL dönüşüm bilgisi
+- [ ] Canlı moda geçiş
 
 #### Dosyalar:
-- `functions/payment/iyzico.js` (yeni)
-- `functions/index.js` (güncelle - payment endpoints)
-- `src/app/checkout/page.tsx` (güncelle)
-- `src/app/checkout/payment/page.tsx` (yeni)
-- `src/app/checkout/callback/page.tsx` (yeni)
+Backend:
+- `functions/payment/paytr.js` (yeni - PayTR servis fonksiyonları)
+- `functions/payment/hash.js` (yeni - HMAC-SHA256 hash)
+- `functions/payment/config.js` (yeni - PayTR config)
+- `functions/db/payments.js` (yeni - Payment CRUD)
+- `functions/index.js` (güncelle - 4 payment endpoint)
+
+Frontend:
+- `src/app/checkout/page.tsx` (güncelle - ödeme butonu)
+- `src/app/checkout/payment/page.tsx` (yeni - PayTR iframe)
+- `src/app/checkout/success/page.tsx` (yeni - başarılı ödeme)
+- `src/app/payment-failed/page.tsx` (yeni - başarısız ödeme)
+- `src/lib/paytr-client.ts` (yeni - PayTR helper)
+
+#### Firestore Collection (payments):
+```javascript
+{
+  id: "auto",
+  orderId: "ref",
+  userId: "uid",
+  paymentToken: "PayTR token",
+  merchantOid: "unique-order-id",
+  amount: 5106.00,        // TRY
+  amountUsd: 147.48,      // USD
+  exchangeRate: 34.5678,
+  status: "pending",      // pending/success/failed/cancelled
+  paymentMethod: "credit_card",
+  installment: 1,
+  paytrTransactionId: "xxx",
+  errorMessage: null,
+  ipAddress: "xxx",
+  createdAt: timestamp,
+  updatedAt: timestamp
+}
+```
+
+#### Environment Variables:
+```bash
+# functions/.env
+PAYTR_MERCHANT_ID=XXXXX
+PAYTR_MERCHANT_KEY=XXXXXXXXXXXXX
+PAYTR_MERCHANT_SALT=XXXXXXXXXXXXX
+PAYTR_TEST_MODE=true
+PAYTR_CALLBACK_URL=https://api-xxx.run.app/payment/callback
+PAYTR_SUCCESS_URL=https://yoursite.com/checkout/success
+PAYTR_FAIL_URL=https://yoursite.com/payment-failed
+```
+
+#### PayTR Endpoints:
+```javascript
+POST   /payment/create           // Token oluştur
+POST   /payment/callback         // IPN handler
+GET    /payment/status/:orderId  // Durum sorgula
+POST   /payment/verify           // Manuel verify
+```
+
+#### PayTR İframe Entegrasyon:
+- Müşteri siteden ayrılmaz (güven artırıcı)
+- Kolay entegrasyon (5-10 dakika)
+- PCI-DSS uyumluluk gerektirmez
+- 3D Secure otomatik
+- Taksit seçenekleri hazır
+- Test kartları: PayTR panelinden alınacak
+
+#### Ödeme Akışı:
+1. Kullanıcı checkout'ta "Ödemeye Geç" butonuna tıklar
+2. Backend'e sepet bilgisi gönderilir
+3. PayTR iframe token oluşturulur
+4. Payment sayfasında PayTR iframe açılır
+5. Kullanıcı kart bilgilerini girer (PayTR'de)
+6. PayTR ödemeyi işler ve callback gönderir
+7. Backend callback'i doğrular ve siparişi oluşturur
+8. Success/fail sayfasına yönlendirilir
 
 #### Notlar:
-```javascript
-// .env eklenecek:
-IYZICO_API_KEY=your_api_key
-IYZICO_SECRET_KEY=your_secret_key
-IYZICO_BASE_URL=https://sandbox-api.iyzipay.com (test)
-
-// Ödeme tutarı hesaplama:
-// USD fiyat × güncel kur = TL tutarı
-// İyzico'ya TL gönderilecek
-```
+- Komisyon: ~%1.95-2.95 (İyzico'dan daha ucuz)
+- Entegrasyon türü: iFrame API (önerilen)
+- Test modu: PayTR credentials gelene kadar hazırlık yapılacak
+- Dokümantasyon: https://dev.paytr.com/
 
 ---
 
