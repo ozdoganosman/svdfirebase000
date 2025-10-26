@@ -12,8 +12,11 @@ type ProductSummary = {
   id: string;
   title: string;
   slug: string;
-  price: number;
+  price?: number;
+  priceUSD?: number;
+  priceTRY?: number;
   bulkPricing?: BulkTier[];
+  bulkPricingUSD?: BulkTier[];
   packageInfo?: {
     itemsPerBox: number;
     minBoxes: number;
