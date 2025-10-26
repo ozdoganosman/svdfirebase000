@@ -20,6 +20,7 @@ type Product = {
   stock?: number;
   images?: string[];
   bulkPricing?: { minQty: number; price: number }[];
+  bulkPricingUSD?: { minQty: number; price: number }[];
   packageInfo?: {
     itemsPerBox: number;
     minBoxes: number;
