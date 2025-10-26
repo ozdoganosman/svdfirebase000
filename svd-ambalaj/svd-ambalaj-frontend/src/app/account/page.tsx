@@ -158,9 +158,10 @@ function AccountPageContent() {
       console.error("[handlePasswordChange] Error changing password:", error);
       if (error instanceof Error) {
         console.error("[handlePasswordChange] Error message:", error.message);
-        console.error("[handlePasswordChange] Error code:", (error as any).code);
+        const firebaseError = error as { code?: string; message: string };
+        console.error("[handlePasswordChange] Error code:", firebaseError.code);
 
-        const errorCode = (error as any).code || "";
+        const errorCode = firebaseError.code || "";
         const errorMessage = error.message || "";
 
         if (errorCode === "auth/wrong-password" || errorCode === "auth/invalid-credential" ||
@@ -580,9 +581,62 @@ function AccountPageContent() {
                       </button>
                       <button
                         type="button"
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.preventDefault();
-                          handlePasswordChange(e as any);
+                          setPasswordError("");
+
+                          if (!passwordForm.newPassword || !passwordForm.confirmPassword || !passwordForm.currentPassword) {
+                            setPasswordError("Tüm alanları doldurun");
+                            return;
+                          }
+
+                          if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+                            setPasswordError("Yeni şifreler eşleşmiyor");
+                            return;
+                          }
+
+                          if (passwordForm.newPassword.length < 6) {
+                            setPasswordError("Yeni şifre en az 6 karakter olmalı");
+                            return;
+                          }
+
+                          setLoading(true);
+                          try {
+                            const { changePassword } = await import("@/lib/firebase-auth");
+                            await changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+                            setPasswordForm({
+                              currentPassword: "",
+                              newPassword: "",
+                              confirmPassword: "",
+                            });
+                            setShowPasswordSection(false);
+                            alert("Şifreniz başarıyla değiştirildi!");
+                          } catch (error: unknown) {
+                            console.error("[handlePasswordChange] Error changing password:", error);
+                            if (error instanceof Error) {
+                              console.error("[handlePasswordChange] Error message:", error.message);
+                              const firebaseError = error as { code?: string; message: string };
+                              console.error("[handlePasswordChange] Error code:", firebaseError.code);
+
+                              const errorCode = firebaseError.code || "";
+                              const errorMessage = error.message || "";
+
+                              if (errorCode === "auth/wrong-password" || errorCode === "auth/invalid-credential" ||
+                                  errorMessage.includes("wrong-password") || errorMessage.includes("invalid-credential")) {
+                                setPasswordError("Mevcut şifre hatalı");
+                              } else if (errorCode === "auth/requires-recent-login") {
+                                setPasswordError("Güvenlik nedeniyle lütfen çıkış yapıp tekrar giriş yapın");
+                              } else if (errorCode === "auth/weak-password") {
+                                setPasswordError("Yeni şifre çok zayıf");
+                              } else {
+                                setPasswordError("Şifre değiştirme başarısız. Lütfen tekrar deneyin");
+                              }
+                            } else {
+                              setPasswordError("Şifre değiştirme başarısız. Lütfen tekrar deneyin");
+                            }
+                          } finally {
+                            setLoading(false);
+                          }
                         }}
                         disabled={loading}
                         className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-2 font-semibold text-white shadow-md transition hover:from-amber-600 hover:to-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"

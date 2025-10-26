@@ -2,17 +2,14 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 
 function PaymentPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [iframeUrl, setIframeUrl] = useState("");
-  const [paymentToken, setPaymentToken] = useState("");
 
   useEffect(() => {
     // Get payment token from URL
@@ -26,7 +23,6 @@ function PaymentPageContent() {
 
     // Construct PayTR iframe URL
     const iframe_url = `https://www.paytr.com/odeme/guvenli/${token}`;
-    setPaymentToken(token);
     setIframeUrl(iframe_url);
     setLoading(false);
   }, [searchParams]);
