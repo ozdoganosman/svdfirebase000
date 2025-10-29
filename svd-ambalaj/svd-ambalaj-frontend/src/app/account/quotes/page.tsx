@@ -301,6 +301,21 @@ export default function QuotesPage() {
                     })} tarihine kadar
                   </div>
                 )}
+
+                {/* Convert to Order Button */}
+                {quote.status === "approved" && (
+                  <div className="mt-6 border-t border-purple-200 pt-4">
+                    <Link
+                      href={`/checkout?fromQuote=${quote.id}`}
+                      className="block w-full rounded-lg bg-purple-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-purple-700"
+                    >
+                      🛒 Sipariş Ver
+                    </Link>
+                    <p className="mt-2 text-center text-xs text-slate-500">
+                      Bu teklifi onaylayarak sipariş verebilirsiniz
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

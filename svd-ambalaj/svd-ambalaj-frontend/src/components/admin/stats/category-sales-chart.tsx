@@ -18,13 +18,18 @@ export function CategorySalesChart({ stats, loading }: CategorySalesChartProps) 
     if (!stats) {
       return [];
     }
+
+    // Calculate total from category sales instead of using totalRevenue
+    // This ensures percentages are calculated correctly when filters are applied
+    const categoryTotal = stats.categorySales.reduce((sum, entry) => sum + entry.total, 0);
+
     return stats.categorySales
       .slice()
       .sort((a, b) => b.total - a.total)
       .map((entry) => ({
         ...entry,
         percentage:
-          stats.totalRevenue > 0 ? Math.round((entry.total / stats.totalRevenue) * 100) : 0,
+          categoryTotal > 0 ? Math.round((entry.total / categoryTotal) * 100) : 0,
       }));
   }, [stats]);
 

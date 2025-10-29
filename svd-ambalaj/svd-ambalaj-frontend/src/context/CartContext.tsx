@@ -71,8 +71,11 @@ const getTotalItemCount = (item: CartItem): number => {
 };
 
 const getEffectivePrice = (item: CartItem): number => {
+  // Use priceTRY if available, fallback to price
+  const basePrice = item.priceTRY ?? item.price ?? 0;
+
   if (!item.bulkPricing || item.bulkPricing.length === 0) {
-    return item.price ?? 0;
+    return basePrice;
   }
 
   // For products with packageInfo, bulk pricing is based on box count
@@ -86,7 +89,7 @@ const getEffectivePrice = (item: CartItem): number => {
     }
   }
 
-  return item.price ?? 0;
+  return basePrice;
 };
 
 const getAppliedTier = (item: CartItem): BulkTier | null => {

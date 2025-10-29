@@ -408,6 +408,113 @@ export async function updateLandingMedia(payload: LandingMedia): Promise<Landing
   return response.landingMedia;
 }
 
+export type AdminQuoteItem = {
+  id: string;
+  title: string;
+  quantity: number;
+  price: number;
+  subtotal: number;
+};
+
+export type AdminQuote = {
+  id: string;
+  quoteNumber: string | null;
+  status: string; // pending, approved, rejected, converted
+  customer: {
+    userId?: string | null;
+    name: string;
+    company: string;
+    email: string;
+    phone: string;
+    taxNumber?: string;
+    address?: string;
+    city?: string;
+  };
+  items: AdminQuoteItem[];
+  totals: {
+    subtotal: number;
+    tax: number;
+    total: number;
+    currency: string;
+  };
+  paymentTerms: {
+    termMonths: number;
+    guaranteeType: string;
+    guaranteeDetails: string;
+  };
+  adminNotes?: string;
+  validUntil?: string;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+export type AdminSampleItem = {
+  id: string;
+  title: string;
+  quantity: number;
+};
+
+export type AdminSample = {
+  id: string;
+  sampleNumber?: string | null;
+  customer: {
+    userId?: string | null;
+    name: string;
+    company: string;
+    email: string;
+    phone: string;
+  };
+  items: AdminSampleItem[];
+  shippingFee: number;
+  status: string; // requested, approved, preparing, shipped, delivered, rejected
+  notes?: string;
+  adminNotes?: string;
+  trackingNumber?: string;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+export type VIPTier = "platinum" | "gold" | "silver" | "bronze" | null;
+export type CustomerSegment = "vip" | "high-potential" | "new" | "passive" | "standard";
+
+export type VIPStatus = {
+  tier: VIPTier;
+  discount: number;
+  manuallySet: boolean;
+  autoCalculated: boolean;
+  lastCalculatedAt?: string;
+  stats?: {
+    totalOrdersValue: number;
+    totalOrdersCount: number;
+    totalQuotesCount: number;
+    approvedQuotesCount: number;
+    convertedQuotesCount: number;
+    quoteToOrderConversion: number;
+    firstOrderAt?: string;
+    lastOrderAt?: string;
+  };
+  segment?: CustomerSegment;
+};
+
+export type AdminCustomer = {
+  uid: string;
+  email: string;
+  displayName: string;
+  company: string;
+  vipStatus: VIPStatus | null;
+  createdAt?: string;
+};
+
+export type VIPTierInfo = {
+  name: string;
+  label: string;
+  icon: string;
+  discount: number;
+  minOrderValue: number;
+  minOrderCount: number;
+  minQuoteConversion: number;
+};
+
 export async function fetchStatsOverview(filters: StatsFiltersPayload = {}): Promise<AdminStatsOverview> {
   const query = new URLSearchParams();
   if (filters.from) {
@@ -426,4 +533,46 @@ export async function fetchStatsOverview(filters: StatsFiltersPayload = {}): Pro
   const search = query.toString();
   const path = `/stats/overview${search ? `?${search}` : ""}`;
   return apiFetch<AdminStatsOverview>(path);
+}
+
+export async function fetchCustomers(filters: { tier?: VIPTier; segment?: CustomerSegment } = {}): Promise<AdminCustomer[]> {
+  const query = new URLSearchParams();
+  if (filters.tier) {
+    query.set("tier", filters.tier);
+  }
+  if (filters.segment) {
+    query.set("segment", filters.segment);
+  }
+
+  const search = query.toString();
+  const path = `/admin/customers${search ? `?${search}` : ""}`;
+  const response = await apiFetch<{ customers: AdminCustomer[] }>(path);
+  return response.customers ?? [];
+}
+
+export async function setCustomerVIPTier(userId: string, tier: VIPTier): Promise<VIPStatus> {
+  const response = await apiFetch<{ vipStatus: VIPStatus }>(`/admin/vip/set-tier/${userId}`, {
+    method: "PUT",
+    body: JSON.stringify({ tier }),
+  });
+  return response.vipStatus;
+}
+
+export async function calculateCustomerVIP(userId: string): Promise<VIPStatus> {
+  const response = await apiFetch<{ vipStatus: VIPStatus }>(`/admin/vip/calculate/${userId}`, {
+    method: "POST",
+  });
+  return response.vipStatus;
+}
+
+export async function calculateAllCustomersVIP(): Promise<{ success: number; failed: number; errors: Array<{ userId: string; error: string }> }> {
+  const response = await apiFetch<{ results: { success: number; failed: number; errors: Array<{ userId: string; error: string }> } }>("/admin/vip/calculate-all", {
+    method: "POST",
+  });
+  return response.results;
+}
+
+export async function fetchVIPTiers(): Promise<Record<string, VIPTierInfo>> {
+  const response = await apiFetch<{ tiers: Record<string, VIPTierInfo> }>("/vip/tiers");
+  return response.tiers;
 }

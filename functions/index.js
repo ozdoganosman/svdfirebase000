@@ -18,7 +18,11 @@ import * as auth from "./db/auth.js";
 import * as exchangeRates from "./db/exchange-rates.js";
 import * as users from "./db/users.js";
 import * as quotes from "./db/quotes.js";
+import * as vip from "./db/vip.js";
+import * as emailSender from "./email/sender.js";
 import { fetchTCMBRate } from "./services/exchange-rate.js";
+import { db } from "./db/client.js";
+import admin from "firebase-admin";
 
 // Load environment variables
 dotenv.config();
@@ -861,10 +865,31 @@ app.get("/user/profile", async (req, res) => {
       return res.status(400).json({ error: "userId parameter is required" });
     }
 
-    const user = await users.getUserById(userId);
+    let user = await users.getUserById(userId);
 
+    // If user profile doesn't exist in Firestore, create it from Firebase Auth
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      functions.logger.info("User profile not found, attempting to create from Firebase Auth", { userId });
+
+      try {
+        // Get Firebase Auth user data
+        const { getAuth } = await import("firebase-admin/auth");
+        const authUser = await getAuth().getUser(userId);
+
+        // Create user profile in Firestore
+        user = await users.createUser(userId, {
+          email: authUser.email || "",
+          displayName: authUser.displayName || authUser.email?.split("@")[0] || "",
+          phone: authUser.phoneNumber || "",
+          company: "",
+          taxNumber: "",
+        });
+
+        functions.logger.info("User profile created successfully", { userId, email: authUser.email });
+      } catch (createError) {
+        functions.logger.error("Failed to create user profile from Auth", { userId, error: createError });
+        return res.status(404).json({ error: "User not found" });
+      }
     }
 
     res.status(200).json({ user });
@@ -1045,7 +1070,80 @@ app.get("/quotes", async (req, res) => {
 // Update quote (admin only)
 app.put("/quotes/:id", requireAuth, async (req, res) => {
   try {
-    const updatedQuote = await quotes.updateQuote(req.params.id, req.body);
+    const { status, editedItems } = req.body;
+    const updatePayload = { ...req.body };
+
+    // Handle price edits if provided
+    if (editedItems && Array.isArray(editedItems)) {
+      // Get current quote to merge with edited prices
+      const currentQuote = await quotes.getQuoteById(req.params.id);
+      if (!currentQuote) {
+        return res.status(404).json({ error: "Quote not found" });
+      }
+
+      // Create updated items array with edited prices
+      const updatedItems = currentQuote.items.map((item) => {
+        const editedItem = editedItems.find((e) => e.id === item.id);
+        if (editedItem) {
+          const newPrice = Number(editedItem.price);
+          const newSubtotal = newPrice * item.quantity;
+          return {
+            ...item,
+            price: newPrice,
+            subtotal: newSubtotal,
+          };
+        }
+        return item;
+      });
+
+      // Recalculate totals
+      const subtotal = updatedItems.reduce((sum, item) => sum + item.subtotal, 0);
+      const tax = subtotal * 0.20; // 20% KDV
+      const total = subtotal + tax;
+
+      // Add items and totals to update payload
+      updatePayload.items = updatedItems;
+      updatePayload.totals = {
+        subtotal,
+        tax,
+        total,
+        currency: currentQuote.totals?.currency || "TRY",
+      };
+
+      functions.logger.info("Quote prices updated", {
+        quoteId: req.params.id,
+        oldSubtotal: currentQuote.totals?.subtotal,
+        newSubtotal: subtotal,
+      });
+    }
+
+    const updatedQuote = await quotes.updateQuote(req.params.id, updatePayload);
+
+    // Send email notification when status changes
+    if (status === "approved") {
+      try {
+        // Generate PDF for approved quote
+        const { generateQuotePDF } = await import("./pdf/quote-generator.js");
+        const pdfBuffer = await generateQuotePDF(updatedQuote);
+
+        // Send approval email with PDF attachment
+        await emailSender.sendQuoteApprovedEmail(updatedQuote, pdfBuffer);
+        functions.logger.info(`Quote approved email sent to ${updatedQuote.customer.email}`);
+      } catch (emailError) {
+        functions.logger.error("Error sending quote approved email", emailError);
+        // Don't fail the request if email fails
+      }
+    } else if (status === "rejected") {
+      try {
+        // Send rejection email
+        await emailSender.sendQuoteRejectedEmail(updatedQuote);
+        functions.logger.info(`Quote rejected email sent to ${updatedQuote.customer.email}`);
+      } catch (emailError) {
+        functions.logger.error("Error sending quote rejected email", emailError);
+        // Don't fail the request if email fails
+      }
+    }
+
     res.status(200).json({ quote: updatedQuote });
   } catch (error) {
     functions.logger.error("Error updating quote", error);
@@ -1072,6 +1170,38 @@ app.delete("/quotes/:id", requireAuth, async (req, res) => {
   } catch (error) {
     functions.logger.error("Error deleting quote", error);
     res.status(500).json({ error: "Failed to delete quote." });
+  }
+});
+
+// Generate PDF for quote
+app.get("/quotes/:id/pdf", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const quote = await quotes.getQuoteById(id);
+
+    if (!quote) {
+      return res.status(404).json({ error: "Quote not found" });
+    }
+
+    // Import PDF generator
+    const { generateQuotePDF } = await import("./pdf/quote-generator.js");
+
+    // Generate PDF
+    const pdfBuffer = await generateQuotePDF(quote);
+
+    // Set response headers
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="teklif-${quote.quoteNumber || quote.id}.pdf"`
+    );
+    res.setHeader("Content-Length", pdfBuffer.length);
+
+    // Send PDF
+    res.send(pdfBuffer);
+  } catch (error) {
+    functions.logger.error("Error generating quote PDF", error);
+    res.status(500).json({ error: "Failed to generate PDF." });
   }
 });
 
@@ -1193,6 +1323,18 @@ app.put("/samples/:id/status", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "status is required" });
     }
     const updatedSample = await samples.updateSampleStatus(req.params.id, status);
+
+    // Send email notification when sample is approved
+    if (status === "approved") {
+      try {
+        await emailSender.sendSampleApprovedEmail(updatedSample);
+        functions.logger.info(`Sample approved email sent to ${updatedSample.customer.email}`);
+      } catch (emailError) {
+        functions.logger.error("Error sending sample approved email", emailError);
+        // Don't fail the request if email fails
+      }
+    }
+
     res.status(200).json({ sample: updatedSample });
   } catch (error) {
     functions.logger.error("Error updating sample status", error);
@@ -1208,6 +1350,108 @@ app.get("/admin/samples", requireAuth, async (req, res) => {
   } catch (error) {
     functions.logger.error("Error listing samples", error);
     res.status(500).json({ error: "Failed to list samples." });
+  }
+});
+
+// ============ VIP CUSTOMER MANAGEMENT ENDPOINTS ============
+
+// Get user VIP status (authenticated users)
+app.get("/user/vip-status", async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).json({ error: "userId parameter is required" });
+    }
+
+    const user = await vip.getUserWithVIPStatus(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json({ vipStatus: user.vipStatus });
+  } catch (error) {
+    functions.logger.error("Error fetching VIP status", error);
+    res.status(500).json({ error: "Failed to fetch VIP status." });
+  }
+});
+
+// Update VIP status for a user (recalculate based on stats)
+app.post("/admin/vip/calculate/:userId", requireAuth, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const vipStatus = await vip.updateUserVIPStatus(userId);
+    res.status(200).json({ message: "VIP status updated", vipStatus });
+  } catch (error) {
+    functions.logger.error("Error calculating VIP status", error);
+    res.status(500).json({ error: "Failed to calculate VIP status." });
+  }
+});
+
+// Manually set VIP tier (admin override)
+app.put("/admin/vip/set-tier/:userId", requireAuth, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { tier } = req.body;
+
+    if (!tier && tier !== null) {
+      return res.status(400).json({ error: "tier is required" });
+    }
+
+    const vipStatus = await vip.manuallySetVIPTier(userId, tier);
+    res.status(200).json({ message: "VIP tier set manually", vipStatus });
+  } catch (error) {
+    functions.logger.error("Error setting VIP tier", error);
+    res.status(500).json({ error: error.message || "Failed to set VIP tier." });
+  }
+});
+
+// Calculate all customer VIP statuses (batch operation)
+app.post("/admin/vip/calculate-all", requireAuth, async (_req, res) => {
+  try {
+    functions.logger.info("Starting batch VIP calculation for all customers");
+    const results = await vip.calculateAllCustomerVIPStatuses();
+    res.status(200).json({
+      message: "Batch VIP calculation completed",
+      results,
+    });
+  } catch (error) {
+    functions.logger.error("Error in batch VIP calculation", error);
+    res.status(500).json({ error: "Failed to calculate VIP statuses." });
+  }
+});
+
+// Get all VIP tiers information
+app.get("/vip/tiers", async (_req, res) => {
+  try {
+    const tiers = vip.getAllVIPTiers();
+    res.status(200).json({ tiers });
+  } catch (error) {
+    functions.logger.error("Error fetching VIP tiers", error);
+    res.status(500).json({ error: "Failed to fetch VIP tiers." });
+  }
+});
+
+// List customers with VIP/segment filtering (admin)
+app.get("/admin/customers", requireAuth, async (req, res) => {
+  try {
+    const { tier, segment } = req.query;
+    const customers = await vip.listCustomersWithVIP({ tier, segment });
+    res.status(200).json({ customers });
+  } catch (error) {
+    functions.logger.error("Error listing customers", error);
+    res.status(500).json({ error: "Failed to list customers." });
+  }
+});
+
+// Get customer statistics (admin)
+app.get("/admin/customers/:userId/stats", requireAuth, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const stats = await vip.calculateCustomerStats(userId);
+    res.status(200).json({ stats });
+  } catch (error) {
+    functions.logger.error("Error fetching customer stats", error);
+    res.status(500).json({ error: "Failed to fetch customer stats." });
   }
 });
 
@@ -1263,6 +1507,117 @@ app.post("/products/migrate-try-to-usd", requireAuth, async (_req, res) => {
   } catch (error) {
     functions.logger.error("TRY->USD migration failed", { message: error.message, stack: error.stack });
     res.status(500).json({ error: "Migration failed." });
+  }
+});
+
+// Migration endpoint: Fix orders with packageInfo
+app.post("/admin/migrate-orders", async (req, res) => {
+  try {
+    functions.logger.info("Starting order migration...");
+
+    const ordersCollection = db.collection("orders");
+    const productsCollection = db.collection("products");
+
+    // Get all orders
+    const ordersSnapshot = await ordersCollection.get();
+    functions.logger.info(`Found ${ordersSnapshot.size} orders to process`);
+
+    let updatedCount = 0;
+    let skippedCount = 0;
+    let errorCount = 0;
+    const results = [];
+
+    for (const orderDoc of ordersSnapshot.docs) {
+      const orderId = orderDoc.id;
+      const orderData = orderDoc.data();
+
+      try {
+        let needsUpdate = false;
+        const updatedItems = [];
+
+        for (const item of orderData.items || []) {
+          // Skip if already has packageInfo
+          if (item.packageInfo) {
+            updatedItems.push(item);
+            continue;
+          }
+
+          // Fetch product data
+          const productDoc = await productsCollection.doc(item.id).get();
+          if (!productDoc.exists) {
+            updatedItems.push(item);
+            continue;
+          }
+
+          const productData = productDoc.data();
+          const packageInfo = productData.packageInfo || null;
+          const category = productData.category || item.category || null;
+
+          // Calculate correct subtotal
+          let subtotal = item.subtotal;
+          if (packageInfo && packageInfo.itemsPerBox) {
+            const actualQuantity = item.quantity * packageInfo.itemsPerBox;
+            subtotal = item.price * actualQuantity;
+            needsUpdate = true;
+          }
+
+          updatedItems.push({
+            ...item,
+            packageInfo,
+            category,
+            subtotal
+          });
+        }
+
+        // Update order if needed
+        if (needsUpdate) {
+          // Recalculate order subtotal
+          const newSubtotal = updatedItems.reduce((sum, item) => sum + item.subtotal, 0);
+          const shippingTotal = orderData.totals?.shippingTotal || 0;
+          const discountTotal = orderData.totals?.discountTotal || 0;
+          const newTotal = newSubtotal + shippingTotal - discountTotal;
+
+          await ordersCollection.doc(orderId).update({
+            items: updatedItems,
+            "totals.subtotal": newSubtotal,
+            "totals.total": newTotal,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+
+          results.push({
+            orderId,
+            status: "updated",
+            oldSubtotal: orderData.totals?.subtotal || 0,
+            newSubtotal
+          });
+          updatedCount++;
+        } else {
+          skippedCount++;
+        }
+
+      } catch (error) {
+        functions.logger.error(`Error processing order ${orderId}`, error);
+        results.push({
+          orderId,
+          status: "error",
+          error: error.message
+        });
+        errorCount++;
+      }
+    }
+
+    functions.logger.info("Migration complete", { updatedCount, skippedCount, errorCount });
+    res.status(200).json({
+      message: "Migration completed",
+      updated: updatedCount,
+      skipped: skippedCount,
+      errors: errorCount,
+      results
+    });
+
+  } catch (error) {
+    functions.logger.error("Migration failed", error);
+    res.status(500).json({ error: "Migration failed: " + error.message });
   }
 });
 

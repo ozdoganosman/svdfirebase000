@@ -91,30 +91,22 @@ export default function CartPage() {
 
   // Fetch user profile and auto-fill forms
   useEffect(() => {
-    console.log('[Cart] User state:', user);
     if (user?.uid) {
-      console.log('[Cart] Fetching user profile for:', user.uid);
       // Fetch user profile
       fetch(resolveServerApiUrl(`/user/profile?userId=${user.uid}`))
         .then((res) => res.json())
         .then((data) => {
-          console.log('[Cart] User profile data:', data);
           if (data.user) {
             const userProfile = data.user;
-            console.log('[Cart] User profile:', userProfile);
 
             // Fetch default address
-            console.log('[Cart] Fetching addresses for:', user.uid);
             fetch(resolveServerApiUrl(`/user/addresses?userId=${user.uid}`))
               .then((res) => res.json())
               .then((addressData) => {
-                console.log('[Cart] Address data:', addressData);
                 const addresses = addressData.addresses || [];
                 const defaultAddress = addresses.find((addr: { isDefault?: boolean; fullName?: string; phone?: string; address?: string; city?: string }) => addr.isDefault) || addresses[0];
-                console.log('[Cart] Default address:', defaultAddress);
 
                 // Auto-fill quote form
-                console.log('[Cart] Auto-filling quote form');
                 setQuoteForm((prev) => ({
                   ...prev,
                   name: userProfile.displayName || defaultAddress?.fullName || prev.name,
@@ -127,7 +119,6 @@ export default function CartPage() {
                 }));
 
                 // Auto-fill sample form
-                console.log('[Cart] Auto-filling sample form');
                 setSampleForm((prev) => ({
                   ...prev,
                   name: userProfile.displayName || defaultAddress?.fullName || prev.name,
@@ -797,7 +788,7 @@ export default function CartPage() {
               const nextTier = getNextTier(item);
               const itemTotal = calculateItemTotal(item);
               const totalItemCount = getTotalItemCount(item);
-              const basePrice = item.price ?? 0;
+              const basePrice = item.priceTRY ?? item.price ?? 0;
               const savings = item.packageInfo
                 ? (basePrice - effectivePrice) * totalItemCount
                 : (basePrice - effectivePrice) * item.quantity;
@@ -869,11 +860,11 @@ export default function CartPage() {
                         {item.packageInfo ? 'Birim Fiyat' : 'Fiyat'}
                       </p>
                       <p className="text-sm font-semibold text-slate-700">
-                        {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, effectivePrice) : "₺" + effectivePrice.toLocaleString("tr-TR")}
+                        {exchangeRate ? formatDualPrice(item.priceUSD, exchangeRate, false, 1, effectivePrice) : "₺" + effectivePrice.toLocaleString("tr-TR")}
                         <span className="text-xs font-normal text-slate-500">+KDV</span>
                         {effectivePrice < basePrice && basePrice > 0 && (
                           <span className="ml-2 text-xs text-green-600 line-through">
-                            {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, basePrice) : "₺" + basePrice.toLocaleString("tr-TR")}
+                            {exchangeRate ? formatDualPrice(item.priceUSD, exchangeRate, false, 1, basePrice) : "₺" + basePrice.toLocaleString("tr-TR")}
                           </span>
                         )}
                       </p>
@@ -884,7 +875,7 @@ export default function CartPage() {
                           {item.packageInfo.boxLabel} Fiyatı
                         </p>
                         <p className="text-sm font-semibold text-slate-700">
-                          {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, item.packageInfo.itemsPerBox, effectivePrice) : "₺" + (effectivePrice * item.packageInfo.itemsPerBox).toLocaleString("tr-TR")}
+                          {exchangeRate ? formatDualPrice(item.priceUSD, exchangeRate, false, 1, effectivePrice * item.packageInfo.itemsPerBox) : "₺" + (effectivePrice * item.packageInfo.itemsPerBox).toLocaleString("tr-TR")}
                           <span className="text-xs font-normal text-slate-500">+KDV</span>
                         </p>
                       </div>
@@ -1252,6 +1243,93 @@ export default function CartPage() {
                           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200"
                           placeholder="Ek bilgiler varsa belirtiniz"
                         />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cart Summary */}
+                  <div className="mb-6 rounded-lg bg-slate-50 border border-slate-200 p-4">
+                    <h3 className="font-semibold text-slate-900 mb-3">Sipariş Özeti</h3>
+
+                    {/* Products List */}
+                    <div className="space-y-2 mb-4">
+                      {items.map((item) => {
+                        const effectivePrice = getEffectivePrice(item);
+                        const totalItemCount = getTotalItemCount(item);
+                        const itemTotal = calculateItemTotal(item);
+
+                        return (
+                          <div key={item.id} className="flex items-center justify-between text-sm py-2 border-b border-slate-200 last:border-0">
+                            <div className="flex-1">
+                              <p className="font-medium text-slate-900">{item.title}</p>
+                              <p className="text-xs text-slate-500">
+                                {item.packageInfo ? (
+                                  <>
+                                    {item.quantity} {item.packageInfo.boxLabel.toLowerCase()} × {item.packageInfo.itemsPerBox} = {totalItemCount.toLocaleString('tr-TR')} adet
+                                  </>
+                                ) : (
+                                  <>{item.quantity} adet</>
+                                )}
+                              </p>
+                            </div>
+                            <div className="text-right ml-4">
+                              <p className="font-semibold text-slate-900">
+                                {exchangeRate ? formatDualPrice(item.priceUSD, exchangeRate, false, 1, effectivePrice) : "₺" + effectivePrice.toLocaleString("tr-TR")}
+                                <span className="text-xs font-normal text-slate-500"> /adet</span>
+                              </p>
+                              <p className="text-xs text-slate-600">
+                                Toplam: {exchangeRate ? formatDualPrice(item.priceUSD, exchangeRate, false, totalItemCount, itemTotal) : "₺" + itemTotal.toLocaleString("tr-TR")}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Summary Totals */}
+                    <div className="space-y-2 pt-3 border-t border-slate-300">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">Ara toplam (KDV Hariç)</span>
+                        <span className="font-semibold text-slate-900">
+                          {exchangeRate ? formatDualPrice(undefined, exchangeRate, false, 1, subtotal) : "₺" + subtotal.toLocaleString("tr-TR")}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">KDV (%20)</span>
+                        <span className="font-semibold text-slate-900">
+                          {exchangeRate ? formatDualPrice(undefined, exchangeRate, false, 1, subtotal * 0.20) : "₺" + (subtotal * 0.20).toLocaleString("tr-TR")}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">Kargo</span>
+                        <span className="font-semibold text-slate-900">
+                          {totalBoxes >= 50 ? (
+                            <span className="text-green-600">Ücretsiz</span>
+                          ) : (
+                            exchangeRate ? formatDualPrice(undefined, exchangeRate, false, 1, totalBoxes * 120) : "₺" + (totalBoxes * 120).toLocaleString("tr-TR")
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-base font-bold pt-2 border-t border-slate-300">
+                        <span className="text-slate-900">Genel Toplam (KDV Dahil)</span>
+                        <span className="text-purple-600">
+                          {exchangeRate ? formatDualPrice(undefined, exchangeRate, false, 1, subtotal * 1.20 + (totalBoxes >= 50 ? 0 : totalBoxes * 120)) : "₺" + (subtotal * 1.20 + (totalBoxes >= 50 ? 0 : totalBoxes * 120)).toLocaleString("tr-TR")}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Pricing Notice */}
+                    <div className="mt-4 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3">
+                      <svg className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="text-xs text-amber-800">
+                        <p className="font-semibold mb-1">Fiyat Bilgilendirmesi</p>
+                        <p>
+                          Yukarıda belirtilen fiyatlar <strong>peşin ödeme</strong> fiyatlarıdır.
+                          Seçtiğiniz vade süresine göre nihai fiyatlarda değişiklik olabilir.
+                          Size özel teklifimiz e-posta ile iletilecektir.
+                        </p>
                       </div>
                     </div>
                   </div>

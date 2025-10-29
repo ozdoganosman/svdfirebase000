@@ -2,7 +2,7 @@
 
 **Proje:** SVD Ambalaj E-Ticaret Platformu
 **Başlangıç Tarihi:** 22 Ekim 2025
-**Son Güncelleme:** 26 Ekim 2025, 16:00
+**Son Güncelleme:** 26 Ekim 2025, 19:15
 
 ---
 
@@ -35,6 +35,21 @@
      - Loading spinner animasyonu
      - Minimum miktar kontrolü
      - Responsive ve erişilebilir tasarım
+4. **🏢 B2B Teklif & Numune Sistemi İyileştirmeleri - ✅ TAMAMLANDI**
+   - Quote ve Sample formlarında otomatik kullanıcı bilgisi doldurma
+     - Kayıtlı kullanıcılar için profil ve adres bilgilerini otomatik çekme
+     - Backend: `/user/profile` endpoint - eksik profil varsa Auth'dan otomatik oluşturma
+   - Teklif formuna detaylı sipariş özeti eklendi
+     - Her ürün için: miktar, birim fiyat, koli bilgisi, toplam
+     - Ara toplam, KDV, kargo ve genel toplam hesaplamaları
+     - Fiyat bilgilendirme uyarısı: "Peşin fiyatlar, vadeye göre değişiklik olabilir"
+5. **📊 Admin İstatistikleri Düzeltmeleri - ✅ TAMAMLANDI**
+   - Kategori satış yüzdelerinin doğru hesaplanması
+     - Yüzde hesabı kategori toplamına göre yapılıyor (totalRevenue yerine)
+   - Sipariş subtotal hesaplamalarında koli içi adet sayısı dikkate alınıyor
+     - packageInfo ile doğru hesaplama: quantity × itemsPerBox × price
+     - Migration endpoint (/admin/migrate-orders) ile eski siparişler güncellendi
+   - Cart fiyat gösteriminde priceUSD ve priceTRY parametreleri düzeltildi
 
 ### 23 Ekim 2025
 1. Admin Ürünler sayfası USD-Only tamamlandı: TRY alanları kaldırıldı, 0.001 adımlı USD fiyat ve USD toplu fiyatlandırma (koli bazlı) aktif
@@ -72,8 +87,8 @@
 - ⏳ Beklemede: Faz 1.5 (PayTR onay bekleniyor) ve Faz 2+ (aşağıda listelenenler)
 - Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı durumda
 
-**Son Deployment:** 26 Ekim 2025, 16:20 - Production (Firebase Hosting + Functions)
-**Son Commit:** f6e395f - fix: Resolve TypeScript build errors and lint warnings
+**Son Deployment:** 26 Ekim 2025, 19:10 - Production (Firebase Hosting + Functions)
+**Son Commit:** Migration: Fix order packageInfo and category sales statistics
 **Deployed Services:**
 - ✅ Frontend - https://svdfirebase000.web.app
 - ✅ API (us-central1) - https://api-tfi7rlxtca-uc.a.run.app
@@ -521,21 +536,28 @@ POST   /payment/verify           // Manuel verify
 
 ## 🚀 FAZ 2: KISA VADELİ (2-4 Hafta)
 
-### 2.1 B2B Teklif Sistemi 🏢
-**Durum:** ⏳ Beklemede
-**Tahmini Süre:** 6-7 gün
+### 2.1 B2B Teklif & Numune Sistemi 🏢
+**Durum:** ✅ TAMAMLANDI
+**Tahmini Süre:** 6-7 gün (Tamamlandı)
 **Bağımlılık:** 1.1 tamamlanmalı (teklif USD ve TL olarak gösterilecek)
 **Öncelik:** Orta
 
 #### Görevler:
-- [ ] Sepetten teklif oluşturma butonu
-- [ ] Teklif formu (müşteri bilgileri, notlar)
-- [ ] Backend teklif kaydetme (USD ve TL)
-- [ ] Admin teklif onay/reddetme
-- [ ] Teklif PDF oluşturma (dual currency)
-- [ ] E-posta ile teklif gönderme
-- [ ] Teklif geçerlilik süresi (30 gün)
-- [ ] Onaylı teklifi siparişe dönüştürme
+- [x] Sepetten teklif oluşturma butonu
+- [x] Sepetten numune talebi butonu
+- [x] Teklif formu (müşteri bilgileri, ödeme şartları, notlar)
+- [x] Numune formu (müşteri bilgileri, notlar)
+- [x] Kayıtlı kullanıcılar için otomatik bilgi doldurma
+- [x] Teklif formunda detaylı sipariş özeti (ürünler, fiyatlar, toplam)
+- [x] Vade uyarısı ("Peşin fiyatlar, vadeye göre değişebilir")
+- [x] Backend teklif kaydetme (USD ve TL) - quotes collection
+- [x] Backend numune talebi kaydetme - samples collection
+- [x] Admin teklif onay/reddetme
+- [x] Admin numune onay/reddetme
+- [x] Teklif PDF oluşturma (dual currency)
+- [x] E-posta ile teklif gönderme
+- [x] Teklif geçerlilik süresi (30 gün)
+- [x] Onaylı teklifi siparişe dönüştürme
 
 #### Firestore Koleksiyon:
 ```
@@ -584,7 +606,56 @@ Genel Toplam: $176.98 (₺6,127.20)
 
 ---
 
-### 2.2 Başlık-Şişe Kombinasyon İndirimi 🔄
+### 2.2 VIP Müşteri Yönetimi ve Segmentasyon 👑
+**Durum:** ✅ TAMAMLANDI
+**Tahmini Süre:** 4-5 gün (Tamamlandı)
+**Bağımlılık:** Quotes & Orders sistemi tamamlanmalı
+**Öncelik:** Yüksek
+
+#### Görevler:
+- [x] VIP tier sistemi (Platinum 20%, Gold 15%, Silver 10%, Bronze 5%)
+- [x] Otomatik müşteri segmentasyonu (VIP, High-Potential, New, Passive, Standard)
+- [x] Sipariş ve teklif bazlı VIP belirleme
+- [x] Admin müşteri yönetim sayfası
+- [x] Manuel VIP tier atama
+- [x] Batch VIP hesaplama
+- [x] VIP pricing altyapısı (calculateVIPPrice, formatVIPPrice)
+- [x] VIP badge ve progress bileşenleri
+- [x] AuthContext'e VIP status entegrasyonu
+- [x] Account sayfasında VIP gösterimi
+
+#### VIP Tier Kriterleri:
+- **Platinum (20%)**: 50K+ sipariş, 10+ adet, 30%+ dönüşüm
+- **Gold (15%)**: 30K+ sipariş, 7+ adet, 25%+ dönüşüm
+- **Silver (10%)**: 15K+ sipariş, 5+ adet, 20%+ dönüşüm
+- **Bronze (5%)**: 5K+ sipariş, 3+ adet, 15%+ dönüşüm
+
+#### Müşteri Segmentleri:
+- **VIP**: Manuel veya otomatik VIP tier sahipleri
+- **High-Potential**: 2+ sipariş, 10K+ değer, aktif (3 ay)
+- **New**: 1 sipariş veya teklif, yeni müşteri
+- **Passive**: Eski müşteri, 6+ ay inaktif
+- **Standard**: Diğer müşteriler
+
+#### Backend API Endpoints:
+- `GET /user/vip-status` - Kullanıcı VIP bilgisi
+- `POST /admin/vip/calculate/:userId` - Tekil hesaplama
+- `PUT /admin/vip/set-tier/:userId` - Manuel atama
+- `POST /admin/vip/calculate-all` - Toplu hesaplama
+- `GET /vip/tiers` - Tier bilgileri
+- `GET /admin/customers` - Müşteri listesi (filtreleme)
+- `GET /admin/customers/:userId/stats` - Müşteri istatistikleri
+
+#### Dosyalar:
+- `functions/db/vip.js` - VIP hesaplama ve segmentasyon
+- `src/lib/pricing.ts` - VIP fiyatlama fonksiyonları
+- `src/components/VIPBadge.tsx` - VIP gösterimi
+- `src/app/admin/customers/page.tsx` - Admin müşteri yönetimi
+- `src/context/AuthContext.tsx` - VIP status entegrasyonu
+
+---
+
+### 2.3 Başlık-Şişe Kombinasyon İndirimi 🔄
 **Durum:** ⏳ Beklemede
 **Tahmini Süre:** 4-5 gün
 **Bağımlılık:** 1.1 tamamlanmalı (indirim USD üzerinden hesaplanacak)
@@ -665,7 +736,7 @@ Eşleşen Miktar: 3,000 adet
 
 ---
 
-### 2.3 Süper Admin Panel - Tam Kontrol Sistemi ⚙️
+### 2.4 Süper Admin Panel - Tam Kontrol Sistemi ⚙️
 **Durum:** ⏳ Beklemede
 **Tahmini Süre:** 8-10 gün
 **Öncelik:** Kritik
@@ -869,7 +940,7 @@ service cloud.firestore {
 
 ---
 
-### 2.4 Promosyon ve Kampanya Kodu Sistemi 🎁
+### 2.5 Promosyon ve Kampanya Kodu Sistemi 🎁
 **Durum:** ⏳ Beklemede
 **Tahmini Süre:** 3-4 gün
 **Öncelik:** Orta
@@ -908,7 +979,7 @@ promotions/
 
 ---
 
-### 2.5 Ürün Varyantları (Renk, Boyut) 🎨
+### 2.6 Ürün Varyantları (Renk, Boyut) 🎨
 **Durum:** ⏳ Beklemede
 **Tahmini Süre:** 5-6 gün
 **Öncelik:** Düşük (productType ve neckSize ile kısmen çözüldü)
@@ -944,7 +1015,7 @@ variants: [
 
 ---
 
-### 2.6 E-posta Bildirim Sistemi 📧
+### 2.7 E-posta Bildirim Sistemi 📧
 **Durum:** ⏳ Beklemede
 **Tahmini Süre:** 4 gün
 **Bağımlılık:** 2.3 tamamlanmalı (email ayarları admin panelden yapılacak)
@@ -1241,6 +1312,9 @@ Gerekli yeni koleksiyonlar:
 - ✅ PDF Export Sistemi
 - ✅ Checkout Sayfası İyileştirmesi
 - ✅ UX İyileştirmeleri (cart fix, checkout auto-fill, modern quantity selector)
+- ✅ B2B Teklif & Numune Sistemi (Faz 2.1 - TAM)
+- ✅ VIP Müşteri Yönetimi ve Segmentasyon (Faz 2.2 - TAM)
+- ✅ Admin İstatistikleri Düzeltmeleri (kategori satış, packageInfo)
 - ✅ Production Deployment (Firebase Hosting + Functions)
 
 **Odak (güncel):**
@@ -1256,13 +1330,18 @@ Kısa vadeli (PayTR onayı geldiğinde):
 - [ ] Production'a geçiş
 
 Orta vadeli (sonraki sprint):
-- [ ] B2B Teklif Sistemi (Faz 2.1)
-- [ ] Başlık-Şişe Kombinasyon İndirimi (Faz 2.2)
-- [ ] Süper Admin Panel (Faz 2.3)
+- [x] B2B Teklif & Numune Sistemi (Faz 2.1) - ✅ TAMAMLANDI
+  - [x] Admin onay/red sistemi
+  - [x] PDF oluşturma
+  - [x] E-posta bildirimleri
+  - [x] Teklifi siparişe dönüştürme
+- [x] VIP Müşteri Yönetimi ve Segmentasyon (Faz 2.2) - ✅ TAMAMLANDI
+- [ ] Başlık-Şişe Kombinasyon İndirimi (Faz 2.3)
+- [ ] Süper Admin Panel (Faz 2.4)
 
 Tamamlayıcı iyileştirmeler:
 - [ ] Kalan minör sayfalarda next/image dönüşümleri ve lazy loading
-- [ ] E-posta bildirim sistemi
+- [ ] E-posta bildirim sistemi (teklif, sipariş, vb.)
 - [ ] Promosyon/kampanya kodu sistemi
 
 ---

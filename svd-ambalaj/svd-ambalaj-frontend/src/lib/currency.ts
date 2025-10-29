@@ -103,24 +103,18 @@ export function formatDualPrice(
   multiplier = 1,
   tryAmount?: number
 ): string {
-  console.log('[formatDualPrice] Input:', { usdAmount, rate, showUSD, multiplier, tryAmount });
-  
   // If TRY amount is provided directly, use it
   if (tryAmount !== undefined && tryAmount !== null) {
-    const result = formatCurrency(tryAmount * multiplier, "TRY");
-    console.log('[formatDualPrice] Using TRY amount:', result);
-    return result;
+    return formatCurrency(tryAmount * multiplier, "TRY");
   }
 
   // If no USD amount, return zero formatted as TRY
   if (usdAmount === undefined || usdAmount === null) {
-    console.log('[formatDualPrice] No USD amount, returning 0');
     return formatCurrency(0, "TRY");
   }
 
   const converted = convertUSDToTRY(usdAmount * multiplier, rate);
   const tryFormatted = formatCurrency(converted, "TRY");
-  console.log('[formatDualPrice] Converted USD to TRY:', { usdAmount, rate, converted, tryFormatted });
 
   if (showUSD) {
     const usdFormatted = formatCurrency(usdAmount * multiplier, "USD");

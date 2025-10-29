@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
@@ -34,6 +34,28 @@ interface SavedAddress {
   isDefault: boolean;
 }
 
+interface Quote {
+  id: string;
+  quoteNumber: string;
+  status: string;
+  customer: {
+    name: string;
+    company: string;
+    email: string;
+    phone: string;
+    taxNumber?: string;
+    address?: string;
+    city?: string;
+  };
+  items: Array<{
+    id: string;
+    title: string;
+    quantity: number;
+    price: number;
+    subtotal: number;
+  }>;
+}
+
 const defaultState: CheckoutFormState = {
   name: "",
   company: "",
@@ -45,18 +67,19 @@ const defaultState: CheckoutFormState = {
   notes: "",
 };
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { 
-    items, 
+  const {
+    items,
     subtotal,
     totalBoxes,
     totalItems,
     getEffectivePrice,
     getTotalItemCount,
     calculateItemTotal,
-    clearCart 
+    clearCart
   } = useCart();
   const [form, setForm] = useState<CheckoutFormState>(defaultState);
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
@@ -66,10 +89,46 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [useNewAddress, setUseNewAddress] = useState(false);
   const [profileDataLoaded, setProfileDataLoaded] = useState(false);
+  const [quoteId, setQuoteId] = useState<string | null>(null);
+  const [quoteData, setQuoteData] = useState<Quote | null>(null);
 
   useEffect(() => {
     getCurrentRate().then(rate => setExchangeRate(rate.rate)).catch(() => setExchangeRate(null));
   }, []);
+
+  // Load quote data if fromQuote param exists
+  useEffect(() => {
+    const fromQuoteParam = searchParams.get("fromQuote");
+    if (fromQuoteParam) {
+      setQuoteId(fromQuoteParam);
+
+      // Fetch quote data
+      fetch(`${apiBase}/quotes/${fromQuoteParam}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.quote) {
+            setQuoteData(data.quote);
+
+            // Auto-fill customer info from quote
+            setForm(prev => ({
+              ...prev,
+              name: data.quote.customer.name || prev.name,
+              company: data.quote.customer.company || prev.company,
+              email: data.quote.customer.email || prev.email,
+              phone: data.quote.customer.phone || prev.phone,
+              taxNumber: data.quote.customer.taxNumber || prev.taxNumber,
+              address: data.quote.customer.address || prev.address,
+              city: data.quote.customer.city || prev.city,
+            }));
+
+            setProfileDataLoaded(true); // Prevent profile fetch from overriding
+          }
+        })
+        .catch(error => {
+          console.error("Error loading quote:", error);
+        });
+    }
+  }, [searchParams]);
 
   // Fetch user profile to auto-fill company info
   useEffect(() => {
@@ -195,6 +254,8 @@ export default function CheckoutPage() {
         quantity: item.quantity,
         price: item.price ?? 0,
         subtotal: (item.price ?? 0) * item.quantity,
+        category: item.slug?.split('-')[0] || null, // Extract category from slug
+        packageInfo: item.packageInfo || null, // Include package info for statistics
       })),
       totals: {
         subtotal,
@@ -216,6 +277,20 @@ export default function CheckoutPage() {
       const result = await response.json();
       const orderId = result?.order?.id;
       const orderNumber = result?.order?.orderNumber;
+
+      // If this order is from a quote, mark quote as converted
+      if (quoteId) {
+        try {
+          await fetch(`${apiBase}/quotes/${quoteId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "converted" }),
+          });
+        } catch (quoteError) {
+          console.error("Error updating quote status:", quoteError);
+          // Don't fail the checkout if quote update fails
+        }
+      }
 
       clearCart();
       setForm(defaultState);
@@ -530,5 +605,22 @@ export default function CheckoutPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-16">
+        <div className="mx-auto max-w-6xl px-6 sm:px-10">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-amber-500 border-r-transparent"></div>
+            <p className="mt-4 text-slate-600">Yükleniyor...</p>
+          </div>
+        </div>
+      </main>
+    }>
+      <CheckoutPageContent />
+    </Suspense>
   );
 }

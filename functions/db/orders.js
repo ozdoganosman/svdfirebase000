@@ -170,7 +170,11 @@ const createOrder = async (payload) => {
   const subtotal = parseNumber(totals.subtotal, items.reduce((sum, item) => {
     const quantity = parseNumber(item.quantity, 0);
     const unitPrice = parseNumber(item.price ?? item.unit_price, 0);
-    return sum + quantity * unitPrice;
+    // Calculate actual quantity considering package info
+    const actualQuantity = item.packageInfo && item.packageInfo.itemsPerBox
+      ? quantity * item.packageInfo.itemsPerBox
+      : quantity;
+    return sum + actualQuantity * unitPrice;
   }, 0));
   const shippingTotal = parseNumber(totals.shippingTotal ?? payload.shippingTotal, 0);
   const discountTotal = parseNumber(totals.discountTotal ?? payload.discountTotal, 0);
@@ -201,14 +205,28 @@ const createOrder = async (payload) => {
     createdAt: now,
     updatedAt: now,
     customer: { id: customerId, ...customerData },
-    items: items.map(item => ({
-      id: item.id || item.product_id || "",
-      title: item.title || "",
-      quantity: parseNumber(item.quantity, 0),
-      price: parseNumber(item.price ?? item.unit_price, 0),
-      subtotal: parseNumber(item.subtotal, parseNumber(item.price ?? item.unit_price, 0) * parseNumber(item.quantity, 0)),
-      category: item.category || null, // Kategori bilgisi ürünlerden alınacak
-    })),
+    items: items.map(item => {
+      const quantity = parseNumber(item.quantity, 0);
+      const unitPrice = parseNumber(item.price ?? item.unit_price, 0);
+
+      // Calculate actual quantity considering package info
+      const actualQuantity = item.packageInfo && item.packageInfo.itemsPerBox
+        ? quantity * item.packageInfo.itemsPerBox
+        : quantity;
+
+      // Calculate subtotal using actual quantity
+      const calculatedSubtotal = unitPrice * actualQuantity;
+
+      return {
+        id: item.id || item.product_id || "",
+        title: item.title || "",
+        quantity,
+        price: unitPrice,
+        subtotal: parseNumber(item.subtotal, calculatedSubtotal),
+        category: item.category || null,
+        packageInfo: item.packageInfo || null,
+      };
+    }),
     totals: {
       subtotal,
       currency,

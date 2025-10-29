@@ -201,6 +201,26 @@ const updateQuote = async (quoteId, updates) => {
     updateData.validUntil = new Date(updates.validUntil);
   }
 
+  // Handle edited items and recalculate totals
+  if (updates.items && Array.isArray(updates.items)) {
+    updateData.items = updates.items.map((item) => ({
+      id: item.id || "",
+      title: item.title || "",
+      quantity: parseNumber(item.quantity, 0),
+      price: parseNumber(item.price, 0),
+      subtotal: parseNumber(item.subtotal, parseNumber(item.price, 0) * parseNumber(item.quantity, 0)),
+    }));
+  }
+
+  if (updates.totals) {
+    updateData.totals = {
+      subtotal: parseNumber(updates.totals.subtotal, 0),
+      tax: parseNumber(updates.totals.tax, 0),
+      total: parseNumber(updates.totals.total, 0),
+      currency: updates.totals.currency || "TRY",
+    };
+  }
+
   await docRef.update(updateData);
   const updatedDoc = await docRef.get();
   return mapQuoteDoc(updatedDoc);
