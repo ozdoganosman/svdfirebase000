@@ -953,13 +953,6 @@ export default function CartPage() {
                     </div>
                   )}
 
-                  {nextTier && exchangeRate && (
-                    <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                      💡 {nextTier.minQty - item.quantity} {item.packageInfo?.boxLabel.toLowerCase() || 'adet'} daha ekleyin,
-                      birim fiyat {formatDualPrice(undefined, exchangeRate, true, 1, (nextTier.price * exchangeRate) * (1 - vipDiscount / 100))} +KDV olsun!
-                    </div>
-                  )}
-
                   {(() => {
                     const itemComboQty = getItemComboQuantity(item.id);
                     const totalItemQty = getTotalItemCount(item);
@@ -988,6 +981,13 @@ export default function CartPage() {
                     <span className="text-sm font-normal text-slate-500">+KDV</span>
                   </span>
                 </div>
+
+                {nextTier && exchangeRate && (
+                  <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    💡 {nextTier.minQty - item.quantity} {item.packageInfo?.boxLabel.toLowerCase() || 'adet'} daha ekleyin,
+                    birim fiyat {formatDualPrice(undefined, exchangeRate, true, 1, (nextTier.price * exchangeRate) * (1 - vipDiscount / 100))} +KDV olsun!
+                  </div>
+                )}
               </div>
               );
             })}
