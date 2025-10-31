@@ -180,23 +180,28 @@ export default function CartPage() {
   useEffect(() => {
     // Fetch exchange rate on mount
     getCurrentRate().then(rate => setExchangeRate(rate.rate)).catch(() => setExchangeRate(null));
-    if (items.length === 0) {
-      fetch(resolveServerApiUrl("/products"))
-        .then((res) => res.json())
-        .then((data) => {
-          const products = data.products || [];
-          console.log('[Cart] Total products fetched:', products.length);
-          console.log('[Cart] Sample product data:', products[0]);
-          // Get random 4 products
-          const shuffled = products.sort(() => 0.5 - Math.random());
-          const selected = shuffled.slice(0, 4);
-          console.log('[Cart] Selected products:', selected);
-          setRecommendedProducts(selected);
-        })
-        .catch((error) => {
-          console.error('[Cart] Error fetching products:', error);
-        });
-    }
+
+    // Fetch recommended products (always show, not just when cart is empty)
+    fetch(resolveServerApiUrl("/products"))
+      .then((res) => res.json())
+      .then((data) => {
+        const products = data.products || [];
+        console.log('[Cart] Total products fetched:', products.length);
+        console.log('[Cart] Sample product data:', products[0]);
+
+        // Filter out items already in cart
+        const cartItemIds = items.map(item => item.id);
+        const availableProducts = products.filter((p: Product) => !cartItemIds.includes(p.id));
+
+        // Get random 4 products from available ones
+        const shuffled = availableProducts.sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, 4);
+        console.log('[Cart] Selected products:', selected);
+        setRecommendedProducts(selected);
+      })
+      .catch((error) => {
+        console.error('[Cart] Error fetching products:', error);
+      });
   }, [items]);
 
   const handleQuantityChange = (productId: string, value: string, packageInfo?: { itemsPerBox: number; minBoxes: number; boxLabel: string }) => {
@@ -639,15 +644,17 @@ export default function CartPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
 
-                {recommendedProducts.length > 0 && (
-                  <div className="relative">
-                    <div className="mb-8 flex items-center justify-between">
-                      <div>
-                        <h2 className="text-3xl font-bold text-slate-900">Bunları da beğenebilirsiniz</h2>
-                        <p className="mt-1 text-sm text-slate-600">Size özel seçtiğimiz ürünler</p>
-                      </div>
-                    </div>
+            {recommendedProducts.length > 0 && (
+              <div className="relative">
+                <div className="mb-8 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-3xl font-bold text-slate-900">Bunları da beğenebilirsiniz</h2>
+                    <p className="mt-1 text-sm text-slate-600">Size özel seçtiğimiz ürünler</p>
+                  </div>
+                </div>
                     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                       {recommendedProducts.map((product) => (
                         <div
@@ -800,8 +807,6 @@ export default function CartPage() {
                       ))}
                     </div>
                   </div>
-                )}
-              </div>
             )}
 
             {items.map((item) => {
