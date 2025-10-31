@@ -647,168 +647,6 @@ export default function CartPage() {
               </div>
             )}
 
-            {recommendedProducts.length > 0 && (
-              <div className="relative">
-                <div className="mb-8 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-3xl font-bold text-slate-900">Bunları da beğenebilirsiniz</h2>
-                    <p className="mt-1 text-sm text-slate-600">Size özel seçtiğimiz ürünler</p>
-                  </div>
-                </div>
-                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                      {recommendedProducts.map((product) => (
-                        <div
-                          key={product.id}
-                          className="group relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-amber-300 hover:shadow-xl hover:shadow-amber-100/50"
-                        >
-                          <Link href={`/products/${product.slug}`} className="relative block h-52 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
-                            {product.images && product.images[0] ? (
-                              <Image
-                                src={product.images[0]}
-                                alt={product.title}
-                                fill
-                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                                className="object-contain p-4 transition duration-500 group-hover:scale-110 group-hover:rotate-2"
-                              />
-                            ) : (
-                              <div className="flex h-full items-center justify-center text-slate-400">
-                                <svg className="h-14 w-14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                              </div>
-                            )}
-                            <div className="absolute right-2 top-2 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-amber-600 shadow-md backdrop-blur-sm">
-                              Önerilen
-                            </div>
-                          </Link>
-                          <div className="p-4">
-                            <Link href={`/products/${product.slug}`}>
-                              <h3 className="line-clamp-2 h-12 text-sm font-semibold text-slate-900 transition hover:text-amber-600">
-                                {product.title}
-                              </h3>
-                            </Link>
-
-                            {/* Product Specifications */}
-                            {product.specifications && (
-                              <div className="mt-2 space-y-0.5">
-                                {product.specifications.volume && (
-                                  <p className="text-xs text-slate-600">📏 {product.specifications.volume}</p>
-                                )}
-                                {product.specifications.color && (
-                                  <p className="text-xs text-slate-600">🎨 {product.specifications.color}</p>
-                                )}
-                                {product.specifications.hoseLength && (
-                                  <p className="text-xs text-slate-600">📐 Hortum: {product.specifications.hoseLength}</p>
-                                )}
-                                {product.specifications.neckSize && (
-                                  <p className="text-xs text-slate-600">⭕ Boyun: {product.specifications.neckSize}</p>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Package Info */}
-                            {product.packageInfo && (
-                              <p className="mt-2 text-xs text-slate-500">
-                                📦 {product.packageInfo.itemsPerBox} adet/{product.packageInfo.boxLabel.toLowerCase()}
-                              </p>
-                            )}
-
-                            {/* Stock Status */}
-                            {product.stock !== undefined && (
-                              <div className="mt-2">
-                                {product.stock > 0 ? (
-                                  <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
-                                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                    </svg>
-                                    Stokta
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600">
-                                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                    </svg>
-                                    Stokta yok
-                                  </span>
-                                )}
-                              </div>
-                            )}
-
-                            {(product.price !== undefined && product.price !== null) || (product.priceUSD !== undefined && product.priceUSD !== null) ? (
-                              <>
-                                <div className="mt-3">
-                                  <div className="flex items-baseline gap-1">
-                                    <span className="text-base font-bold text-amber-600">
-                                      {(() => {
-                                        // If product has TRY price, use it
-                                        if (product.price !== undefined && product.price !== null) {
-                                          return exchangeRate
-                                            ? formatDualPrice(undefined, exchangeRate, true, 1, product.price)
-                                            : "₺" + product.price.toLocaleString("tr-TR", { minimumFractionDigits: 2 });
-                                        }
-                                        // If product only has USD price, convert to TRY
-                                        if (product.priceUSD !== undefined && product.priceUSD !== null && exchangeRate) {
-                                          const tryPrice = product.priceUSD * exchangeRate;
-                                          return "₺" + tryPrice.toLocaleString("tr-TR", { minimumFractionDigits: 2 });
-                                        }
-                                        // Show USD price if no exchange rate
-                                        if (product.priceUSD !== undefined && product.priceUSD !== null) {
-                                          return "$" + product.priceUSD.toLocaleString("en-US", { minimumFractionDigits: 2 });
-                                        }
-                                        return "İletişime geçin";
-                                      })()}
-                                    </span>
-                                    <span className="text-xs font-medium text-slate-500">+KDV</span>
-                                  </div>
-                                  {/* USD Price Display */}
-                                  {(() => {
-                                    // If product has TRY price and exchange rate, show USD equivalent
-                                    if (product.price !== undefined && product.price !== null && exchangeRate && exchangeRate > 0) {
-                                      const usdPrice = product.price / exchangeRate;
-                                      return (
-                                        <span className="text-xs text-slate-500">
-                                          (${usdPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
-                                        </span>
-                                      );
-                                    }
-                                    // If product has USD price and exchange rate, show original USD price
-                                    if (product.priceUSD !== undefined && product.priceUSD !== null && exchangeRate) {
-                                      return (
-                                        <span className="text-xs text-slate-500">
-                                          (${product.priceUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
-                                        </span>
-                                      );
-                                    }
-                                    return null;
-                                  })()}
-                                </div>
-
-                                {/* Bulk Pricing Info */}
-                                {((product.bulkPricing && product.bulkPricing.length > 0) || (product.bulkPricingUSD && product.bulkPricingUSD.length > 0)) && (
-                                  <p className="mt-1 text-xs text-green-600 font-medium">
-                                    💰 Toplu alımda indirim
-                                  </p>
-                                )}
-
-                                <div className="mt-2">
-                                  <AddToCartButton
-                                    product={product}
-                                    variant="primary"
-                                    className="w-full !rounded-lg !py-2 !text-xs !font-semibold shadow-sm shadow-amber-500/20 transition hover:!shadow-md hover:!shadow-amber-500/30"
-                                    showQuantitySelector={false}
-                                  />
-                                </div>
-                              </>
-                            ) : (
-                              <p className="mt-3 text-sm font-medium text-slate-400">İletişime geçin</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-            )}
-
             {items.map((item) => {
               const bulkEffectivePrice = getEffectivePrice(item);
               // Apply VIP discount on top of bulk pricing
@@ -1155,6 +993,157 @@ export default function CartPage() {
             </aside>
           )}
         </div>
+
+        {/* Recommended Products */}
+        {recommendedProducts.length > 0 && (
+          <div className="mt-16">
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-slate-900">Bunları da beğenebilirsiniz</h2>
+              <p className="mt-1 text-sm text-slate-600">Size özel seçtiğimiz ürünler</p>
+            </div>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {recommendedProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className="group relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-amber-300 hover:shadow-xl hover:shadow-amber-100/50"
+                >
+                  <Link href={`/products/${product.slug}`} className="relative block h-52 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
+                    {product.images && product.images[0] ? (
+                      <Image
+                        src={product.images[0]}
+                        alt={product.title}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        className="object-contain p-4 transition duration-500 group-hover:scale-110 group-hover:rotate-2"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-slate-400">
+                        <svg className="h-14 w-14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="absolute right-2 top-2 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-amber-600 shadow-md backdrop-blur-sm">
+                      Önerilen
+                    </div>
+                  </Link>
+                  <div className="p-4">
+                    <Link href={`/products/${product.slug}`}>
+                      <h3 className="line-clamp-2 h-12 text-sm font-semibold text-slate-900 transition hover:text-amber-600">
+                        {product.title}
+                      </h3>
+                    </Link>
+
+                    {product.specifications && (
+                      <div className="mt-2 space-y-0.5">
+                        {product.specifications.volume && (
+                          <p className="text-xs text-slate-600">📏 {product.specifications.volume}</p>
+                        )}
+                        {product.specifications.color && (
+                          <p className="text-xs text-slate-600">🎨 {product.specifications.color}</p>
+                        )}
+                        {product.specifications.hoseLength && (
+                          <p className="text-xs text-slate-600">📐 Hortum: {product.specifications.hoseLength}</p>
+                        )}
+                        {product.specifications.neckSize && (
+                          <p className="text-xs text-slate-600">⭕ Boyun: {product.specifications.neckSize}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {product.packageInfo && (
+                      <p className="mt-2 text-xs text-slate-500">
+                        📦 {product.packageInfo.itemsPerBox} adet/{product.packageInfo.boxLabel.toLowerCase()}
+                      </p>
+                    )}
+
+                    {product.stock !== undefined && (
+                      <div className="mt-2">
+                        {product.stock > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
+                            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            Stokta
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600">
+                            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                            Stokta yok
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {(product.price !== undefined && product.price !== null) || (product.priceUSD !== undefined && product.priceUSD !== null) ? (
+                      <>
+                        <div className="mt-3">
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-base font-bold text-amber-600">
+                              {(() => {
+                                if (product.price !== undefined && product.price !== null) {
+                                  return exchangeRate
+                                    ? formatDualPrice(undefined, exchangeRate, true, 1, product.price)
+                                    : "₺" + product.price.toLocaleString("tr-TR", { minimumFractionDigits: 2 });
+                                }
+                                if (product.priceUSD !== undefined && product.priceUSD !== null && exchangeRate) {
+                                  const tryPrice = product.priceUSD * exchangeRate;
+                                  return "₺" + tryPrice.toLocaleString("tr-TR", { minimumFractionDigits: 2 });
+                                }
+                                if (product.priceUSD !== undefined && product.priceUSD !== null) {
+                                  return "$" + product.priceUSD.toLocaleString("en-US", { minimumFractionDigits: 2 });
+                                }
+                                return "İletişime geçin";
+                              })()}
+                            </span>
+                            <span className="text-xs font-medium text-slate-500">+KDV</span>
+                          </div>
+                          {(() => {
+                            if (product.price !== undefined && product.price !== null && exchangeRate && exchangeRate > 0) {
+                              const usdPrice = product.price / exchangeRate;
+                              return (
+                                <span className="text-xs text-slate-500">
+                                  (${usdPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                                </span>
+                              );
+                            }
+                            if (product.priceUSD !== undefined && product.priceUSD !== null && exchangeRate) {
+                              return (
+                                <span className="text-xs text-slate-500">
+                                  (${product.priceUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+
+                        {((product.bulkPricing && product.bulkPricing.length > 0) || (product.bulkPricingUSD && product.bulkPricingUSD.length > 0)) && (
+                          <p className="mt-1 text-xs text-green-600 font-medium">
+                            💰 Toplu alımda indirim
+                          </p>
+                        )}
+
+                        <div className="mt-2">
+                          <AddToCartButton
+                            product={product}
+                            variant="primary"
+                            className="w-full !rounded-lg !py-2 !text-xs !font-semibold shadow-sm shadow-amber-500/20 transition hover:!shadow-md hover:!shadow-amber-500/30"
+                            showQuantitySelector={false}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <p className="mt-3 text-sm font-medium text-slate-400">İletişime geçin</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Quote Modal */}
         {showQuoteModal && (
