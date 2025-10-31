@@ -76,6 +76,8 @@ function CheckoutPageContent() {
     subtotal,
     totalBoxes,
     totalItems,
+    comboDiscount,
+    comboMatches,
     getEffectivePrice,
     getTotalItemCount,
     calculateItemTotal,
@@ -90,7 +92,6 @@ function CheckoutPageContent() {
   const [useNewAddress, setUseNewAddress] = useState(false);
   const [profileDataLoaded, setProfileDataLoaded] = useState(false);
   const [quoteId, setQuoteId] = useState<string | null>(null);
-  const [quoteData, setQuoteData] = useState<Quote | null>(null);
 
   useEffect(() => {
     getCurrentRate().then(rate => setExchangeRate(rate.rate)).catch(() => setExchangeRate(null));
@@ -107,8 +108,6 @@ function CheckoutPageContent() {
         .then(res => res.json())
         .then(data => {
           if (data.quote) {
-            setQuoteData(data.quote);
-
             // Auto-fill customer info from quote
             setForm(prev => ({
               ...prev,
@@ -259,8 +258,11 @@ function CheckoutPageContent() {
       })),
       totals: {
         subtotal,
+        comboDiscount: comboDiscount || 0,
+        finalTotal: subtotal - (comboDiscount || 0),
         currency: "TRY",
       },
+      comboMatches: comboMatches || [],
     };
 
     try {
@@ -585,16 +587,24 @@ function CheckoutPageContent() {
                   {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, subtotal) : `$${subtotal.toFixed(2)}`}
                 </span>
               </div>
+              {comboDiscount > 0 && (
+                <div className="flex items-center justify-between text-sm text-green-600">
+                  <span>🔄 Kombo İndirimi ({comboMatches.length} eşleşme)</span>
+                  <span className="font-semibold">
+                    -{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, comboDiscount) : `$${comboDiscount.toFixed(2)}`}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between text-sm text-slate-500">
                 <span>KDV (%20)</span>
                 <span>
-                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, subtotal * 0.20) : `$${(subtotal * 0.20).toFixed(2)}`}
+                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (subtotal - (comboDiscount || 0)) * 0.20) : `$${((subtotal - (comboDiscount || 0)) * 0.20).toFixed(2)}`}
                 </span>
               </div>
               <div className="flex items-center justify-between border-t border-slate-200 pt-3 text-base font-bold text-amber-700">
                 <span>Genel Toplam (KDV Dahil)</span>
                 <span>
-                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, subtotal * 1.20) : `$${(subtotal * 1.20).toFixed(2)}`}
+                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (subtotal - (comboDiscount || 0)) * 1.20) : `$${((subtotal - (comboDiscount || 0)) * 1.20).toFixed(2)}`}
                 </span>
               </div>
               <p className="mt-2 text-xs text-slate-500">

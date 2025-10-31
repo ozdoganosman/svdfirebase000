@@ -19,6 +19,7 @@ import * as exchangeRates from "./db/exchange-rates.js";
 import * as users from "./db/users.js";
 import * as quotes from "./db/quotes.js";
 import * as vip from "./db/vip.js";
+import * as comboSettings from "./db/combo-settings.js";
 import * as emailSender from "./email/sender.js";
 import { fetchTCMBRate } from "./services/exchange-rate.js";
 import { db } from "./db/client.js";
@@ -508,6 +509,7 @@ app.post("/categories", requireAuth, async (req, res) => {
       slug: incomingSlug,
       description = "",
       image = "",
+      productType = null,
     } = req.body || {};
 
     if (!name || typeof name !== "string") {
@@ -537,6 +539,7 @@ app.post("/categories", requireAuth, async (req, res) => {
       slug,
       description,
       image,
+      productType,
     });
 
     res.status(201).json({ category });
@@ -557,6 +560,7 @@ app.put("/categories/:id", requireAuth, async (req, res) => {
       name: req.body?.name,
       description: req.body?.description ?? existing.description,
       image: req.body?.image ?? existing.image,
+      productType: req.body?.productType !== undefined ? req.body.productType : existing.productType,
     };
 
     const updated = await catalog.updateCategory(req.params.id, payload);
@@ -1431,6 +1435,64 @@ app.get("/vip/tiers", async (_req, res) => {
   }
 });
 
+// ===== COMBO DISCOUNT SETTINGS =====
+
+// Get combo discount settings
+app.get("/combo-settings", async (_req, res) => {
+  try {
+    let settings = await comboSettings.getComboSettings();
+
+    // Initialize if not exists
+    if (!settings) {
+      settings = await comboSettings.initializeComboSettings();
+    }
+
+    res.status(200).json({ settings });
+  } catch (error) {
+    functions.logger.error("Error fetching combo settings", error);
+    res.status(500).json({ error: "Failed to fetch combo settings." });
+  }
+});
+
+// Update combo discount settings (admin)
+app.put("/admin/combo-settings", requireAuth, async (req, res) => {
+  try {
+    const { isActive, discountType, discountValue, applicableTypes, requireSameNeckSize, minQuantity } = req.body;
+
+    const updatedSettings = await comboSettings.setComboSettings({
+      isActive,
+      discountType,
+      discountValue,
+      applicableTypes,
+      requireSameNeckSize,
+      minQuantity,
+    });
+
+    res.status(200).json({ settings: updatedSettings });
+  } catch (error) {
+    functions.logger.error("Error updating combo settings", error);
+    res.status(500).json({ error: "Failed to update combo settings." });
+  }
+});
+
+// Toggle combo discount active status (admin)
+app.post("/admin/combo-settings/toggle", requireAuth, async (req, res) => {
+  try {
+    const { isActive } = req.body;
+
+    if (typeof isActive !== "boolean") {
+      return res.status(400).json({ error: "isActive must be a boolean" });
+    }
+
+    const updatedSettings = await comboSettings.toggleComboActive(isActive);
+
+    res.status(200).json({ settings: updatedSettings });
+  } catch (error) {
+    functions.logger.error("Error toggling combo active status", error);
+    res.status(500).json({ error: "Failed to toggle combo status." });
+  }
+});
+
 // List customers with VIP/segment filtering (admin)
 app.get("/admin/customers", requireAuth, async (req, res) => {
   try {
@@ -1452,6 +1514,81 @@ app.get("/admin/customers/:userId/stats", requireAuth, async (req, res) => {
   } catch (error) {
     functions.logger.error("Error fetching customer stats", error);
     res.status(500).json({ error: "Failed to fetch customer stats." });
+  }
+});
+
+// Update all products to inherit productType from their category (admin)
+app.post("/admin/update-products-from-categories", requireAuth, async (_req, res) => {
+  try {
+    const { db } = await import("./db/client.js");
+    const categoriesCollection = db.collection("categories");
+    const productsCollection = db.collection("products");
+
+    // Get all categories
+    const categoriesSnapshot = await categoriesCollection.get();
+    const categories = {};
+    categoriesSnapshot.forEach((doc) => {
+      const data = doc.data();
+      categories[doc.id] = {
+        id: doc.id,
+        name: data.name,
+        productType: data.productType || null,
+      };
+    });
+
+    // Get all products
+    const productsSnapshot = await productsCollection.get();
+    let updated = 0;
+    let skipped = 0;
+
+    const batch = db.batch();
+    let batchCount = 0;
+    const MAX_BATCH = 500;
+
+    for (const doc of productsSnapshot.docs) {
+      const data = doc.data();
+      const categoryId = data.category;
+      const currentProductType = data.productType;
+
+      if (!categoryId || !categories[categoryId]) {
+        skipped++;
+        continue;
+      }
+
+      const newProductType = categories[categoryId].productType;
+
+      if (currentProductType === newProductType) {
+        skipped++;
+        continue;
+      }
+
+      batch.update(doc.ref, {
+        productType: newProductType,
+        updatedAt: new Date(),
+      });
+
+      updated++;
+      batchCount++;
+
+      if (batchCount >= MAX_BATCH) {
+        await batch.commit();
+        batchCount = 0;
+      }
+    }
+
+    if (batchCount > 0) {
+      await batch.commit();
+    }
+
+    res.status(200).json({
+      message: "Products updated successfully",
+      total: productsSnapshot.size,
+      updated,
+      skipped,
+    });
+  } catch (error) {
+    functions.logger.error("Error updating products from categories", error);
+    res.status(500).json({ error: "Failed to update products." });
   }
 });
 

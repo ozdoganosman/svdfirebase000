@@ -50,6 +50,7 @@ function AccountPageContent() {
       // Fetch full profile from backend
       fetchUserProfile();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const fetchUserProfile = async () => {
@@ -110,77 +111,6 @@ function AccountPageContent() {
     }
   };
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError("");
-
-    console.log("[handlePasswordChange] Starting password change process");
-
-    // Validation
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      setPasswordError("Lütfen tüm alanları doldurun");
-      return;
-    }
-
-    if (passwordForm.newPassword.length < 6) {
-      setPasswordError("Yeni şifre en az 6 karakter olmalıdır");
-      return;
-    }
-
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setPasswordError("Yeni şifreler eşleşmiyor");
-      return;
-    }
-
-    if (passwordForm.currentPassword === passwordForm.newPassword) {
-      setPasswordError("Yeni şifre mevcut şifreden farklı olmalıdır");
-      return;
-    }
-
-    setLoading(true);
-    console.log("[handlePasswordChange] Validation passed, calling changePassword");
-
-    try {
-      const { changePassword } = await import("@/lib/firebase-auth");
-      console.log("[handlePasswordChange] changePassword function imported");
-
-      await changePassword(passwordForm.currentPassword, passwordForm.newPassword);
-      console.log("[handlePasswordChange] Password changed successfully");
-
-      // Reset form
-      setPasswordForm({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-      setShowPasswordSection(false);
-      alert("Şifreniz başarıyla değiştirildi!");
-    } catch (error: unknown) {
-      console.error("[handlePasswordChange] Error changing password:", error);
-      if (error instanceof Error) {
-        console.error("[handlePasswordChange] Error message:", error.message);
-        const firebaseError = error as { code?: string; message: string };
-        console.error("[handlePasswordChange] Error code:", firebaseError.code);
-
-        const errorCode = firebaseError.code || "";
-        const errorMessage = error.message || "";
-
-        if (errorCode === "auth/wrong-password" || errorCode === "auth/invalid-credential" ||
-            errorMessage.includes("wrong-password") || errorMessage.includes("invalid-credential")) {
-          setPasswordError("Mevcut şifre hatalı");
-        } else if (errorCode === "auth/requires-recent-login") {
-          setPasswordError("Güvenlik nedeniyle tekrar giriş yapmanız gerekiyor");
-        } else {
-          setPasswordError(`Şifre değiştirilemedi: ${errorMessage}`);
-        }
-      } else {
-        setPasswordError("Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.");
-      }
-    } finally {
-      setLoading(false);
-      console.log("[handlePasswordChange] Process completed");
-    }
-  };
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-16 text-slate-900">

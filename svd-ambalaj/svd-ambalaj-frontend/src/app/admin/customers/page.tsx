@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AdminCustomer,
   VIPTier,
@@ -77,6 +77,7 @@ export default function AdminCustomersPage() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tierFilter, segmentFilter]);
 
   const handleSetTier = async (userId: string, tier: VIPTier) => {

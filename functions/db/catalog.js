@@ -73,9 +73,24 @@ const mapCategoryDoc = (doc) => {
     slug: data.slug,
     description: data.description || "",
     image: data.image || "",
+    productType: data.productType || null, // "başlık" | "şişe" | "nötr" | null
     createdAt: mapTimestamp(data.createdAt),
     updatedAt: mapTimestamp(data.updatedAt),
   };
+};
+
+// Determine productType based on category
+const getProductTypeFromCategory = (categorySlug) => {
+  if (!categorySlug) return null;
+
+  const slug = categorySlug.toLowerCase();
+  if (slug.includes('sprey') || slug.includes('trigger') || slug.includes('pompa')) {
+    return 'başlık';
+  }
+  if (slug.includes('şişe') || slug.includes('sise') || slug.includes('bottle')) {
+    return 'şişe';
+  }
+  return null; // nötr for others
 };
 
 const mapProductDoc = (doc) => {
@@ -83,6 +98,10 @@ const mapProductDoc = (doc) => {
     return null;
   }
   const data = doc.data();
+
+  // Auto-determine productType from category if not set
+  const productType = data.productType || getProductTypeFromCategory(data.category);
+
   return {
     id: doc.id,
     title: data.title,
@@ -95,6 +114,10 @@ const mapProductDoc = (doc) => {
     category: data.category, // category_id yerine category
     images: normalizeImages(data.images),
     stock: Number(data.stock ?? 0),
+    // Combo discount fields
+    productType, // Auto-determined from category
+    comboPriceUSD: data.comboPriceUSD !== undefined ? Number(data.comboPriceUSD) : undefined,
+    neckSize: data.specifications?.neckSize || null, // From specifications only
     packageInfo: {
       itemsPerBox: Number(data.packageInfo?.itemsPerBox ?? 1),
       minBoxes: Number(data.packageInfo?.minBoxes ?? 1),
@@ -104,7 +127,7 @@ const mapProductDoc = (doc) => {
       hoseLength: data.specifications.hoseLength || "",
       volume: data.specifications.volume || "",
       color: data.specifications.color || "",
-      neckSize: data.specifications.neckSize || "",
+      neckSize: data.specifications.neckSize || "", // Keep in specifications too
     } : undefined,
     createdAt: mapTimestamp(data.createdAt),
     updatedAt: mapTimestamp(data.updatedAt),
@@ -126,13 +149,14 @@ const getCategoryBySlug = async (slug) => {
   return snapshot.empty ? null : mapCategoryDoc(snapshot.docs[0]);
 };
 
-const createCategory = async ({ id, name, slug, description = "", image = "" }) => {
+const createCategory = async ({ id, name, slug, description = "", image = "", productType = null }) => {
   const now = FieldValue.serverTimestamp();
   const categoryData = {
     name,
     slug, // Use the provided slug directly
     description,
     image,
+    productType, // "başlık" | "şişe" | "nötr" | null
     createdAt: now,
     updatedAt: now,
   };
@@ -154,9 +178,43 @@ const updateCategory = async (id, payload) => {
     updatedAt: FieldValue.serverTimestamp(),
   };
 
+  // Check if productType is changing
+  const productTypeChanged = payload.productType !== undefined && payload.productType !== existing.productType;
+
   await categoriesCollection.doc(id).update(updatedData);
+
+  // If productType changed, update all products in this category
+  if (productTypeChanged) {
+    await updateProductsInCategory(id, payload.productType);
+  }
+
   const doc = await categoriesCollection.doc(id).get();
   return mapCategoryDoc(doc);
+};
+
+/**
+ * Update all products in a category to have the category's productType
+ * Called automatically when a category's productType changes
+ */
+const updateProductsInCategory = async (categoryId, productType) => {
+  const snapshot = await productsCollection.where("category", "==", categoryId).get();
+
+  if (snapshot.empty) {
+    return { updated: 0 };
+  }
+
+  const batch = db.batch();
+  const now = FieldValue.serverTimestamp();
+
+  snapshot.docs.forEach((doc) => {
+    batch.update(doc.ref, {
+      productType,
+      updatedAt: now,
+    });
+  });
+
+  await batch.commit();
+  return { updated: snapshot.size };
 };
 
 const deleteCategory = async (id) => {
@@ -302,6 +360,16 @@ const searchProducts = async (filters = {}) => {
 
 const createProduct = async (payload) => {
   const now = FieldValue.serverTimestamp();
+
+  // Get productType from the category
+  let productType = null;
+  if (payload.category) {
+    const category = await getCategoryById(payload.category);
+    if (category) {
+      productType = category.productType || null;
+    }
+  }
+
   const productData = {
     title: payload.title,
     slug: slugify(payload.title, { lower: true, strict: true }),
@@ -309,6 +377,8 @@ const createProduct = async (payload) => {
     category: payload.category,
     images: normalizeImages(payload.images),
     stock: Number(payload.stock ?? 0),
+    // Combo discount fields - inherited from category
+    productType,
     packageInfo: {
       itemsPerBox: Number(payload.packageInfo?.itemsPerBox ?? 1),
       minBoxes: Number(payload.packageInfo?.minBoxes ?? 1),
@@ -332,6 +402,9 @@ const createProduct = async (payload) => {
   if (payload.bulkPricingUSD !== undefined) {
     productData.bulkPricingUSD = normalizeBulkPricing(payload.bulkPricingUSD);
   }
+  if (payload.comboPriceUSD !== undefined && payload.comboPriceUSD !== null) {
+    productData.comboPriceUSD = Number(payload.comboPriceUSD);
+  }
 
   const docRef = payload.id ? productsCollection.doc(payload.id) : productsCollection.doc();
   await docRef.set(productData);
@@ -345,13 +418,26 @@ const updateProduct = async (id, payload) => {
     return null;
   }
 
+  // Get productType from category
+  const categoryId = payload.category !== undefined ? payload.category : existing.category;
+  let productType = existing.productType || null;
+
+  if (categoryId) {
+    const category = await getCategoryById(categoryId);
+    if (category) {
+      productType = category.productType || null;
+    }
+  }
+
   const updatedData = {
     title: payload.title !== undefined ? payload.title : existing.title,
     slug: payload.title ? slugify(payload.title, { lower: true, strict: true }) : existing.slug,
     description: payload.description !== undefined ? payload.description : existing.description,
-    category: payload.category !== undefined ? payload.category : existing.category,
+    category: categoryId,
     stock: payload.stock !== undefined ? Number(payload.stock) : existing.stock,
     images: payload.images !== undefined ? normalizeImages(payload.images) : existing.images,
+    // Combo discount fields - inherited from category
+    productType,
     packageInfo: payload.packageInfo !== undefined ? {
       itemsPerBox: Number(payload.packageInfo?.itemsPerBox ?? existing.packageInfo?.itemsPerBox ?? 1),
       minBoxes: Number(payload.packageInfo?.minBoxes ?? existing.packageInfo?.minBoxes ?? 1),
@@ -381,6 +467,12 @@ const updateProduct = async (id, payload) => {
 
   if (payload.bulkPricingUSD !== undefined) {
     updatedData.bulkPricingUSD = normalizeBulkPricing(payload.bulkPricingUSD);
+  }
+
+  if (payload.comboPriceUSD !== undefined && payload.comboPriceUSD !== null) {
+    updatedData.comboPriceUSD = Number(payload.comboPriceUSD);
+  } else if (payload.comboPriceUSD === null) {
+    updatedData.comboPriceUSD = FieldValue.delete();
   }
 
   await productsCollection.doc(id).update(updatedData);

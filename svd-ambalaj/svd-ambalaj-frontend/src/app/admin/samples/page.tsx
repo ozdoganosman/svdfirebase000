@@ -44,7 +44,6 @@ export default function AdminSamplesPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedSample, setSelectedSample] = useState<AdminSample | null>(null);
-  const [trackingNumber, setTrackingNumber] = useState("");
 
   const fetchSamples = async () => {
     setLoading(true);
@@ -82,7 +81,6 @@ export default function AdminSamplesPage() {
       await fetchSamples();
       setSuccessMessage(`Numune durumu "${statusLabels[newStatus] ?? newStatus}" olarak güncellendi`);
       setSelectedSample(null);
-      setTrackingNumber("");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -92,12 +90,10 @@ export default function AdminSamplesPage() {
 
   const openSampleModal = (sample: AdminSample) => {
     setSelectedSample(sample);
-    setTrackingNumber(sample.trackingNumber || "");
   };
 
   const closeSampleModal = () => {
     setSelectedSample(null);
-    setTrackingNumber("");
   };
 
   return (

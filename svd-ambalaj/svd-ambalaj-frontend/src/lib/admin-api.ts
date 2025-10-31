@@ -216,6 +216,7 @@ export type AdminCategory = {
   slug: string;
   description?: string;
   image?: string;
+  productType?: string | null; // "başlık" | "şişe" | "nötr" | null
   createdAt?: string;
   updatedAt?: string;
 };

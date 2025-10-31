@@ -10,6 +10,7 @@ const emptyForm: CategoryPayload = {
   slug: "",
   description: "",
   image: "",
+  productType: null,
 };
 
 type CategoryPayload = {
@@ -17,6 +18,7 @@ type CategoryPayload = {
   slug?: string;
   description?: string;
   image?: string;
+  productType?: string | null; // "başlık" | "şişe" | "nötr" | null
 };
 
 const FIELD_IDS = {
@@ -24,6 +26,7 @@ const FIELD_IDS = {
   slug: "admin-category-slug",
   description: "admin-category-description",
   image: "admin-category-image",
+  productType: "admin-category-product-type",
 };
 
 export default function AdminCategoriesPage() {
@@ -36,6 +39,7 @@ export default function AdminCategoriesPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isMediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const derivedSlug = useMemo(() => {
@@ -72,7 +76,7 @@ export default function AdminCategoriesPage() {
     setEditingId(null);
   };
 
-  const handleChange = (key: keyof CategoryPayload, value: string) => {
+  const handleChange = (key: keyof CategoryPayload, value: string | null) => {
     setForm((prev) => ({
       ...prev,
       [key]: value,
@@ -91,6 +95,7 @@ export default function AdminCategoriesPage() {
       slug: derivedSlug || undefined,
       description: form.description?.trim() || undefined,
       image: form.image?.trim() || undefined,
+      productType: form.productType || null,
     };
 
     setSaving(true);
@@ -127,6 +132,7 @@ export default function AdminCategoriesPage() {
       slug: category.slug,
       description: category.description ?? "",
       image: category.image ?? "",
+      productType: category.productType ?? null,
     });
     setSuccess(null);
   };
@@ -193,6 +199,30 @@ export default function AdminCategoriesPage() {
     }
   };
 
+  const handleSyncProducts = async () => {
+    if (!confirm("Tüm ürünlerin productType değeri kategorilerinden güncellenecek. Devam etmek istiyor musunuz?")) {
+      return;
+    }
+
+    setSyncing(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await apiFetch<{ message: string; total: number; updated: number; skipped: number }>(
+        "/admin/update-products-from-categories",
+        {
+          method: "POST",
+        }
+      );
+      setSuccess(`${response.updated} ürün güncellendi, ${response.skipped} ürün zaten günceldi. Toplam: ${response.total}`);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -234,6 +264,26 @@ export default function AdminCategoriesPage() {
               placeholder="pet-siseler"
             />
             <p className="mt-1 text-xs text-slate-500">Boş bırakırsanız otomatik oluşturulur.</p>
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.productType}>
+              Ürün Tipi (Kombo İndirim İçin)
+            </label>
+            <select
+              id={FIELD_IDS.productType}
+              name="productType"
+              value={form.productType || ""}
+              onChange={(event) => handleChange("productType", event.target.value || null)}
+              className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+            >
+              <option value="">Seçiniz (Kombo için geçerli değil)</option>
+              <option value="başlık">Başlık (Sprey, Trigger, Pompa)</option>
+              <option value="şişe">Şişe (Pet Şişe, HDPE Şişe)</option>
+              <option value="nötr">Nötr (Diğer Ürünler)</option>
+            </select>
+            <p className="mt-1 text-xs text-slate-500">
+              Bu kategorideki tüm ürünler seçilen ürün tipini alacak. Aynı ağız ölçüsüne sahip Başlık + Şişe kombine edildiğinde %10 indirim uygulanır.
+            </p>
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.description}>Açıklama</label>
@@ -333,14 +383,24 @@ export default function AdminCategoriesPage() {
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-slate-900">Kayıtlı Kategoriler</h2>
-          <button
-            type="button"
-            onClick={fetchCategories}
-            disabled={loading}
-            className="inline-flex items-center rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:border-slate-100 disabled:text-slate-400"
-          >
-            Yenile
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSyncProducts}
+              disabled={syncing}
+              className="inline-flex items-center rounded-md border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700 transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {syncing ? "Senkronize Ediliyor..." : "🔄 Ürünleri Senkronize Et"}
+            </button>
+            <button
+              type="button"
+              onClick={fetchCategories}
+              disabled={loading}
+              className="inline-flex items-center rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:border-slate-100 disabled:text-slate-400"
+            >
+              Yenile
+            </button>
+          </div>
         </div>
         {loading ? (
           <div className="py-8 text-center text-sm text-slate-500">Yükleniyor...</div>
@@ -353,6 +413,7 @@ export default function AdminCategoriesPage() {
                 <tr>
                   <th className="px-3 py-2 font-medium text-slate-700">Ad</th>
                   <th className="px-3 py-2 font-medium text-slate-700">Slug</th>
+                  <th className="px-3 py-2 font-medium text-slate-700">Ürün Tipi</th>
                   <th className="px-3 py-2 font-medium text-slate-700">Açıklama</th>
                   <th className="px-3 py-2 font-medium text-slate-700">Görsel</th>
                   <th className="px-3 py-2 font-medium text-slate-700">İşlemler</th>
@@ -363,6 +424,21 @@ export default function AdminCategoriesPage() {
                   <tr key={category.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 font-semibold text-slate-900">{category.name}</td>
                     <td className="px-3 py-2 text-slate-600">{category.slug}</td>
+                    <td className="px-3 py-2">
+                      {category.productType ? (
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          category.productType === 'başlık' ? 'bg-blue-100 text-blue-700' :
+                          category.productType === 'şişe' ? 'bg-green-100 text-green-700' :
+                          'bg-purple-100 text-purple-700'
+                        }`}>
+                          {category.productType === 'başlık' ? '🔧 Başlık' :
+                           category.productType === 'şişe' ? '🍶 Şişe' :
+                           '⚪ Nötr'}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">-</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-slate-600">
                       {category.description ? (
                         <span className="line-clamp-2 max-w-xs text-xs text-slate-500">{category.description}</span>

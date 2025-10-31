@@ -30,6 +30,8 @@ type Product = {
   image?: string;
   category?: string;
   stock?: number;
+  productType?: string | null; // "başlık" | "şişe" | "nötr" | null
+  neckSize?: string | null; // "24/410" etc
   packageInfo?: {
     itemsPerBox: number;
     minBoxes: number;

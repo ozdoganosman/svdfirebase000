@@ -2,11 +2,43 @@
 
 **Proje:** SVD Ambalaj E-Ticaret Platformu
 **Başlangıç Tarihi:** 22 Ekim 2025
-**Son Güncelleme:** 26 Ekim 2025, 19:15
+**Son Güncelleme:** 29 Ekim 2025, 10:00
 
 ---
 
 ## 🆕 Son Eklenen Özellikler
+
+### 29 Ekim 2025
+1. **👑 Faz 2.2 - VIP Müşteri Yönetimi - ✅ TAMAMLANDI**
+   - VIP Tier Sistemi (Platinum 20%, Gold 15%, Silver 10%, Bronze 5%)
+   - Otomatik müşteri segmentasyonu (VIP, High-Potential, New, Passive, Standard)
+   - Sipariş ve teklif bazlı VIP belirleme (LTV hesaplama)
+   - Account sayfasında VIP badge gösterimi (💎 Platinum, 🥇 Gold, vb.)
+   - Sepette VIP indirim uygulaması ve gösterimi
+   - İki ayrı indirim mesajı:
+     - ✅ Toplu alım indirimi (yeşil kutu)
+     - 💎 VIP indirimi (mor kutu) - ek tasarruf miktarıyla
+   - Next tier önerisinde VIP indirimli fiyat gösterimi
+   - Backend VIP endpoints:
+     - GET /user/vip-status (kullanıcı VIP bilgisi)
+     - POST /admin/vip/calculate/:userId (tekil hesaplama)
+     - PUT /admin/vip/set-tier/:userId (manuel atama)
+     - POST /admin/vip/calculate-all (toplu hesaplama)
+     - GET /admin/customers (müşteri listesi + filtreleme)
+     - GET /admin/customers/:userId/stats (müşteri istatistikleri)
+   - Admin customers sayfası (müşteri listesi, VIP yönetimi, segmentasyon)
+   - AuthContext VIP status entegrasyonu
+2. **💱 USD → TRY Otomatik Fiyat Çevirme - ✅ TAMAMLANDI**
+   - CartContext'e exchange rate fetch eklendi
+   - Sadece USD fiyatı olan ürünler için otomatik TRY çevirme
+   - Fallback mekanizması (34.0 TRY default)
+   - getEffectivePrice: priceTRY ?? price ?? (priceUSD × rate)
+   - Sorun çözüldü: Fiyatı olmayan ürünler artık çalışıyor
+3. **📋 VIP Pricing Altyapısı - ✅ TAMAMLANDI**
+   - src/lib/pricing.ts - VIP fiyatlama fonksiyonları
+   - calculateVIPPrice, formatVIPPrice
+   - getVIPTierBadge, calculateCartTotal
+   - src/components/VIPBadge.tsx - VIP gösterimi
 
 ### 26 Ekim 2025
 1. **👤 Faz 1.4 - Firebase Auth Sistemi - ✅ TAMAMLANDI**
@@ -82,13 +114,13 @@
 
 ## 📊 Durum Özeti
 
-- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), Faz 1.4 (Firebase Auth), UX İyileştirmeleri, PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon
+- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), Faz 1.4 (Firebase Auth), Faz 2.1 (B2B Teklif & Numune), Faz 2.2 (VIP Müşteri Yönetimi), UX İyileştirmeleri, PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon, USD → TRY Otomatik Çevirme
 - 🔄 Devam Ediyor: Faz 1.5 (PayTR Ödeme - Hazırlık Aşaması)
-- ⏳ Beklemede: Faz 1.5 (PayTR onay bekleniyor) ve Faz 2+ (aşağıda listelenenler)
-- Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı durumda
+- ⏳ Beklemede: Faz 1.5 (PayTR onay bekleniyor), Faz 2.3 (Kombinasyon İndirimi), Faz 2.4 (Süper Admin Panel)
+- Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı; VIP müşteri sistemi production'da
 
-**Son Deployment:** 26 Ekim 2025, 19:10 - Production (Firebase Hosting + Functions)
-**Son Commit:** Migration: Fix order packageInfo and category sales statistics
+**Son Deployment:** 29 Ekim 2025, 10:00 - Production (Firebase Hosting + Functions)
+**Son Commit:** feat: VIP customer management system with dual pricing and USD→TRY auto-convert
 **Deployed Services:**
 - ✅ Frontend - https://svdfirebase000.web.app
 - ✅ API (us-central1) - https://api-tfi7rlxtca-uc.a.run.app
@@ -101,6 +133,8 @@
 - ✅ **Faz 1.2** - Ürün Arama ve Filtreleme (6/6 görev)
 - ✅ **Faz 1.3** - Sipariş Takip Numarası (6/6 görev)
 - ✅ **Faz 1.4** - Firebase Auth Sistemi (13/13 görev)
+- ✅ **Faz 2.1** - B2B Teklif & Numune Sistemi (11/11 görev)
+- ✅ **Faz 2.2** - VIP Müşteri Yönetimi ve Segmentasyon (9/9 görev)
 
 ---
 
@@ -656,20 +690,27 @@ Genel Toplam: $176.98 (₺6,127.20)
 ---
 
 ### 2.3 Başlık-Şişe Kombinasyon İndirimi 🔄
-**Durum:** ⏳ Beklemede
-**Tahmini Süre:** 4-5 gün
+**Durum:** ✅ Tamamlandı (31 Ekim 2025)
+**Gerçek Süre:** 7 gün
 **Bağımlılık:** 1.1 tamamlanmalı (indirim USD üzerinden hesaplanacak)
 **Öncelik:** Yüksek
 
 #### Görevler:
-- [ ] Ürünlere `productType` alanı ekle (başlık/şişe/nötr)
-- [ ] Ürünlere `neckSize` alanı ekle (24/410, 28/410, vb.)
-- [ ] Kombinasyon indirim kuralları (admin ayarlanabilir)
-- [ ] Sepette otomatik kombinasyon algılama
-- [ ] Eşleşen ağız ölçüsü kontrolü
-- [ ] Az olan miktara göre indirim uygulama
-- [ ] Sepette kombinasyon indirimi gösterimi
-- [ ] Admin panelinde kombinasyon ayarları
+- [x] Ürünlere `productType` alanı ekle (başlık/şişe/nötr)
+- [x] Ürünlere `neckSize` alanı ekle (24/410, 28/410, vb.)
+- [x] Kombinasyon indirim kuralları (admin ayarlanabilir)
+- [x] Sepette otomatik kombinasyon algılama
+- [x] Eşleşen ağız ölçüsü kontrolü
+- [x] Az olan miktara göre indirim uygulama
+- [x] Sepette kombinasyon indirimi gösterimi
+- [x] Admin panelinde kombinasyon ayarları
+- [x] **Ucuz ürünlere öncelik verme (maksimum tasarruf)**
+- [x] **Ürün bazında combo quantity gösterimi**
+- [x] **Çoklu ürün desteği (3+ ürün)**
+- [x] **Detaylı breakdown UI**
+- [x] **Frontend-Backend entegrasyonu**
+- [x] **Checkout'a combo discount entegrasyonu**
+- [x] **Order kayıtlarına combo bilgileri ekleme**
 
 #### Product Schema Güncellemesi:
 ```javascript
@@ -712,26 +753,59 @@ Cart:
 Kombinasyon İndirimi: $90 tasarruf! 🎉
 ```
 
-#### Dosyalar:
-- `functions/db/catalog.js` (güncelle - productType, neckSize)
-- `functions/db/combo-settings.js` (yeni)
-- `src/context/CartContext.tsx` (güncelle - combo hesaplama)
-- `src/app/cart/page.tsx` (güncelle - combo gösterimi)
-- `src/app/admin/products/page.tsx` (güncelle - yeni alanlar)
-- `src/app/admin/combo-settings/page.tsx` (yeni)
-- `src/lib/combo-calculator.ts` (yeni - hesaplama mantığı)
+#### Tamamlanan Dosyalar:
+- ✅ `functions/db/catalog.js` - productType, neckSize, comboPriceUSD eklendi
+- ✅ `functions/db/combo-settings.js` - Combo ayarları yönetimi (YENİ)
+- ✅ `functions/lib/combo-calculator.js` - Hesaplama mantığı + ucuz ürün önceliği (YENİ)
+- ✅ `functions/db/orders.js` - Combo discount field'ları eklendi
+- ✅ `functions/index.js` - Combo settings API endpoints
+- ✅ `src/context/CartContext.tsx` - Backend settings entegrasyonu, dinamik hesaplama
+- ✅ `src/app/cart/page.tsx` - Detaylı combo gösterimi + breakdown
+- ✅ `src/app/checkout/page.tsx` - Combo discount entegrasyonu
+- ✅ `src/app/admin/products/page.tsx` - comboPriceUSD field'ı eklendi
+- ✅ `src/app/admin/combo-settings/page.tsx` - Admin yönetim sayfası (YENİ)
+- ✅ `functions/scripts/update-products-from-categories.js` - ProductType migration
 
-#### Sepette Gösterim:
+#### Öne Çıkan Özellikler:
+1. **Ucuz Ürün Önceliği:** Combo her zaman en ucuz ürünlere uygulanır (maksimum tasarruf)
+2. **Dinamik Settings:** Admin panelden ayarlanabilir (aktif/pasif, %, sabit tutar, min miktar)
+3. **Çoklu Ürün Desteği:** 3+ ürün olsa bile doğru hesaplama
+4. **Detaylı Gösterim:** Her ürün için combo'ya dahil olan miktar gösteriliyor
+5. **Order Tracking:** Sipariş kayıtlarında combo bilgileri saklanıyor
+
+#### Gerçek Sepet Gösterimi (Uygulanan):
 ```
-🔄 BAŞLIK-ŞİŞE KOMBİNASYONU BULUNDU!
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Ağız Ölçüsü: 24/410
-Eşleşen Miktar: 3,000 adet
+Sipariş Özeti
+─────────────────────────────────
+Toplam Koli: 26
+Toplam Ürün: 31.000 adet
 
-✅ 3,000 Başlık → Kombo Fiyat
-✅ 3,000 Şişe → Kombo Fiyat
+Ürün Toplamı: ₺84.729,51 +KDV  (üzeri çizili)
 
-💰 Kombinasyon İndirimi: $90.00 (₺3,111.00)
+🔄 Kombo İndirimi %10: - ₺6.165,96
+  🎉 Kombo İndirimi Uygulandı!
+
+  7.000 adet BAŞLIK + ŞIŞE (24/410)
+    • 24 Ağız Parmak Sprey (Siyah): 7.000 adet
+    • 100 ml Pet Şişe: 7.000 adet
+
+Ara Toplam (KDV Hariç): ₺78.563,55 +KDV
+Kargo: ₺3.120,00
+KDV (%20): ₺15.712,71
+─────────────────────────────────
+Genel Toplam (KDV Dahil): ₺97.396,26
+```
+
+**Ürün Kartlarında:**
+```
+🔵 Siyah Başlık (₺2,10/adet) - 12.000 adet
+🔄 Kombo İndirimi! 12.000 adetten 7.000 adedi için %10 indirim (24/410)
+
+⚪ Beyaz Başlık (₺2,52/adet) - 12.000 adet
+(Combo yok - daha pahalı, öncelik ucuza verildi)
+
+🟢 Şişe (₺4,19/adet) - 7.000 adet
+🔄 Kombo İndirimi! Tüm ürünler (7.000 adet) için %10 indirim (24/410)
 ```
 
 ---
@@ -1301,7 +1375,7 @@ Gerekli yeni koleksiyonlar:
 
 ## 🎯 Aktif Sprint (Güncel Odak)
 
-**Sprint:** Sprint 2 - Kullanıcı Sistemi ve Ödeme
+**Sprint:** Sprint 3 - VIP & Ödeme Sistemi
 **Başlangıç:** 23 Ekim 2025
 **Bitiş:** 10 Kasım 2025
 **Tamamlanan:**
@@ -1309,16 +1383,19 @@ Gerekli yeni koleksiyonlar:
 - ✅ Faz 1.2 - Ürün Arama ve Filtreleme
 - ✅ Faz 1.3 - Sipariş Takip Numarası
 - ✅ Faz 1.4 - Firebase Auth Sistemi (tam)
+- ✅ Faz 2.1 - B2B Teklif & Numune Sistemi (tam)
+- ✅ Faz 2.2 - VIP Müşteri Yönetimi ve Segmentasyon (tam)
 - ✅ PDF Export Sistemi
 - ✅ Checkout Sayfası İyileştirmesi
 - ✅ UX İyileştirmeleri (cart fix, checkout auto-fill, modern quantity selector)
-- ✅ B2B Teklif & Numune Sistemi (Faz 2.1 - TAM)
-- ✅ VIP Müşteri Yönetimi ve Segmentasyon (Faz 2.2 - TAM)
 - ✅ Admin İstatistikleri Düzeltmeleri (kategori satış, packageInfo)
+- ✅ USD → TRY Otomatik Fiyat Çevirme (CartContext)
+- ✅ VIP İndirim Gösterimi (sepette iki ayrı mesaj)
 - ✅ Production Deployment (Firebase Hosting + Functions)
 
 **Odak (güncel):**
 - ⏳ PayTR ödeme entegrasyonu (1.5) - Onay bekleniyor
+- 🔄 ESLint uyarıları temizliği
 
 ### Bir Sonraki Adımlar (Önümüzde Neler Var?)
 Kısa vadeli (PayTR onayı geldiğinde):

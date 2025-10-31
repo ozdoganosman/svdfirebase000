@@ -81,7 +81,10 @@ const mapOrderDoc = (doc) => {
       discountTotal: 0,
       shippingTotal: 0,
       total: 0,
+      comboDiscount: 0,
+      finalTotal: 0,
     },
+    comboMatches: data.comboMatches || [],
     metadata: data.metadata || {},
   };
 };
@@ -178,7 +181,10 @@ const createOrder = async (payload) => {
   }, 0));
   const shippingTotal = parseNumber(totals.shippingTotal ?? payload.shippingTotal, 0);
   const discountTotal = parseNumber(totals.discountTotal ?? payload.discountTotal, 0);
-  const total = subtotal + shippingTotal - discountTotal;
+  const comboDiscount = parseNumber(totals.comboDiscount, 0);
+  const comboMatches = Array.isArray(payload.comboMatches) ? payload.comboMatches : [];
+  const finalTotal = parseNumber(totals.finalTotal, subtotal - comboDiscount);
+  const total = finalTotal + shippingTotal - discountTotal;
 
   const now = FieldValue.serverTimestamp();
 
@@ -232,8 +238,11 @@ const createOrder = async (payload) => {
       currency,
       discountTotal,
       shippingTotal,
+      comboDiscount,
+      finalTotal,
       total,
     },
+    comboMatches,
     metadata: payload.metadata || {},
   };
 

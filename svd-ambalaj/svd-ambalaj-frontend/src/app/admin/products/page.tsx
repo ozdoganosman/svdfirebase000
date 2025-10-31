@@ -11,6 +11,7 @@ type ProductPayload = {
   description?: string;
   price?: number;
   priceUSD?: number;
+  comboPriceUSD?: number;
   bulkPricing?: ProductBulkRow[];
   bulkPricingUSD?: ProductBulkRow[];
   category?: string;
@@ -25,7 +26,7 @@ type ProductPayload = {
     hoseLength?: string;
     volume?: string;
     color?: string;
-    neckSize?: string;
+    neckSize?: string; // Backend uses this for combo matching
   };
 };
 
@@ -161,7 +162,7 @@ export default function AdminProductsPage() {
     [form.images]
   );
 
-  const handleChange = (key: keyof ProductPayload, value: string) => {
+  const handleChange = (key: keyof ProductPayload, value: string | number | null) => {
     setForm((prev) => ({
       ...prev,
       [key]: value,
@@ -195,15 +196,16 @@ export default function AdminProductsPage() {
       category: form.category,
       images: form.images,
       stock: form.stock !== undefined && form.stock !== null ? Number(form.stock) : undefined,
+      // productType and neckSize are auto-determined by backend
       packageInfo: form.packageInfo ? {
         itemsPerBox: Number(form.packageInfo.itemsPerBox) || 1,
         minBoxes: 1,
         boxLabel: form.packageInfo.boxLabel || "Koli",
       } : undefined,
       specifications: form.specifications && (
-        form.specifications.hoseLength || 
-        form.specifications.volume || 
-        form.specifications.color || 
+        form.specifications.hoseLength ||
+        form.specifications.volume ||
+        form.specifications.color ||
         form.specifications.neckSize
       ) ? form.specifications : undefined,
     };
@@ -213,6 +215,12 @@ export default function AdminProductsPage() {
     const usdPrice = usdPriceStr !== '' ? Number(usdPriceStr) : undefined;
     payload.priceUSD = usdPrice;
     payload.bulkPricingUSD = parsedBulkPricingUSD.length > 0 ? JSON.stringify(parsedBulkPricingUSD) : undefined;
+
+    // Combo pricing
+    const comboPriceStr = String(form.comboPriceUSD || '').trim();
+    const comboPrice = comboPriceStr !== '' ? Number(comboPriceStr) : undefined;
+    payload.comboPriceUSD = comboPrice;
+
     payload.price = null;
     payload.bulkPricing = null;
 
@@ -252,12 +260,13 @@ export default function AdminProductsPage() {
 
   const handleEdit = (product: AdminProduct) => {
     setEditingId(product.id);
-    
+
     setForm({
       title: product.title,
       slug: product.slug,
       description: product.description,
       priceUSD: product.priceUSD,
+      comboPriceUSD: (product as any).comboPriceUSD,
       bulkPricingUSD: (product.bulkPricingUSD ?? []).map((tier) => ({
         id: randomId(),
         minQty: String(tier.minQty ?? ""),
@@ -291,6 +300,7 @@ export default function AdminProductsPage() {
       slug: `${product.slug}-kopya`,
       description: product.description,
       priceUSD: product.priceUSD,
+      comboPriceUSD: (product as any).comboPriceUSD,
       bulkPricingUSD: (product.bulkPricingUSD ?? []).map((tier) => ({
         id: randomId(),
         minQty: String(tier.minQty ?? ""),
@@ -647,7 +657,40 @@ export default function AdminProductsPage() {
                 Dolar bazlı fiyat - Güncel kurla TL&apos;ye çevrilip müşteriye gösterilir
               </p>
             </div>
-          
+
+          {/* COMBO PRICE - USD ONLY */}
+            <div>
+               <label className="block text-sm font-medium text-slate-700" htmlFor="admin-product-combo-price-usd">
+                Kombo Fiyatı (USD) <span className="text-xs font-normal text-slate-500">Opsiyonel</span>
+              </label>
+              <input
+                id="admin-product-combo-price-usd"
+                name="comboPriceUSD"
+                type="number"
+                 step="0.001"
+                value={form.comboPriceUSD ?? ""}
+                onChange={(event) => handleChange("comboPriceUSD", event.target.value)}
+                className="mt-1 w-full rounded-md border border-purple-300 px-3 py-2 text-sm shadow-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                placeholder="0.90"
+              />
+              <p className="mt-1 text-xs text-slate-600">
+                Kombo indiriminde kullanılacak özel fiyat (boş bırakırsanız normal fiyat üzerinden indirim uygulanır)
+              </p>
+            </div>
+
+          {/* COMBO DISCOUNT INFO */}
+          <div className="md:col-span-2">
+            <div className="rounded-xl border-2 border-purple-200 bg-purple-50 p-6">
+              <h3 className="mb-4 text-lg font-bold text-purple-900">🔄 Kombinasyon İndirimi</h3>
+              <div className="rounded-lg bg-purple-100 p-3 text-xs text-purple-800">
+                <strong>💡 Otomatik Kombo İndirimi</strong><br />
+                <strong>Ürün Tipi:</strong> Kategoriye göre otomatik belirlenir (Spreyler → Başlık, Şişeler → Şişe)<br/>
+                <strong>Ağız Ölçüsü:</strong> Teknik Özelliklerdeki "Ağız Ölçüsü" alanından alınır<br/><br/>
+                Aynı ağız ölçüsüne sahip başlık ve şişe kombine edildiğinde, az olan miktara kadar her ikisine de <strong>%10 indirim</strong> uygulanır.<br/>
+                <strong>Örnek:</strong> 4500 başlık + 3000 şişe (24/410) = 3000 adet için %10 kombo indirimi
+              </div>
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.stock}>Stok</label>
