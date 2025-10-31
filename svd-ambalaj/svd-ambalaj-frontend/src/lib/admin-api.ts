@@ -233,6 +233,7 @@ export type AdminProduct = {
   description?: string;
   price?: number;
   priceUSD?: number;
+  comboPriceUSD?: number;
   bulkPricing: AdminBulkPricingTier[];
   bulkPricingUSD?: AdminBulkPricingTier[];
   category: string;

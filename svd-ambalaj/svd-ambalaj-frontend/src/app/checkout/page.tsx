@@ -34,28 +34,6 @@ interface SavedAddress {
   isDefault: boolean;
 }
 
-interface Quote {
-  id: string;
-  quoteNumber: string;
-  status: string;
-  customer: {
-    name: string;
-    company: string;
-    email: string;
-    phone: string;
-    taxNumber?: string;
-    address?: string;
-    city?: string;
-  };
-  items: Array<{
-    id: string;
-    title: string;
-    quantity: number;
-    price: number;
-    subtotal: number;
-  }>;
-}
-
 const defaultState: CheckoutFormState = {
   name: "",
   company: "",

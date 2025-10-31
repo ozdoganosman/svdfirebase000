@@ -266,7 +266,7 @@ export default function AdminProductsPage() {
       slug: product.slug,
       description: product.description,
       priceUSD: product.priceUSD,
-      comboPriceUSD: (product as any).comboPriceUSD,
+      comboPriceUSD: product.comboPriceUSD,
       bulkPricingUSD: (product.bulkPricingUSD ?? []).map((tier) => ({
         id: randomId(),
         minQty: String(tier.minQty ?? ""),
@@ -300,7 +300,7 @@ export default function AdminProductsPage() {
       slug: `${product.slug}-kopya`,
       description: product.description,
       priceUSD: product.priceUSD,
-      comboPriceUSD: (product as any).comboPriceUSD,
+      comboPriceUSD: product.comboPriceUSD,
       bulkPricingUSD: (product.bulkPricingUSD ?? []).map((tier) => ({
         id: randomId(),
         minQty: String(tier.minQty ?? ""),
@@ -685,7 +685,7 @@ export default function AdminProductsPage() {
               <div className="rounded-lg bg-purple-100 p-3 text-xs text-purple-800">
                 <strong>💡 Otomatik Kombo İndirimi</strong><br />
                 <strong>Ürün Tipi:</strong> Kategoriye göre otomatik belirlenir (Spreyler → Başlık, Şişeler → Şişe)<br/>
-                <strong>Ağız Ölçüsü:</strong> Teknik Özelliklerdeki "Ağız Ölçüsü" alanından alınır<br/><br/>
+                <strong>Ağız Ölçüsü:</strong> Teknik Özelliklerdeki &ldquo;Ağız Ölçüsü&rdquo; alanından alınır<br/><br/>
                 Aynı ağız ölçüsüne sahip başlık ve şişe kombine edildiğinde, az olan miktara kadar her ikisine de <strong>%10 indirim</strong> uygulanır.<br/>
                 <strong>Örnek:</strong> 4500 başlık + 3000 şişe (24/410) = 3000 adet için %10 kombo indirimi
               </div>

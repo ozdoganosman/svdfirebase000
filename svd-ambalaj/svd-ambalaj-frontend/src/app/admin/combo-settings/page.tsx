@@ -48,7 +48,7 @@ export default function AdminComboSettingsPage() {
     fetchSettings();
   }, []);
 
-  const handleChange = (key: keyof ComboSettings, value: any) => {
+  const handleChange = (key: keyof ComboSettings, value: ComboSettings[keyof ComboSettings]) => {
     setForm((prev) => ({
       ...prev,
       [key]: value,

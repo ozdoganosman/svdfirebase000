@@ -41,6 +41,7 @@ type ProductSummary = {
     hoseLength?: string;
     volume?: string;
     color?: string;
+    neckSize?: string;
   };
 };
 
