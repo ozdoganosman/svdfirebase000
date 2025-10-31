@@ -222,8 +222,16 @@ export function CartProvider({ children }: CartProviderProps) {
           setItems(updatedItems);
         };
 
-        setItems(migratedItems);
-        fetchFreshData(); // Async update in background
+        // Check if any item is missing productType
+        const needsFreshData = migratedItems.some(item => !item.productType);
+
+        if (needsFreshData) {
+          // Wait for fresh data before setting items
+          fetchFreshData();
+        } else {
+          // All items have productType, use them immediately
+          setItems(migratedItems);
+        }
       }
     } catch (error) {
       console.error("Failed to parse stored cart", error);
