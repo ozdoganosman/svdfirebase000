@@ -254,21 +254,36 @@ export function CartProvider({ children }: CartProviderProps) {
     }
 
     // Use bulkPricingUSD for USD-based products, fallback to bulkPricing
-    const bulkPricing = item.bulkPricingUSD || item.bulkPricing;
+    const bulkPricingUSD = item.bulkPricingUSD;
+    const bulkPricingTRY = item.bulkPricing;
+    const hasBulkPricing = bulkPricingUSD || bulkPricingTRY;
 
-    if (!bulkPricing || bulkPricing.length === 0) {
+    if (!hasBulkPricing || (bulkPricingUSD?.length === 0 && bulkPricingTRY?.length === 0)) {
       return basePrice;
     }
 
     // For products with packageInfo, bulk pricing is based on box count
     const comparisonQty = item.packageInfo ? item.quantity : item.quantity;
 
-    const sortedTiers = [...bulkPricing].sort((a, b) => b.minQty - a.minQty);
+    // Check USD pricing first
+    if (bulkPricingUSD && bulkPricingUSD.length > 0) {
+      const sortedTiers = [...bulkPricingUSD].sort((a, b) => b.minQty - a.minQty);
+      for (const tier of sortedTiers) {
+        if (comparisonQty >= tier.minQty) {
+          // Tier price is in USD, convert to TRY
+          return tier.price * exchangeRate;
+        }
+      }
+    }
 
-    for (const tier of sortedTiers) {
-      if (comparisonQty >= tier.minQty) {
-        // Tier price is in USD, convert to TRY
-        return tier.price * exchangeRate;
+    // Fallback to TRY pricing
+    if (bulkPricingTRY && bulkPricingTRY.length > 0) {
+      const sortedTiers = [...bulkPricingTRY].sort((a, b) => b.minQty - a.minQty);
+      for (const tier of sortedTiers) {
+        if (comparisonQty >= tier.minQty) {
+          // Tier price is already in TRY, return as-is
+          return tier.price;
+        }
       }
     }
 
