@@ -1,18 +1,147 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/adminRoles/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/adminRoles/$(request.auth.uid)).data.role == 'super_admin';
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/adminRoles/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/adminRoles/$(request.auth.uid)).data.role in ['super_admin', 'admin'];
+    }
+
+    function isStaff() {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/adminRoles/$(request.auth.uid));
+    }
+
+    // Admin Roles - Super admin only
+    match /adminRoles/{userId} {
+      allow read: if isStaff();
+      allow write: if isSuperAdmin();
+    }
+
+    // Site Settings - Super admin only for write, authenticated for read
+    match /siteSettings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // Combo Discount Settings - Admin for write, authenticated for read
+    match /comboDiscountSettings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Campaigns - Admin for write, authenticated for read
+    match /campaigns/{campaignId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Content Management - Admin for write, public read
+    match /content/{contentId} {
+      allow read: if true; // Public read for landing pages, etc.
+      allow write: if isAdmin();
+    }
+
+    // Landing Media - Admin for write, public read
+    match /landingMedia/{mediaId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Products - Admin for write, public read
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Categories - Admin for write, public read
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Media - Admin for write, authenticated for read
+    match /media/{mediaId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Customer Profiles - Owners can read/write their own, admins can read all
+    match /customers/{userId} {
+      allow read: if isOwner(userId) || isStaff();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // VIP Status - Admins only for write, owners can read their own
+    match /vipStatus/{userId} {
+      allow read: if isOwner(userId) || isStaff();
+      allow write: if isAdmin();
+    }
+
+    // Orders - Owners can read their own, admins can read/write all
+    match /orders/{orderId} {
+      allow read: if isStaff() ||
+                     (isAuthenticated() && resource.data.customer.id == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // Quotes - Owners can read/create their own, admins can read/write all
+    match /quotes/{quoteId} {
+      allow read: if isStaff() ||
+                     (isAuthenticated() && resource.data.customer.userId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // Sample Requests - Owners can read/create their own, admins can read/write all
+    match /sampleRequests/{sampleId} {
+      allow read: if isStaff() ||
+                     (isAuthenticated() && resource.data.customer.userId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // Email Templates - Admin only
+    match /emailTemplates/{templateId} {
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+
+    // System Logs - Staff read only, system write
+    match /systemLogs/{logId} {
+      allow read: if isStaff();
+      allow write: if false; // Only backend can write logs
+    }
+
+    // Audit Logs - Staff read only
+    match /auditLogs/{logId} {
+      allow read: if isStaff();
+      allow write: if false; // Only backend can write
+    }
+
+    // Deny all other paths by default
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2025, 11, 19);
+      allow read, write: if false;
     }
   }
 }

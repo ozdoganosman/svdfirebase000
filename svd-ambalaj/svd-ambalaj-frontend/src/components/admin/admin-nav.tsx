@@ -11,6 +11,9 @@ const NAV_ITEMS = [
   { href: "/admin/landing", label: "Landing Medya" },
   { href: "/admin/orders", label: "Siparişler" },
   { href: "/admin/stats", label: "İstatistikler" },
+  { href: "/admin/customers", label: "Müşteriler" },
+  { href: "/admin/samples", label: "Numune Talepleri" },
+  { href: "/admin/settings", label: "⚙️ Ayarlar" },
 ];
 
 export function AdminNav() {

@@ -20,6 +20,8 @@ import * as users from "./db/users.js";
 import * as quotes from "./db/quotes.js";
 import * as vip from "./db/vip.js";
 import * as comboSettings from "./db/combo-settings.js";
+import * as settings from "./db/settings.js";
+import * as adminRoles from "./db/admin-roles.js";
 import * as emailSender from "./email/sender.js";
 import { fetchTCMBRate } from "./services/exchange-rate.js";
 import { db } from "./db/client.js";
@@ -73,7 +75,7 @@ const requireAuth = async (req, res, next) => {
   }
 
   const token = authHeader.slice("Bearer ".length).trim();
-  
+
   try {
     const session = await validateSession(token);
     if (!session) {
@@ -87,15 +89,75 @@ const requireAuth = async (req, res, next) => {
       res.set("X-Session-Expires-At", session.expiresAt.toString());
     }
 
-    req.admin = { 
-      email: session.email, 
+    req.admin = {
+      email: session.email,
       token,
-      sessionExpiresAt: session.expiresAt 
+      sessionExpiresAt: session.expiresAt
     };
     next();
   } catch (error) {
     functions.logger.error("Session validation failed", error);
     return res.status(500).json({ error: "Authentication failed. Please try again." });
+  }
+};
+
+// Middleware to require super admin role
+const requireSuperAdmin = async (req, res, next) => {
+  if (!req.admin || !req.admin.email) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    // Get user by email
+    const user = await users.getUserByEmail(req.admin.email);
+    if (!user) {
+      return res.status(401).json({ error: "User not found" });
+    }
+
+    // Check if user is super admin
+    const isSuperAdmin = await adminRoles.isSuperAdmin(user.uid);
+    if (!isSuperAdmin) {
+      functions.logger.warn("Insufficient permissions", {
+        email: req.admin.email,
+        uid: user.uid
+      });
+      return res.status(403).json({ error: "Insufficient permissions. Super admin role required." });
+    }
+
+    req.admin.userId = user.uid;
+    next();
+  } catch (error) {
+    functions.logger.error("Super admin check failed", error);
+    return res.status(500).json({ error: "Authorization check failed" });
+  }
+};
+
+// Middleware to require admin role (admin or super_admin)
+const requireAdmin = async (req, res, next) => {
+  if (!req.admin || !req.admin.email) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const user = await users.getUserByEmail(req.admin.email);
+    if (!user) {
+      return res.status(401).json({ error: "User not found" });
+    }
+
+    const isAdmin = await adminRoles.isAdmin(user.uid);
+    if (!isAdmin) {
+      functions.logger.warn("Insufficient permissions", {
+        email: req.admin.email,
+        uid: user.uid
+      });
+      return res.status(403).json({ error: "Insufficient permissions. Admin role required." });
+    }
+
+    req.admin.userId = user.uid;
+    next();
+  } catch (error) {
+    functions.logger.error("Admin check failed", error);
+    return res.status(500).json({ error: "Authorization check failed" });
   }
 };
 
@@ -1755,6 +1817,304 @@ app.post("/admin/migrate-orders", async (req, res) => {
   } catch (error) {
     functions.logger.error("Migration failed", error);
     res.status(500).json({ error: "Migration failed: " + error.message });
+  }
+});
+
+// ==================== SETTINGS ENDPOINTS ====================
+
+// Get all site settings (authenticated users)
+app.get("/settings", requireAuth, async (_req, res) => {
+  try {
+    const allSettings = await settings.getAllSiteSettings();
+    res.status(200).json({ settings: allSettings });
+  } catch (error) {
+    functions.logger.error("Failed to get settings", error);
+    res.status(500).json({ error: "Failed to get settings" });
+  }
+});
+
+// Get specific settings section
+app.get("/settings/:section", requireAuth, async (req, res) => {
+  try {
+    const { section } = req.params;
+    const sectionSettings = await settings.getSiteSettings(section);
+
+    if (!sectionSettings) {
+      return res.status(404).json({ error: "Settings section not found" });
+    }
+
+    res.status(200).json({ settings: sectionSettings });
+  } catch (error) {
+    functions.logger.error("Failed to get settings section", error);
+    res.status(500).json({ error: "Failed to get settings" });
+  }
+});
+
+// Update settings section (super admin only)
+app.put("/admin/settings/:section", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const { section } = req.params;
+    const settingsData = req.body;
+    const userId = req.admin.userId;
+
+    const updated = await settings.setSiteSettings(section, settingsData, userId);
+
+    functions.logger.info("Settings updated", { section, userId });
+    res.status(200).json({ settings: updated });
+  } catch (error) {
+    functions.logger.error("Failed to update settings", error);
+    res.status(500).json({ error: "Failed to update settings: " + error.message });
+  }
+});
+
+// Initialize default settings (super admin only)
+app.post("/admin/settings/initialize", requireAuth, requireSuperAdmin, async (_req, res) => {
+  try {
+    const initialized = await settings.initializeSiteSettings();
+    res.status(200).json({ settings: initialized });
+  } catch (error) {
+    functions.logger.error("Failed to initialize settings", error);
+    res.status(500).json({ error: "Failed to initialize settings" });
+  }
+});
+
+// ==================== CAMPAIGNS ENDPOINTS ====================
+
+// Get all campaigns
+app.get("/admin/campaigns", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { isActive, type } = req.query;
+    const filters = {};
+
+    if (isActive !== undefined) {
+      filters.isActive = isActive === "true";
+    }
+    if (type) {
+      filters.type = type;
+    }
+
+    const campaigns = await settings.getAllCampaigns(filters);
+    res.status(200).json({ campaigns });
+  } catch (error) {
+    functions.logger.error("Failed to get campaigns", error);
+    res.status(500).json({ error: "Failed to get campaigns" });
+  }
+});
+
+// Get active campaigns (public)
+app.get("/campaigns/active", async (_req, res) => {
+  try {
+    const campaigns = await settings.getActiveCampaigns();
+    res.status(200).json({ campaigns });
+  } catch (error) {
+    functions.logger.error("Failed to get active campaigns", error);
+    res.status(500).json({ error: "Failed to get campaigns" });
+  }
+});
+
+// Get campaign by ID
+app.get("/admin/campaigns/:id", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const campaign = await settings.getCampaign(id);
+
+    if (!campaign) {
+      return res.status(404).json({ error: "Campaign not found" });
+    }
+
+    res.status(200).json({ campaign });
+  } catch (error) {
+    functions.logger.error("Failed to get campaign", error);
+    res.status(500).json({ error: "Failed to get campaign" });
+  }
+});
+
+// Create campaign
+app.post("/admin/campaigns", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const campaignData = req.body;
+    const userId = req.admin.userId;
+
+    const campaign = await settings.createCampaign(campaignData, userId);
+
+    functions.logger.info("Campaign created", { campaignId: campaign.id, userId });
+    res.status(201).json({ campaign });
+  } catch (error) {
+    functions.logger.error("Failed to create campaign", error);
+    res.status(500).json({ error: "Failed to create campaign: " + error.message });
+  }
+});
+
+// Update campaign
+app.put("/admin/campaigns/:id", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const userId = req.admin.userId;
+
+    const campaign = await settings.updateCampaign(id, updates, userId);
+
+    functions.logger.info("Campaign updated", { campaignId: id, userId });
+    res.status(200).json({ campaign });
+  } catch (error) {
+    functions.logger.error("Failed to update campaign", error);
+    res.status(500).json({ error: "Failed to update campaign: " + error.message });
+  }
+});
+
+// Delete campaign
+app.delete("/admin/campaigns/:id", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await settings.deleteCampaign(id);
+
+    functions.logger.info("Campaign deleted", { campaignId: id });
+    res.status(200).json({ success: true });
+  } catch (error) {
+    functions.logger.error("Failed to delete campaign", error);
+    res.status(500).json({ error: "Failed to delete campaign" });
+  }
+});
+
+// ==================== CONTENT ENDPOINTS ====================
+
+// Get all content (public)
+app.get("/content", async (_req, res) => {
+  try {
+    const content = await settings.getAllContent();
+    res.status(200).json({ content });
+  } catch (error) {
+    functions.logger.error("Failed to get content", error);
+    res.status(500).json({ error: "Failed to get content" });
+  }
+});
+
+// Get specific content section (public)
+app.get("/content/:section", async (req, res) => {
+  try {
+    const { section } = req.params;
+    const content = await settings.getContent(section);
+
+    if (!content) {
+      return res.status(404).json({ error: "Content section not found" });
+    }
+
+    res.status(200).json({ content });
+  } catch (error) {
+    functions.logger.error("Failed to get content section", error);
+    res.status(500).json({ error: "Failed to get content" });
+  }
+});
+
+// Update content section (admin)
+app.put("/admin/content/:section", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { section } = req.params;
+    const contentData = req.body;
+    const userId = req.admin.userId;
+
+    const updated = await settings.setContent(section, contentData, userId);
+
+    functions.logger.info("Content updated", { section, userId });
+    res.status(200).json({ content: updated });
+  } catch (error) {
+    functions.logger.error("Failed to update content", error);
+    res.status(500).json({ error: "Failed to update content: " + error.message });
+  }
+});
+
+// ==================== ADMIN ROLES ENDPOINTS ====================
+
+// Get all admin users (super admin only)
+app.get("/admin/roles", requireAuth, requireSuperAdmin, async (_req, res) => {
+  try {
+    const admins = await adminRoles.getAllAdmins();
+    res.status(200).json({ admins });
+  } catch (error) {
+    functions.logger.error("Failed to get admin roles", error);
+    res.status(500).json({ error: "Failed to get admin roles" });
+  }
+});
+
+// Get admin role by user ID
+app.get("/admin/roles/:userId", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const role = await adminRoles.getAdminRole(userId);
+
+    if (!role) {
+      return res.status(404).json({ error: "Admin role not found" });
+    }
+
+    res.status(200).json({ role });
+  } catch (error) {
+    functions.logger.error("Failed to get admin role", error);
+    res.status(500).json({ error: "Failed to get admin role" });
+  }
+});
+
+// Set admin role (super admin only)
+app.put("/admin/roles/:userId", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const roleData = req.body;
+    const adminUserId = req.admin.userId;
+
+    // Prevent super admin from demoting themselves
+    if (userId === adminUserId && roleData.role !== "super_admin") {
+      return res.status(400).json({ error: "Cannot change your own super admin role" });
+    }
+
+    const role = await adminRoles.setAdminRole(userId, roleData, adminUserId);
+
+    functions.logger.info("Admin role set", { userId, role: roleData.role, by: adminUserId });
+    res.status(200).json({ role });
+  } catch (error) {
+    functions.logger.error("Failed to set admin role", error);
+    res.status(500).json({ error: "Failed to set admin role: " + error.message });
+  }
+});
+
+// Delete admin role (super admin only)
+app.delete("/admin/roles/:userId", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const adminUserId = req.admin.userId;
+
+    // Prevent super admin from removing their own role
+    if (userId === adminUserId) {
+      return res.status(400).json({ error: "Cannot delete your own admin role" });
+    }
+
+    await adminRoles.deleteAdminRole(userId);
+
+    functions.logger.info("Admin role deleted", { userId, by: adminUserId });
+    res.status(200).json({ success: true });
+  } catch (error) {
+    functions.logger.error("Failed to delete admin role", error);
+    res.status(500).json({ error: "Failed to delete admin role" });
+  }
+});
+
+// Get current user's role and permissions
+app.get("/admin/me/role", requireAuth, async (req, res) => {
+  try {
+    const user = await users.getUserByEmail(req.admin.email);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const role = await adminRoles.getAdminRole(user.uid);
+
+    res.status(200).json({
+      role: role || null,
+      isStaff: role !== null,
+      isAdmin: role && ["super_admin", "admin"].includes(role.role),
+      isSuperAdmin: role && role.role === "super_admin"
+    });
+  } catch (error) {
+    functions.logger.error("Failed to get user role", error);
+    res.status(500).json({ error: "Failed to get role information" });
   }
 });
 
