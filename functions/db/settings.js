@@ -135,6 +135,13 @@ export const initializeSiteSettings = async () => {
       googleAnalyticsId: "",
       facebookPixelId: "",
     },
+    stock: {
+      lowStockThreshold: 100,
+      criticalStockThreshold: 20,
+      allowZeroStockOrders: false,
+      notifyOnLowStock: true,
+      notifyEmail: "",
+    },
   };
 
   const results = {};

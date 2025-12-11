@@ -44,9 +44,8 @@ export default function InitializeSettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-8">
-      <div className="max-w-2xl w-full">
-        <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="max-w-2xl mx-auto p-6">
           {!success ? (
             <>
               <div className="text-center mb-8">
@@ -154,7 +153,6 @@ export default function InitializeSettingsPage() {
               )}
             </div>
           )}
-        </div>
 
         <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <div className="flex items-start gap-3">

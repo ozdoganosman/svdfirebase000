@@ -61,6 +61,15 @@ export type SEOSettings = SiteSettings & {
   facebookPixelId?: string;
 };
 
+export type StockSettings = SiteSettings & {
+  section: "stock";
+  lowStockThreshold?: number;
+  criticalStockThreshold?: number;
+  allowZeroStockOrders?: boolean;
+  notifyOnLowStock?: boolean;
+  notifyEmail?: string;
+};
+
 export type Campaign = {
   id: string;
   name: string;

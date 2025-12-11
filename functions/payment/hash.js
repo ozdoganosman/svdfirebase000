@@ -3,59 +3,72 @@
  * Handles HMAC-SHA256 hash calculations for PayTR API
  */
 
-const crypto = require("crypto");
+import crypto from "crypto";
 
 /**
  * Generate PayTR payment token hash
+ * Based on PayTR iFrame API documentation
+ * Hash format: merchant_id + user_ip + merchant_oid + email + payment_amount + user_basket + no_installment + max_installment + currency + test_mode + merchant_salt
+ *
  * @param {Object} params - Payment parameters
  * @param {string} params.merchant_id - Merchant ID
+ * @param {string} params.user_ip - User IP address
  * @param {string} params.merchant_oid - Unique order ID
  * @param {string} params.email - Customer email
  * @param {string} params.payment_amount - Payment amount in kuruş (TRY * 100)
- * @param {string} params.merchant_ok_url - Success URL
- * @param {string} params.merchant_fail_url - Fail URL
- * @param {string} params.user_name - Customer name
- * @param {string} params.user_address - Customer address
- * @param {string} params.user_phone - Customer phone
+ * @param {string} params.user_basket - Base64 encoded basket
+ * @param {string} params.no_installment - No installment flag ("0" or "1")
+ * @param {string} params.max_installment - Max installment ("0" for none)
+ * @param {string} params.currency - Currency code ("TL")
+ * @param {string} params.test_mode - Test mode flag ("0" or "1")
  * @param {string} params.merchant_salt - Merchant salt
  * @param {string} params.merchant_key - Merchant key
- * @param {string} params.user_basket - Base64 encoded basket
- * @returns {string} HMAC-SHA256 hash
+ * @returns {string} HMAC-SHA256 hash in base64
  */
-const generatePaymentTokenHash = (params) => {
+export const generatePaymentTokenHash = (params) => {
   const {
     merchant_id,
+    user_ip,
     merchant_oid,
     email,
     payment_amount,
-    merchant_ok_url,
-    merchant_fail_url,
-    user_name,
-    user_address,
-    user_phone,
+    user_basket,
+    no_installment,
+    max_installment,
+    currency,
+    test_mode,
     merchant_salt,
     merchant_key,
-    user_basket,
   } = params;
 
-  // PayTR hash format
+  // PayTR hash format - order is critical!
+  // merchant_id + user_ip + merchant_oid + email + payment_amount + user_basket + no_installment + max_installment + currency + test_mode + merchant_salt
   const hashStr =
     merchant_id +
-    user_basket +
-    "1" + // no_installment (1 = tek çekim)
-    "0" + // max_installment
-    "TRY" + // currency
-    "1" + // test_mode (0 = production, 1 = test - ancak prod'da da test kartı çalışır)
+    user_ip +
     merchant_oid +
-    payment_amount +
-    merchant_ok_url +
-    merchant_fail_url +
-    user_name +
-    user_address +
-    user_phone +
-    user_basket +
     email +
+    payment_amount +
+    user_basket +
+    no_installment +
+    max_installment +
+    currency +
+    test_mode +
     merchant_salt;
+
+  console.log("[PayTR Hash] Hash string components:", {
+    merchant_id,
+    user_ip,
+    merchant_oid,
+    email,
+    payment_amount,
+    user_basket: user_basket?.substring(0, 20) + "...",
+    no_installment,
+    max_installment,
+    currency,
+    test_mode,
+    merchant_salt: merchant_salt?.substring(0, 4) + "***",
+  });
 
   const paytr_token = crypto
     .createHmac("sha256", merchant_key)
@@ -75,7 +88,7 @@ const generatePaymentTokenHash = (params) => {
  * @param {string} merchantSalt - Merchant salt
  * @returns {boolean} True if hash is valid
  */
-const verifyCallbackHash = (
+export const verifyCallbackHash = (
   merchantOid,
   status,
   totalAmount,
@@ -95,10 +108,11 @@ const verifyCallbackHash = (
 
 /**
  * Generate merchant_oid (unique order ID)
- * Format: YYYYMMDD-HHMMSS-RANDOM
+ * Format: YYYYMMDDHHMMSSRANDOM (alphanumeric only, no special characters)
+ * PayTR requires alphanumeric characters only
  * @returns {string} Unique merchant order ID
  */
-const generateMerchantOid = () => {
+export const generateMerchantOid = () => {
   const now = new Date();
   const date = now.toISOString().slice(0, 10).replace(/-/g, "");
   const time = now.toISOString().slice(11, 19).replace(/:/g, "");
@@ -106,7 +120,8 @@ const generateMerchantOid = () => {
     .toString()
     .padStart(4, "0");
 
-  return `${date}-${time}-${random}`;
+  // PayTR requires alphanumeric only - no dashes or special characters
+  return `SVD${date}${time}${random}`;
 };
 
 /**
@@ -118,7 +133,7 @@ const generateMerchantOid = () => {
  * @param {number} item.quantity - Product quantity
  * @returns {string} Base64 encoded basket JSON
  */
-const encodeUserBasket = (items) => {
+export const encodeUserBasket = (items) => {
   const basket = items.map((item) => [
     item.name || "Ürün",
     (item.price * 100).toFixed(0), // Convert TRY to kuruş
@@ -127,11 +142,4 @@ const encodeUserBasket = (items) => {
 
   const basketJson = JSON.stringify(basket);
   return Buffer.from(basketJson).toString("base64");
-};
-
-module.exports = {
-  generatePaymentTokenHash,
-  verifyCallbackHash,
-  generateMerchantOid,
-  encodeUserBasket,
 };

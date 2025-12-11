@@ -2,11 +2,31 @@
 
 **Proje:** SVD Ambalaj E-Ticaret Platformu
 **Başlangıç Tarihi:** 22 Ekim 2025
-**Son Güncelleme:** 29 Ekim 2025, 10:00
+**Son Güncelleme:** 9 Aralık 2025
 
 ---
 
 ## 🆕 Son Eklenen Özellikler
+
+### 9 Aralık 2025
+1. **💳 Faz 1.5 - PayTR Ödeme Entegrasyonu - ✅ TAMAMLANDI**
+   - PayTR iFrame API entegrasyonu
+   - Kredi kartı ile ödeme desteği
+   - HMAC-SHA256 hash hesaplaması (token authentication)
+   - Test modu ve production modu desteği
+   - Ödeme başarılı/başarısız sayfaları
+   - Backend endpoints:
+     - POST /payment/create-token (iFrame token oluşturma)
+     - POST /payment/callback (PayTR IPN handler)
+     - GET /settings/payment/public (public payment settings)
+   - Admin ayarları:
+     - PayTR aktif/pasif toggle
+     - Test modu toggle
+     - Merchant ID, Key, Salt ayarları
+   - Fiyat hesaplama düzeltmeleri:
+     - calculateItemTotal kullanarak doğru TRY fiyat
+     - Exchange rate çift çarpma sorunu çözüldü
+     - Sepet tutarı ile ödeme tutarı uyumu sağlandı
 
 ### 29 Ekim 2025
 1. **👑 Faz 2.2 - VIP Müşteri Yönetimi - ✅ TAMAMLANDI**
@@ -114,13 +134,12 @@
 
 ## 📊 Durum Özeti
 
-- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), Faz 1.4 (Firebase Auth), Faz 2.1 (B2B Teklif & Numune), Faz 2.2 (VIP Müşteri Yönetimi), Faz 2.3 (Kombo İndirimi), UX İyileştirmeleri, PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon, USD → TRY Otomatik Çevirme
+- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), Faz 1.4 (Firebase Auth), Faz 1.5 (PayTR Ödeme), Faz 2.1 (B2B Teklif & Numune), Faz 2.2 (VIP Müşteri Yönetimi), Faz 2.3 (Kombo İndirimi), UX İyileştirmeleri, PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon, USD → TRY Otomatik Çevirme
 - 🔄 Devam Ediyor: Faz 2.4 (Süper Admin Panel - Phase 1 Tamamlandı, Phase 2 Devam Ediyor)
-- ⏳ Beklemede: Faz 1.5 (PayTR onay bekleniyor)
-- Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı; VIP müşteri sistemi production'da; Kombo indirimi aktif
+- Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı; VIP müşteri sistemi production'da; Kombo indirimi aktif; PayTR kredi kartı ödemesi aktif
 
-**Son Deployment:** 1 Kasım 2025, 18:00 - Production (Firebase Hosting + Functions)
-**Son Commit:** feat: Super Admin Panel Phase 1 - Settings infrastructure and core pages
+**Son Deployment:** 9 Aralık 2025 - Production (Firebase Hosting + Functions)
+**Son Commit:** fix: PayTR payment amount calculation - use calculateItemTotal for correct TRY price
 **Deployed Services:**
 - ✅ Frontend - https://svdfirebase000.web.app
 - ✅ API (us-central1) - https://api-tfi7rlxtca-uc.a.run.app
@@ -133,6 +152,7 @@
 - ✅ **Faz 1.2** - Ürün Arama ve Filtreleme (6/6 görev)
 - ✅ **Faz 1.3** - Sipariş Takip Numarası (6/6 görev)
 - ✅ **Faz 1.4** - Firebase Auth Sistemi (13/13 görev)
+- ✅ **Faz 1.5** - PayTR Ödeme Entegrasyonu (11/11 görev - 9 Aralık 2025)
 - ✅ **Faz 2.1** - B2B Teklif & Numune Sistemi (11/11 görev)
 - ✅ **Faz 2.2** - VIP Müşteri Yönetimi ve Segmentasyon (9/9 görev)
 - ✅ **Faz 2.3** - Başlık-Şişe Kombo İndirimi (8/8 görev - 31 Ekim 2025)
@@ -470,24 +490,25 @@ userAddresses/
 ---
 
 ### 1.5 Ödeme Entegrasyonu (PayTR) 💳
-**Durum:** 🔄 Hazırlık Aşamasında
+**Durum:** ✅ TAMAMLANDI
 **Tahmini Süre:** 4-5 gün
+**Başlangıç:** 4 Aralık 2025
+**Bitiş:** 9 Aralık 2025
 **Bağımlılık:** 1.1 tamamlanmalı (ödeme tutarı kur ile hesaplanacak)
 **Öncelik:** Yüksek
-**Not:** PayTR başvurusu yapıldı, onay bekleniyor
 
 #### Görevler:
-- [ ] PayTR hesap onayı ve API anahtarları alma
-- [ ] PayTR iframe entegrasyon türü seçimi
-- [ ] Ödeme başlatma endpoint'i (TL tutarı ile)
-- [ ] PayTR iframe token oluşturma
-- [ ] Callback/IPN handler (PayTR bildirimleri)
-- [ ] Ödeme sonuç sayfası
-- [ ] Başarısız ödeme yönetimi
-- [ ] Test ortamı kurulumu (test kartları)
-- [ ] Ödeme logları
-- [ ] Ödeme kaydında USD/TL dönüşüm bilgisi
-- [ ] Canlı moda geçiş
+- [x] PayTR hesap onayı ve API anahtarları alma
+- [x] PayTR iframe entegrasyon türü seçimi
+- [x] Ödeme başlatma endpoint'i (TL tutarı ile)
+- [x] PayTR iframe token oluşturma
+- [x] Callback/IPN handler (PayTR bildirimleri)
+- [x] Ödeme sonuç sayfası
+- [x] Başarısız ödeme yönetimi
+- [x] Test ortamı kurulumu (test kartları)
+- [x] Ödeme kaydında USD/TL dönüşüm bilgisi
+- [x] Admin ayarlar sayfası (PayTR credentials)
+- [x] Fiyat hesaplama düzeltmeleri
 
 #### Dosyalar:
 Backend:
@@ -1379,16 +1400,18 @@ Gerekli yeni koleksiyonlar:
 
 ## 🎯 Aktif Sprint (Güncel Odak)
 
-**Sprint:** Sprint 3 - VIP & Ödeme Sistemi
-**Başlangıç:** 23 Ekim 2025
-**Bitiş:** 10 Kasım 2025
+**Sprint:** Sprint 4 - Ödeme Sistemi & Admin Panel
+**Başlangıç:** 1 Aralık 2025
+**Bitiş:** 15 Aralık 2025
 **Tamamlanan:**
 - ✅ Faz 1.1 - Döviz Kuru Sistemi
 - ✅ Faz 1.2 - Ürün Arama ve Filtreleme
 - ✅ Faz 1.3 - Sipariş Takip Numarası
 - ✅ Faz 1.4 - Firebase Auth Sistemi (tam)
+- ✅ Faz 1.5 - PayTR Ödeme Entegrasyonu (tam - 9 Aralık 2025)
 - ✅ Faz 2.1 - B2B Teklif & Numune Sistemi (tam)
 - ✅ Faz 2.2 - VIP Müşteri Yönetimi ve Segmentasyon (tam)
+- ✅ Faz 2.3 - Başlık-Şişe Kombo İndirimi (tam)
 - ✅ PDF Export Sistemi
 - ✅ Checkout Sayfası İyileştirmesi
 - ✅ UX İyileştirmeleri (cart fix, checkout auto-fill, modern quantity selector)
@@ -1398,32 +1421,24 @@ Gerekli yeni koleksiyonlar:
 - ✅ Production Deployment (Firebase Hosting + Functions)
 
 **Odak (güncel):**
-- ⏳ PayTR ödeme entegrasyonu (1.5) - Onay bekleniyor
+- 🔄 Faz 2.4 - Süper Admin Panel (devam)
 - 🔄 ESLint uyarıları temizliği
 
 ### Bir Sonraki Adımlar (Önümüzde Neler Var?)
-Kısa vadeli (PayTR onayı geldiğinde):
-- [ ] PayTR sandbox entegrasyonu
-- [ ] Ödeme token oluşturma ve iframe
-- [ ] Ödeme callback ve IPN handler
-- [ ] Ödeme sonuç sayfaları (success/fail)
-- [ ] Test kartları ile ödeme testleri
-- [ ] Production'a geçiş
+Kısa vadeli:
+- [ ] Süper Admin Panel Phase 2 tamamlama
+- [ ] E-posta bildirim sistemi iyileştirmeleri
+- [ ] PayTR production modu aktivasyonu (canlı ödeme)
 
 Orta vadeli (sonraki sprint):
-- [x] B2B Teklif & Numune Sistemi (Faz 2.1) - ✅ TAMAMLANDI
-  - [x] Admin onay/red sistemi
-  - [x] PDF oluşturma
-  - [x] E-posta bildirimleri
-  - [x] Teklifi siparişe dönüştürme
-- [x] VIP Müşteri Yönetimi ve Segmentasyon (Faz 2.2) - ✅ TAMAMLANDI
-- [ ] Başlık-Şişe Kombinasyon İndirimi (Faz 2.3)
-- [ ] Süper Admin Panel (Faz 2.4)
+- [ ] Promosyon/kampanya kodu sistemi (Faz 2.5)
+- [ ] Gelişmiş raporlama ve analitik (Faz 3.1)
+- [ ] SEO optimizasyonları (Faz 3.3)
 
 Tamamlayıcı iyileştirmeler:
 - [ ] Kalan minör sayfalarda next/image dönüşümleri ve lazy loading
-- [ ] E-posta bildirim sistemi (teklif, sipariş, vb.)
-- [ ] Promosyon/kampanya kodu sistemi
+- [ ] Test coverage artırımı
+- [ ] Performance optimizasyonları
 
 ---
 
@@ -1443,5 +1458,5 @@ Tamamlayıcı iyileştirmeler:
 
 ---
 
-**Son Güncelleme:** 22 Ekim 2025
-**Bir sonraki review:** 1 Kasım 2025
+**Son Güncelleme:** 9 Aralık 2025
+**Bir sonraki review:** 15 Aralık 2025

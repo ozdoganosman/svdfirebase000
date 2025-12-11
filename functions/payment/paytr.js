@@ -3,13 +3,14 @@
  * Handles PayTR API interactions
  */
 
-const axios = require("axios");
-const { getPayTRConfig, getPayTRApiUrl, getPayTRIframeUrl } = require("./config");
-const {
+import axios from "axios";
+import { getPayTRConfig, getPayTRApiUrl, getPayTRIframeUrl } from "./config.js";
+import {
   generatePaymentTokenHash,
   generateMerchantOid,
   encodeUserBasket,
-} = require("./hash");
+  verifyCallbackHash,
+} from "./hash.js";
 
 /**
  * Create PayTR iframe payment token
@@ -24,10 +25,13 @@ const {
  * @param {string} paymentData.ip_address - Customer IP address
  * @returns {Promise<Object>} Payment token response
  */
-const createIframeToken = async (paymentData) => {
+export const createIframeToken = async (paymentData) => {
   try {
-    const config = getPayTRConfig();
+    console.log("[PayTR] Starting createIframeToken");
+    const config = await getPayTRConfig();
+    console.log("[PayTR] Config loaded:", { merchant_id: config.merchant_id, test_mode: config.test_mode, enabled: config.enabled });
     const merchantOid = generateMerchantOid();
+    console.log("[PayTR] Generated merchantOid:", merchantOid);
 
     // Convert TRY to kuruş (multiply by 100)
     const paymentAmountKurus = Math.round(paymentData.total_amount * 100).toString();
@@ -35,20 +39,26 @@ const createIframeToken = async (paymentData) => {
     // Encode user basket
     const userBasket = encodeUserBasket(paymentData.cart_items);
 
-    // Generate token hash
+    // Define constants for hash and request
+    const no_installment = "1";
+    const max_installment = "0";
+    const currency = "TL";
+    const test_mode = config.test_mode ? "1" : "0";
+
+    // Generate token hash - parameters must match exactly what's sent to PayTR
     const paytr_token = generatePaymentTokenHash({
       merchant_id: config.merchant_id,
+      user_ip: paymentData.ip_address,
       merchant_oid: merchantOid,
       email: paymentData.customer.email,
       payment_amount: paymentAmountKurus,
-      merchant_ok_url: config.success_url,
-      merchant_fail_url: config.fail_url,
-      user_name: paymentData.customer.name,
-      user_address: paymentData.customer.address,
-      user_phone: paymentData.customer.phone,
+      user_basket: userBasket,
+      no_installment: no_installment,
+      max_installment: max_installment,
+      currency: currency,
+      test_mode: test_mode,
       merchant_salt: config.merchant_salt,
       merchant_key: config.merchant_key,
-      user_basket: userBasket,
     });
 
     // Prepare request data
@@ -61,17 +71,20 @@ const createIframeToken = async (paymentData) => {
       paytr_token: paytr_token,
       user_basket: userBasket,
       debug_on: config.test_mode ? "1" : "0",
-      no_installment: "1",
-      max_installment: "0",
+      no_installment: no_installment,
+      max_installment: max_installment,
       user_name: paymentData.customer.name,
       user_address: paymentData.customer.address,
       user_phone: paymentData.customer.phone,
       merchant_ok_url: config.success_url,
       merchant_fail_url: config.fail_url,
       timeout_limit: "30",
-      currency: "TL",
-      test_mode: config.test_mode ? "1" : "0",
+      currency: currency,
+      test_mode: test_mode,
     };
+
+    console.log("[PayTR] Making API request to:", getPayTRApiUrl());
+    console.log("[PayTR] Request data:", { ...requestData, paytr_token: "[HIDDEN]" });
 
     // Make API request
     const response = await axios.post(
@@ -84,6 +97,8 @@ const createIframeToken = async (paymentData) => {
       },
     );
 
+    console.log("[PayTR] API response:", response.data);
+
     // Check response
     if (response.data.status === "success") {
       return {
@@ -93,13 +108,14 @@ const createIframeToken = async (paymentData) => {
         merchantOid: merchantOid,
       };
     } else {
+      console.error("[PayTR] Token creation failed:", response.data.reason);
       return {
         success: false,
         error: response.data.reason || "Token oluşturulamadı",
       };
     }
   } catch (error) {
-    console.error("PayTR token creation error:", error);
+    console.error("[PayTR] Token creation error:", error.message);
     return {
       success: false,
       error: error.message || "PayTR ile bağlantı kurulamadı",
@@ -116,10 +132,9 @@ const createIframeToken = async (paymentData) => {
  * @param {string} callbackData.hash - Hash from PayTR
  * @returns {Object} Verification result
  */
-const verifyCallback = (callbackData) => {
+export const verifyCallback = async (callbackData) => {
   try {
-    const config = getPayTRConfig();
-    const { verifyCallbackHash } = require("./hash");
+    const config = await getPayTRConfig();
 
     const isValid = verifyCallbackHash(
       callbackData.merchant_oid,
@@ -142,9 +157,4 @@ const verifyCallback = (callbackData) => {
       error: error.message,
     };
   }
-};
-
-module.exports = {
-  createIframeToken,
-  verifyCallback,
 };

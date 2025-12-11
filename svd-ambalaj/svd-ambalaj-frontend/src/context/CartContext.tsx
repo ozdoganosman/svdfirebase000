@@ -72,6 +72,8 @@ export type CartContextValue = {
   comboDiscount: number; // Total combo discount in TRY
   comboMatches: ComboMatch[]; // Combo matches found
   comboDiscountLabel: string; // Label for combo discount (e.g., "%10" or "$0.02")
+  taxRate: number; // Dynamic tax rate from settings (e.g., 20 for 20%)
+  exchangeRate: number; // Current exchange rate
   getBoxCount: (item: CartItem) => number;
   getTotalItemCount: (item: CartItem) => number;
   getEffectivePrice: (item: CartItem) => number;
@@ -150,6 +152,7 @@ export function CartProvider({ children }: CartProviderProps) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [exchangeRate, setExchangeRate] = useState<number>(34.0); // Fallback rate
+  const [taxRate, setTaxRate] = useState<number>(20); // Default 20% VAT
   const [comboSettings, setComboSettings] = useState<ComboSettings | null>(null);
 
   // Fetch exchange rate on mount
@@ -160,6 +163,27 @@ export function CartProvider({ children }: CartProviderProps) {
         console.error("Failed to fetch exchange rate:", error);
         // Keep fallback rate
       });
+  }, []);
+
+  // Fetch pricing settings (taxRate) on mount
+  useEffect(() => {
+    const fetchPricingSettings = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api-tfi7rlxtca-uc.a.run.app'}/pricing-settings`);
+        if (!response.ok) {
+          console.error("Failed to fetch pricing settings");
+          return;
+        }
+        const data = await response.json();
+        if (data.settings?.taxRate !== undefined) {
+          setTaxRate(data.settings.taxRate);
+        }
+      } catch (error) {
+        console.error("Error fetching pricing settings:", error);
+      }
+    };
+
+    fetchPricingSettings();
   }, []);
 
   // Fetch combo settings on mount
@@ -308,14 +332,6 @@ export function CartProvider({ children }: CartProviderProps) {
     items.reduce((total, item) => total + calculateItemTotal(item), 0);
 
   const addItem = (product: ProductSummary, quantity = 1) => {
-    console.log('➕ Adding to cart:', {
-      title: product.title,
-      productType: product.productType,
-      neckSize: product.neckSize,
-      hasSpecs: !!product.specifications,
-      specsNeckSize: product.specifications?.neckSize,
-    });
-
     setItems((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       const newQuantity = existing ? existing.quantity + quantity : quantity;
@@ -402,14 +418,6 @@ export function CartProvider({ children }: CartProviderProps) {
       discountLabel = `$${discountValue.toFixed(2)}`;
     }
 
-    // Debug: Log all items with their productType and neckSize
-    console.log('🔍 Combo Debug - All cart items:', items.map(item => ({
-      title: item.title,
-      productType: item.productType,
-      neckSize: item.neckSize,
-      specifications: item.specifications,
-    })));
-
     // Group items by neckSize if required
     const itemsByNeckSize: Record<string, CartItem[]> = {};
 
@@ -419,13 +427,11 @@ export function CartProvider({ children }: CartProviderProps) {
 
       // Skip items without productType or not in applicable types
       if (!item.productType || !applicableTypes.includes(item.productType)) {
-        console.log(`⚠️ Skipping item "${item.title}" - productType: ${item.productType} not in applicable types`);
         return;
       }
 
       // If neckSize is required but missing, skip
       if (requireSameNeckSize && !neckSize) {
-        console.log(`⚠️ Skipping item "${item.title}" - neckSize required but missing`);
         return;
       }
 
@@ -437,8 +443,6 @@ export function CartProvider({ children }: CartProviderProps) {
       itemsByNeckSize[key].push({...item, neckSize: neckSize || null});
     });
 
-    console.log('📦 Grouped items by neckSize:', itemsByNeckSize);
-
     // Find combo matches (başlık + şişe with same neckSize)
     Object.keys(itemsByNeckSize).forEach((neckSizeKey) => {
       const itemsInGroup = itemsByNeckSize[neckSizeKey];
@@ -448,7 +452,6 @@ export function CartProvider({ children }: CartProviderProps) {
       const sises = itemsInGroup.filter(i => i.productType === 'şişe');
 
       if (basliks.length === 0 || sises.length === 0) {
-        console.log(`⚠️ No combo for ${neckSizeKey} - başlık: ${basliks.length}, şişe: ${sises.length}`);
         return;
       }
 
@@ -461,7 +464,6 @@ export function CartProvider({ children }: CartProviderProps) {
 
       // Check minimum quantity requirement
       if (matchedQty < minQuantity) {
-        console.log(`⚠️ Combo quantity ${matchedQty} is below minimum ${minQuantity}`);
         return;
       }
 
@@ -480,12 +482,6 @@ export function CartProvider({ children }: CartProviderProps) {
         const priceA = getEffectivePrice(a);
         const priceB = getEffectivePrice(b);
         return priceA - priceB; // Ascending: ucuzdan pahalıya
-      });
-
-      console.log(`🔄 Combo for ${neckSizeKey}:`, {
-        başlıkSorted: sortedBasliks.map(i => ({ title: i.title, price: getEffectivePrice(i), qty: getTotalItemCount(i) })),
-        şişeSorted: sortedSises.map(i => ({ title: i.title, price: getEffectivePrice(i), qty: getTotalItemCount(i) })),
-        matchedQty
       });
 
       let remainingComboQty1 = matchedQty;
@@ -540,38 +536,10 @@ export function CartProvider({ children }: CartProviderProps) {
       });
     });
 
-    console.log('💰 Combo Discount Calculation:', {
-      settings: comboSettings,
-      matches: matches.length,
-      totalDiscount,
-      discountLabel,
-      matchDetails: matches.map(m => ({
-        type: `${m.type1}+${m.type2}`,
-        neckSize: m.neckSize,
-        quantity: m.matchedQuantity,
-        itemBreakdown: m.itemComboQuantities ? Object.entries(m.itemComboQuantities).map(([id, qty]) => {
-          const item = items.find(i => i.id === id);
-          return {
-            id,
-            title: item?.title,
-            comboQty: qty,
-            totalQty: item ? getTotalItemCount(item) : 0,
-            price: item ? getEffectivePrice(item) : 0
-          };
-        }) : []
-      }))
-    });
-
     return { matches, totalDiscount, discountLabel };
   };
 
   const { matches: comboMatches, totalDiscount: comboDiscount, discountLabel: comboDiscountLabel } = calculateComboDiscounts();
-
-  console.log('🛒 Cart Context Values:', {
-    comboMatches: comboMatches.length,
-    comboDiscount,
-    itemCount: items.length,
-  });
 
   const subtotal = calculateSubtotal(items);
   const totalBoxes = items.reduce((total, item) => {
@@ -596,6 +564,8 @@ export function CartProvider({ children }: CartProviderProps) {
     comboDiscount,
     comboMatches,
     comboDiscountLabel,
+    taxRate,
+    exchangeRate,
     getBoxCount,
     getTotalItemCount,
     getEffectivePrice,

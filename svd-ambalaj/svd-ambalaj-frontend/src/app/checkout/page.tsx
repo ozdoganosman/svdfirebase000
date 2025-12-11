@@ -22,6 +22,13 @@ type CheckoutFormState = {
   notes: string;
 };
 
+type PaymentMethod = "bank_transfer" | "credit_card";
+
+type PaymentSettings = {
+  paytrEnabled: boolean;
+  paytrTestMode: boolean;
+};
+
 interface SavedAddress {
   id: string;
   title: string;
@@ -56,6 +63,7 @@ function CheckoutPageContent() {
     totalItems,
     comboDiscount,
     comboMatches,
+    taxRate,
     getEffectivePrice,
     getTotalItemCount,
     calculateItemTotal,
@@ -70,9 +78,31 @@ function CheckoutPageContent() {
   const [useNewAddress, setUseNewAddress] = useState(false);
   const [profileDataLoaded, setProfileDataLoaded] = useState(false);
   const [quoteId, setQuoteId] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("bank_transfer");
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   useEffect(() => {
     getCurrentRate().then(rate => setExchangeRate(rate.rate)).catch(() => setExchangeRate(null));
+  }, []);
+
+  // Fetch payment settings
+  useEffect(() => {
+    const fetchPaymentSettings = async () => {
+      try {
+        const response = await fetch(`${apiBase}/settings/payment/public`);
+        if (response.ok) {
+          const data = await response.json();
+          setPaymentSettings({
+            paytrEnabled: data.paytrEnabled ?? false,
+            paytrTestMode: data.paytrTestMode ?? true,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching payment settings:", error);
+      }
+    };
+    fetchPaymentSettings();
   }, []);
 
   // Load quote data if fromQuote param exists
@@ -241,6 +271,7 @@ function CheckoutPageContent() {
         currency: "TRY",
       },
       comboMatches: comboMatches || [],
+      paymentMethod,
     };
 
     try {
@@ -272,6 +303,56 @@ function CheckoutPageContent() {
         }
       }
 
+      // If credit card payment, redirect to PayTR
+      if (paymentMethod === "credit_card" && paymentSettings?.paytrEnabled) {
+        setProcessingPayment(true);
+        try {
+          const totalAmount = (subtotal - (comboDiscount || 0)) * (1 + taxRate / 100);
+          const paymentResponse = await fetch(`${apiBase}/payment/create-token`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orderId,
+              customer: {
+                email: form.email,
+                name: form.name,
+                phone: form.phone,
+                address: form.address,
+              },
+              // PayTR expects cart_items - send each item with its total price
+              // Note: subtotal and calculateItemTotal are already in TRY
+              cart_items: items.map((item) => ({
+                name: item.title,
+                price: calculateItemTotal(item), // Total price for this item in TRY
+                quantity: 1, // Price already includes quantity calculation
+              })),
+              total_amount: totalAmount, // (subtotal - comboDiscount) * (1 + taxRate/100) in TRY
+            }),
+          });
+
+          if (!paymentResponse.ok) {
+            throw new Error("Payment token creation failed");
+          }
+
+          const paymentResult = await paymentResponse.json();
+
+          if (paymentResult.success && paymentResult.token) {
+            // Redirect to PayTR payment page
+            router.push(`/checkout/payment?token=${paymentResult.token}`);
+            return;
+          } else {
+            throw new Error(paymentResult.error || "Ödeme başlatılamadı");
+          }
+        } catch (paymentError) {
+          console.error("Payment initialization failed:", paymentError);
+          setStatus("error");
+          setMessage("Ödeme başlatılırken bir hata oluştu. Lütfen tekrar deneyin veya farklı bir ödeme yöntemi seçin.");
+          setProcessingPayment(false);
+          return;
+        }
+      }
+
+      // For bank transfer, redirect to success page
       clearCart();
       setForm(defaultState);
       router.push(`/checkout/success?id=${orderId}&number=${orderNumber || orderId}`);
@@ -480,6 +561,79 @@ function CheckoutPageContent() {
               </>
             )}
 
+            {/* Payment Method Selection */}
+            <div className="border-t pt-6 mt-6">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">Ödeme Yöntemi</h3>
+              <div className="space-y-3">
+                {/* Bank Transfer Option */}
+                <label
+                  className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition ${
+                    paymentMethod === "bank_transfer"
+                      ? "border-amber-500 bg-amber-50"
+                      : "border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="bank_transfer"
+                    checked={paymentMethod === "bank_transfer"}
+                    onChange={() => setPaymentMethod("bank_transfer")}
+                    className="mt-1 h-4 w-4 text-amber-600 focus:ring-amber-500"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🏦</span>
+                      <span className="font-semibold text-slate-900">Havale / EFT</span>
+                    </div>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Sipariş onayından sonra banka hesap bilgileri iletilecektir.
+                    </p>
+                  </div>
+                </label>
+
+                {/* Credit Card Option - Only show if PayTR is enabled */}
+                {paymentSettings?.paytrEnabled && (
+                  <label
+                    className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition ${
+                      paymentMethod === "credit_card"
+                        ? "border-amber-500 bg-amber-50"
+                        : "border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="credit_card"
+                      checked={paymentMethod === "credit_card"}
+                      onChange={() => setPaymentMethod("credit_card")}
+                      className="mt-1 h-4 w-4 text-amber-600 focus:ring-amber-500"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">💳</span>
+                        <span className="font-semibold text-slate-900">Kredi Kartı</span>
+                        {paymentSettings.paytrTestMode && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                            Test Modu
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-slate-600 mt-1">
+                        PayTR güvenli ödeme altyapısı ile anında ödeme yapın.
+                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        <span className="text-xs text-slate-500">3D Secure ile güvenli ödeme</span>
+                      </div>
+                    </div>
+                  </label>
+                )}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label htmlFor="notes" className="text-sm font-semibold text-slate-700">
                 Ek Notlar
@@ -503,10 +657,14 @@ function CheckoutPageContent() {
 
             <button
               type="submit"
-              disabled={status === "submitting"}
+              disabled={status === "submitting" || processingPayment}
               className="w-full rounded-full bg-amber-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-amber-500/30 transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {status === "submitting" ? "Gönderiliyor..." : "Sipariş Talebini Gönder"}
+              {status === "submitting" || processingPayment
+                ? (processingPayment ? "Ödeme sayfasına yönlendiriliyor..." : "Gönderiliyor...")
+                : paymentMethod === "credit_card"
+                ? "Ödemeye Geç"
+                : "Sipariş Talebini Gönder"}
             </button>
           </form>
 
@@ -574,15 +732,15 @@ function CheckoutPageContent() {
                 </div>
               )}
               <div className="flex items-center justify-between text-sm text-slate-500">
-                <span>KDV (%20)</span>
+                <span>KDV (%{taxRate})</span>
                 <span>
-                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (subtotal - (comboDiscount || 0)) * 0.20) : `$${((subtotal - (comboDiscount || 0)) * 0.20).toFixed(2)}`}
+                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (subtotal - (comboDiscount || 0)) * (taxRate / 100)) : `$${((subtotal - (comboDiscount || 0)) * (taxRate / 100)).toFixed(2)}`}
                 </span>
               </div>
               <div className="flex items-center justify-between border-t border-slate-200 pt-3 text-base font-bold text-amber-700">
                 <span>Genel Toplam (KDV Dahil)</span>
                 <span>
-                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (subtotal - (comboDiscount || 0)) * 1.20) : `$${((subtotal - (comboDiscount || 0)) * 1.20).toFixed(2)}`}
+                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (subtotal - (comboDiscount || 0)) * (1 + taxRate / 100)) : `$${((subtotal - (comboDiscount || 0)) * (1 + taxRate / 100)).toFixed(2)}`}
                 </span>
               </div>
               <p className="mt-2 text-xs text-slate-500">

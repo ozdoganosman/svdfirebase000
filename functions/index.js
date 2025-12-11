@@ -23,6 +23,7 @@ import * as comboSettings from "./db/combo-settings.js";
 import * as settings from "./db/settings.js";
 import * as adminRoles from "./db/admin-roles.js";
 import * as emailSender from "./email/sender.js";
+import * as paytr from "./payment/paytr.js";
 import { fetchTCMBRate } from "./services/exchange-rate.js";
 import { db } from "./db/client.js";
 import admin from "firebase-admin";
@@ -1683,13 +1684,42 @@ app.post("/exchange-rate/update", requireAuth, async (_req, res) => {
     functions.logger.info("Manual exchange rate update requested");
     const rateData = await fetchTCMBRate();
     const result = await exchangeRates.saveExchangeRate(rateData);
-    res.status(200).json({ 
-      message: "Exchange rate updated successfully", 
-      exchangeRate: result.data 
+    res.status(200).json({
+      message: "Exchange rate updated successfully",
+      exchangeRate: result.data
     });
   } catch (error) {
     functions.logger.error("Error manually updating exchange rate", error);
     res.status(500).json({ error: "Failed to update exchange rate." });
+  }
+});
+
+// Manual exchange rate update (admin enters custom rate)
+app.post("/admin/exchange-rate/manual", requireAuth, async (req, res) => {
+  try {
+    const { rate } = req.body;
+
+    if (!rate || !Number.isFinite(Number(rate)) || Number(rate) <= 0) {
+      return res.status(400).json({ error: "Valid rate is required" });
+    }
+
+    const rateData = {
+      currency: "USD",
+      rate: Number(rate),
+      source: "manual",
+      effectiveDate: new Date().toISOString().split("T")[0],
+    };
+
+    const result = await exchangeRates.saveExchangeRate(rateData);
+
+    functions.logger.info("Manual exchange rate set", { rate: rateData.rate });
+    res.status(200).json({
+      message: "Exchange rate updated manually",
+      exchangeRate: result.data
+    });
+  } catch (error) {
+    functions.logger.error("Error setting manual exchange rate", error);
+    res.status(500).json({ error: "Failed to set exchange rate." });
   }
 });
 
@@ -1822,6 +1852,32 @@ app.post("/admin/migrate-orders", async (req, res) => {
 
 // ==================== SETTINGS ENDPOINTS ====================
 
+// Public endpoint to get pricing settings (for frontend to display correct VAT)
+app.get("/pricing-settings", async (_req, res) => {
+  try {
+    const pricingSettings = await settings.getSiteSettings("pricing");
+
+    // Only return public pricing info (not sensitive data)
+    const publicSettings = {
+      taxRate: pricingSettings?.taxRate || 20,
+      currency: pricingSettings?.currency || "TRY",
+      showPricesWithTax: pricingSettings?.showPricesWithTax ?? true,
+    };
+
+    res.status(200).json({ settings: publicSettings });
+  } catch (error) {
+    functions.logger.error("Failed to get pricing settings", error);
+    // Return defaults on error
+    res.status(200).json({
+      settings: {
+        taxRate: 20,
+        currency: "TRY",
+        showPricesWithTax: true
+      }
+    });
+  }
+});
+
 // Get all site settings (authenticated users)
 app.get("/settings", requireAuth, async (_req, res) => {
   try {
@@ -1830,6 +1886,26 @@ app.get("/settings", requireAuth, async (_req, res) => {
   } catch (error) {
     functions.logger.error("Failed to get settings", error);
     res.status(500).json({ error: "Failed to get settings" });
+  }
+});
+
+// Get public payment settings (no auth required - for checkout page)
+app.get("/settings/payment/public", async (_req, res) => {
+  try {
+    const paymentSettings = await settings.getSiteSettings("payment");
+
+    // Only return non-sensitive payment settings
+    res.status(200).json({
+      paytrEnabled: paymentSettings?.paytrEnabled ?? false,
+      paytrTestMode: paymentSettings?.paytrTestMode ?? true,
+    });
+  } catch (error) {
+    functions.logger.error("Failed to get public payment settings", error);
+    // Return defaults on error
+    res.status(200).json({
+      paytrEnabled: false,
+      paytrTestMode: true,
+    });
   }
 });
 
@@ -2025,6 +2101,42 @@ app.put("/admin/content/:section", requireAuth, requireAdmin, async (req, res) =
 
 // ==================== ADMIN ROLES ENDPOINTS ====================
 
+// Bootstrap first super admin (only works if no admins exist)
+app.post("/admin/bootstrap", requireAuth, async (req, res) => {
+  try {
+    // Check if any admin already exists
+    const existingAdmins = await adminRoles.getAllAdmins();
+    if (existingAdmins && existingAdmins.length > 0) {
+      return res.status(403).json({ error: "Admin already exists. Bootstrap not allowed." });
+    }
+
+    // Create first super admin
+    const userId = req.user.uid;
+    const roleData = {
+      role: "super_admin",
+      permissions: {
+        manageSettings: true,
+        manageProducts: true,
+        manageOrders: true,
+        manageUsers: true,
+        manageRoles: true,
+      },
+    };
+
+    const role = await adminRoles.setAdminRole(userId, roleData, "bootstrap");
+    functions.logger.info("Bootstrap: First super admin created", { userId, email: req.user.email });
+
+    res.status(200).json({
+      success: true,
+      message: "First super admin created successfully",
+      role
+    });
+  } catch (error) {
+    functions.logger.error("Bootstrap failed", error);
+    res.status(500).json({ error: "Bootstrap failed: " + error.message });
+  }
+});
+
 // Get all admin users (super admin only)
 app.get("/admin/roles", requireAuth, requireSuperAdmin, async (_req, res) => {
   try {
@@ -2093,6 +2205,134 @@ app.delete("/admin/roles/:userId", requireAuth, requireSuperAdmin, async (req, r
   } catch (error) {
     functions.logger.error("Failed to delete admin role", error);
     res.status(500).json({ error: "Failed to delete admin role" });
+  }
+});
+
+// ==================== EMAIL TEST ENDPOINT ====================
+
+// Send test email (super admin only)
+app.post("/admin/email/test", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const { to } = req.body;
+
+    if (!to || typeof to !== "string" || !to.includes("@")) {
+      return res.status(400).json({ error: "Valid email address is required" });
+    }
+
+    await emailSender.sendTestEmail(to);
+
+    functions.logger.info("Test email sent", { to, by: req.admin.email });
+    res.status(200).json({ success: true, message: `Test email sent to ${to}` });
+  } catch (error) {
+    functions.logger.error("Failed to send test email", error);
+    res.status(500).json({ error: "Failed to send test email: " + error.message });
+  }
+});
+
+// ==================== PAYMENT ENDPOINTS ====================
+
+// Create PayTR payment token
+app.post("/payment/create-token", async (req, res) => {
+  try {
+    const { orderId, customer, cart_items, total_amount } = req.body;
+
+    functions.logger.info("Payment token request received", { orderId, customer, cart_items_count: cart_items?.length, total_amount });
+
+    if (!orderId || !customer || !cart_items || !total_amount) {
+      functions.logger.warn("Missing required fields", { orderId: !!orderId, customer: !!customer, cart_items: !!cart_items, total_amount: !!total_amount });
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Get client IP
+    const ip_address = req.headers["x-forwarded-for"]?.split(",")[0] || req.ip || "127.0.0.1";
+    functions.logger.info("Client IP", { ip_address });
+
+    const result = await paytr.createIframeToken({
+      cart_items,
+      customer: {
+        email: customer.email,
+        name: customer.name,
+        phone: customer.phone || "0000000000",
+        address: customer.address || "Adres belirtilmedi",
+      },
+      total_amount,
+      ip_address,
+    });
+
+    functions.logger.info("PayTR createIframeToken result", { success: result.success, error: result.error, hasToken: !!result.token });
+
+    if (result.success) {
+      // Store payment info in order
+      await orders.updateOrder(orderId, {
+        paymentMethod: "credit_card",
+        paymentStatus: "pending",
+        paymentMerchantOid: result.merchantOid,
+      });
+
+      res.json({
+        success: true,
+        token: result.token,
+        merchantOid: result.merchantOid,
+      });
+    } else {
+      functions.logger.warn("PayTR token creation failed", { error: result.error });
+      res.status(400).json({
+        success: false,
+        error: result.error,
+      });
+    }
+  } catch (error) {
+    functions.logger.error("Payment token creation failed with exception", { message: error.message, stack: error.stack });
+    res.status(500).json({ error: "Payment token creation failed: " + error.message });
+  }
+});
+
+// PayTR callback endpoint
+app.post("/payment/callback", async (req, res) => {
+  try {
+    const callbackData = req.body;
+    functions.logger.info("PayTR callback received", callbackData);
+
+    const verification = await paytr.verifyCallback(callbackData);
+
+    if (!verification.valid) {
+      functions.logger.error("PayTR callback verification failed");
+      return res.send("FAIL");
+    }
+
+    // Find order by merchant_oid
+    const ordersSnapshot = await db.collection("orders")
+      .where("paymentMerchantOid", "==", callbackData.merchant_oid)
+      .limit(1)
+      .get();
+
+    if (ordersSnapshot.empty) {
+      functions.logger.error("Order not found for merchant_oid:", callbackData.merchant_oid);
+      return res.send("OK"); // Still send OK to prevent retries
+    }
+
+    const orderDoc = ordersSnapshot.docs[0];
+    const orderId = orderDoc.id;
+
+    if (callbackData.status === "success") {
+      await orders.updateOrder(orderId, {
+        paymentStatus: "paid",
+        paymentCompletedAt: new Date().toISOString(),
+        status: "confirmed",
+      });
+      functions.logger.info("Payment successful for order:", orderId);
+    } else {
+      await orders.updateOrder(orderId, {
+        paymentStatus: "failed",
+        paymentFailedAt: new Date().toISOString(),
+      });
+      functions.logger.info("Payment failed for order:", orderId);
+    }
+
+    res.send("OK");
+  } catch (error) {
+    functions.logger.error("PayTR callback processing failed", error);
+    res.send("OK"); // Still send OK to prevent retries
   }
 });
 

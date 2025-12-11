@@ -85,3 +85,22 @@ export async function sendNewSampleAdminEmail(sample, adminEmail) {
   const { subject, html, text } = templates.newSampleAdminTemplate(sample);
   return sendEmail(adminEmail, subject, html, text);
 }
+
+/**
+ * Send test email to verify SMTP configuration
+ */
+export async function sendTestEmail(to) {
+  const subject = "SVD Ambalaj - Test E-postası";
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h1 style="color: #f59e0b;">Test E-postası</h1>
+      <p>Bu e-posta, SVD Ambalaj admin panelinden SMTP ayarlarınızı test etmek için gönderilmiştir.</p>
+      <p>E-posta ayarlarınız doğru bir şekilde yapılandırılmış.</p>
+      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+      <p style="color: #6b7280; font-size: 12px;">Bu bir test e-postasıdır. Herhangi bir işlem yapmanıza gerek yoktur.</p>
+    </div>
+  `;
+  const text = "Bu e-posta, SVD Ambalaj admin panelinden SMTP ayarlarınızı test etmek için gönderilmiştir. E-posta ayarlarınız doğru bir şekilde yapılandırılmış.";
+
+  return sendEmail(to, subject, html, text);
+}

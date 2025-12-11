@@ -97,16 +97,16 @@ function PaymentPageContent() {
           </div>
 
           {/* iframe container */}
-          <div className="relative" style={{ minHeight: "600px" }}>
+          <div className="relative" style={{ minHeight: "800px" }}>
             {iframeUrl && (
               <iframe
                 src={iframeUrl}
                 id="paytriframe"
                 frameBorder="0"
-                scrolling="no"
+                scrolling="yes"
                 style={{
                   width: "100%",
-                  height: "600px",
+                  height: "800px",
                   border: "none",
                 }}
                 title="PayTR Ödeme"

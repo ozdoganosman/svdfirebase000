@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/admin-api";
+import { clearRateCache } from "@/lib/currency";
 import {
   SettingsSection,
   SettingsField,
@@ -87,6 +88,7 @@ export default function ExchangeRatesPage() {
       setError(null);
       setSuccessMessage(null);
       await apiFetch("/exchange-rate/update", { method: "POST" });
+      clearRateCache(); // Clear cached rate so frontend fetches new rate
       setSuccessMessage("Döviz kuru TCMB&apos;den başarıyla güncellendi");
       await loadCurrentRate();
     } catch (err) {
@@ -109,12 +111,12 @@ export default function ExchangeRatesPage() {
       setError(null);
       setSuccessMessage(null);
 
-      // Manual update - we'll need to add this endpoint
       await apiFetch("/admin/exchange-rate/manual", {
         method: "POST",
         body: JSON.stringify({ rate }),
       });
 
+      clearRateCache(); // Clear cached rate so frontend fetches new rate
       setSuccessMessage("Döviz kuru manuel olarak güncellendi");
       await loadCurrentRate();
     } catch (err) {
@@ -137,9 +139,9 @@ export default function ExchangeRatesPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">Döviz Kurları</h2>
+        <h2 className="text-xl font-bold text-slate-900">💱 Döviz Kurları</h2>
         <p className="text-sm text-slate-600 mt-1">
           USD/TRY döviz kurunu yönetin ve geçmiş kurları görüntüleyin
         </p>

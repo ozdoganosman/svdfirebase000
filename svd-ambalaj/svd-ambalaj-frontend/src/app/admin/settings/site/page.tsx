@@ -98,8 +98,8 @@ export default function SiteSettingsPage() {
   }
 
   return (
-    <>
-      <div className="p-8">
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="p-6">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-slate-900">Site Ayarları</h2>
           <p className="text-sm text-slate-600 mt-1">
@@ -235,6 +235,6 @@ export default function SiteSettingsPage() {
         onCancel={handleCancel}
         saving={isSaving}
       />
-    </>
+    </div>
   );
 }

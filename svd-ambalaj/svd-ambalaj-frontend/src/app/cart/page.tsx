@@ -49,6 +49,8 @@ export default function CartPage() {
     comboDiscount,
     comboMatches,
     comboDiscountLabel,
+    taxRate,
+    exchangeRate: cartExchangeRate,
     getEffectivePrice,
     getAppliedTier,
     getNextTier,
@@ -938,14 +940,14 @@ export default function CartPage() {
                 )}
 
                 <div className="flex items-center justify-between text-slate-500 pt-2 border-t border-amber-100">
-                  <dt>KDV (%20)</dt>
-                  <dd>{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (vipSubtotal - comboDiscount) * 0.20) : "₺" + ((vipSubtotal - comboDiscount) * 0.20).toLocaleString("tr-TR")}</dd>
+                  <dt>KDV (%{taxRate})</dt>
+                  <dd>{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (vipSubtotal - comboDiscount) * (taxRate / 100)) : "₺" + ((vipSubtotal - comboDiscount) * (taxRate / 100)).toLocaleString("tr-TR")}</dd>
                 </div>
               </dl>
               <div className="mt-6 border-t border-amber-100 pt-4">
                 <div className="flex items-center justify-between text-base font-bold text-amber-700">
                   <span>Genel Toplam (KDV Dahil)</span>
-                  <span>{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, ((vipSubtotal - comboDiscount) * 1.20) + (totalItems >= 50000 ? 0 : totalBoxes * 120)) : "₺" + (((vipSubtotal - comboDiscount) * 1.20) + (totalItems >= 50000 ? 0 : totalBoxes * 120)).toLocaleString("tr-TR")}</span>
+                  <span>{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, ((vipSubtotal - comboDiscount) * (1 + taxRate / 100)) + (totalItems >= 50000 ? 0 : totalBoxes * 120)) : "₺" + (((vipSubtotal - comboDiscount) * (1 + taxRate / 100)) + (totalItems >= 50000 ? 0 : totalBoxes * 120)).toLocaleString("tr-TR")}</span>
                 </div>
                 <p className="mt-2 text-xs text-slate-600">
                   KDV hariç: {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (vipSubtotal - comboDiscount) + (totalItems >= 50000 ? 0 : totalBoxes * 120)) : "₺" + ((vipSubtotal - comboDiscount) + (totalItems >= 50000 ? 0 : totalBoxes * 120)).toLocaleString("tr-TR")} +KDV
@@ -1410,9 +1412,9 @@ export default function CartPage() {
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">KDV (%20)</span>
+                        <span className="text-slate-600">KDV (%{taxRate})</span>
                         <span className="font-semibold text-slate-900">
-                          {exchangeRate ? formatDualPrice(undefined, exchangeRate, false, 1, subtotal * 0.20) : "₺" + (subtotal * 0.20).toLocaleString("tr-TR")}
+                          {exchangeRate ? formatDualPrice(undefined, exchangeRate, false, 1, subtotal * (taxRate / 100)) : "₺" + (subtotal * (taxRate / 100)).toLocaleString("tr-TR")}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
@@ -1428,7 +1430,7 @@ export default function CartPage() {
                       <div className="flex justify-between text-base font-bold pt-2 border-t border-slate-300">
                         <span className="text-slate-900">Genel Toplam (KDV Dahil)</span>
                         <span className="text-purple-600">
-                          {exchangeRate ? formatDualPrice(undefined, exchangeRate, false, 1, subtotal * 1.20 + (totalBoxes >= 50 ? 0 : totalBoxes * 120)) : "₺" + (subtotal * 1.20 + (totalBoxes >= 50 ? 0 : totalBoxes * 120)).toLocaleString("tr-TR")}
+                          {exchangeRate ? formatDualPrice(undefined, exchangeRate, false, 1, subtotal * (1 + taxRate / 100) + (totalBoxes >= 50 ? 0 : totalBoxes * 120)) : "₺" + (subtotal * (1 + taxRate / 100) + (totalBoxes >= 50 ? 0 : totalBoxes * 120)).toLocaleString("tr-TR")}
                         </span>
                       </div>
                     </div>

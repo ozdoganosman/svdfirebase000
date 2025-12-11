@@ -140,11 +140,11 @@ export default function ComboSettingsPage() {
   }
 
   return (
-    <>
-      <div className="p-8">
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="p-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Kombo İndirimleri</h2>
+            <h2 className="text-xl font-bold text-slate-900">🎁 Kombo İndirimleri</h2>
             <p className="text-sm text-slate-600 mt-1">
               Başlık + Şişe kombo indirim ayarlarını yönetin
             </p>
@@ -307,6 +307,6 @@ export default function ComboSettingsPage() {
         onCancel={handleCancel}
         saving={isSaving}
       />
-    </>
+    </div>
   );
 }

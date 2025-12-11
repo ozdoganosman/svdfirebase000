@@ -265,6 +265,26 @@ const updateOrderStatus = async (id, status) => {
   return getOrderById(id);
 };
 
+/**
+ * Update order with arbitrary fields
+ * @param {string} id - Order ID
+ * @param {Object} updates - Fields to update
+ * @returns {Promise<Object>} Updated order
+ */
+const updateOrder = async (id, updates) => {
+  if (!id) {
+    throw new Error("Order ID is required");
+  }
+
+  const now = FieldValue.serverTimestamp();
+  await ordersCollection.doc(id).update({
+    ...updates,
+    updatedAt: now,
+  });
+
+  return getOrderById(id);
+};
+
 const getStatsOverview = async (filters = {}) => {
   const normalizedStatus = filters.status && filters.status !== "all" ? filters.status.toLowerCase() : null;
   const orders = await listOrders({
@@ -332,5 +352,6 @@ export {
   getOrderById,
   createOrder,
   updateOrderStatus,
+  updateOrder,
   getStatsOverview,
 };
