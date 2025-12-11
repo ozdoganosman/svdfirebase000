@@ -24,6 +24,16 @@ export type PricingSettings = SiteSettings & {
   allowGuestCheckout?: boolean;
 };
 
+export type SocialMediaLinks = {
+  facebook?: string;
+  instagram?: string;
+  twitter?: string;
+  linkedin?: string;
+  youtube?: string;
+  tiktok?: string;
+  whatsapp?: string;
+};
+
 export type SiteInfoSettings = SiteSettings & {
   section: "site";
   siteName?: string;
@@ -31,6 +41,22 @@ export type SiteInfoSettings = SiteSettings & {
   supportEmail?: string;
   supportPhone?: string;
   maintenanceMode?: boolean;
+  // Logo
+  logoUrl?: string;
+  logoAlt?: string;
+  faviconUrl?: string;
+  // Address
+  address?: string;
+  city?: string;
+  district?: string;
+  postalCode?: string;
+  country?: string;
+  mapUrl?: string;
+  // Social Media
+  socialMedia?: SocialMediaLinks;
+  // Working Hours
+  workingHours?: string;
+  workingDays?: string;
 };
 
 export type EmailSettings = SiteSettings & {
@@ -132,10 +158,18 @@ export type UserRoleInfo = {
 // ==================== SETTINGS API ====================
 
 /**
- * Get all site settings
+ * Get all site settings (requires authentication)
  */
 export async function getAllSettings(): Promise<Record<string, SiteSettings>> {
   const response = await apiFetch<{ settings: Record<string, SiteSettings> }>("/settings");
+  return response.settings;
+}
+
+/**
+ * Get public site settings (no auth required - for header/footer)
+ */
+export async function getPublicSiteSettings(): Promise<SiteInfoSettings> {
+  const response = await apiFetch<{ settings: SiteInfoSettings }>("/settings/site/public");
   return response.settings;
 }
 

@@ -36,6 +36,22 @@ const currencyFormatter = new Intl.NumberFormat("tr-TR", {
   currency: "TRY",
 });
 
+const carrierOptions = [
+  { value: "", label: "Kargo Firması Seçin" },
+  { value: "Yurtiçi Kargo", label: "Yurtiçi Kargo" },
+  { value: "Aras Kargo", label: "Aras Kargo" },
+  { value: "MNG Kargo", label: "MNG Kargo" },
+  { value: "PTT Kargo", label: "PTT Kargo" },
+  { value: "Sürat Kargo", label: "Sürat Kargo" },
+  { value: "UPS", label: "UPS" },
+  { value: "FedEx", label: "FedEx" },
+  { value: "DHL", label: "DHL" },
+  { value: "Trendyol Express", label: "Trendyol Express" },
+  { value: "Hepsijet", label: "Hepsijet" },
+  { value: "Getir", label: "Getir" },
+  { value: "Diğer", label: "Diğer" },
+];
+
 export default function AdminSamplesPage() {
   const [samples, setSamples] = useState<AdminSample[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,6 +60,7 @@ export default function AdminSamplesPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedSample, setSelectedSample] = useState<AdminSample | null>(null);
+  const [shippingForm, setShippingForm] = useState({ carrier: "", trackingNumber: "" });
 
   const fetchSamples = async () => {
     setLoading(true);
@@ -69,18 +86,24 @@ export default function AdminSamplesPage() {
     return samples.filter((sample) => sample.status === statusFilter);
   }, [samples, statusFilter]);
 
-  const handleStatusChange = async (sampleId: string, newStatus: string) => {
+  const handleStatusChange = async (sampleId: string, newStatus: string, shippingInfo?: { carrier: string; trackingNumber: string }) => {
     setUpdatingId(sampleId);
     setError(null);
     setSuccessMessage(null);
     try {
+      const body: { status: string; carrier?: string; trackingNumber?: string } = { status: newStatus };
+      if (shippingInfo) {
+        body.carrier = shippingInfo.carrier;
+        body.trackingNumber = shippingInfo.trackingNumber;
+      }
       await apiFetch(`/samples/${sampleId}/status`, {
         method: "PUT",
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify(body),
       });
       await fetchSamples();
       setSuccessMessage(`Numune durumu "${statusLabels[newStatus] ?? newStatus}" olarak güncellendi`);
       setSelectedSample(null);
+      setShippingForm({ carrier: "", trackingNumber: "" });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -88,12 +111,25 @@ export default function AdminSamplesPage() {
     }
   };
 
-  const openSampleModal = (sample: AdminSample) => {
-    setSelectedSample(sample);
+  const handleShipSample = async (sampleId: string) => {
+    if (!shippingForm.carrier) {
+      setError("Lütfen kargo firması seçin");
+      return;
+    }
+    if (!shippingForm.trackingNumber) {
+      setError("Lütfen kargo takip numarası girin");
+      return;
+    }
+    await handleStatusChange(sampleId, "shipped", shippingForm);
   };
 
-  const closeSampleModal = () => {
-    setSelectedSample(null);
+  const openSampleModal = (sample: AdminSample) => {
+    setSelectedSample(sample);
+    // Pre-fill shipping form if sample already has shipping info
+    setShippingForm({
+      carrier: sample.carrier || "",
+      trackingNumber: sample.trackingNumber || "",
+    });
   };
 
   return (
@@ -145,9 +181,10 @@ export default function AdminSamplesPage() {
           <div className="space-y-5">
             {filteredSamples.map((sample) => (
               <article key={sample.id} className="rounded-lg border border-slate-200 p-4 shadow-sm">
-                <div className="flex flex-col gap-4">
-                  {/* Header */}
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  {/* Left side - Info */}
+                  <div className="space-y-3 flex-1">
+                    {/* Header */}
                     <div className="flex flex-wrap items-center gap-3">
                       <span className="text-sm font-semibold text-slate-900">
                         {sample.sampleNumber || `#${sample.id.substring(0, 8)}`}
@@ -159,68 +196,92 @@ export default function AdminSamplesPage() {
                         {new Date(sample.createdAt).toLocaleString("tr-TR")}
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => openSampleModal(sample)}
-                      className="text-sm font-medium text-amber-600 hover:text-amber-700"
-                    >
-                      Detaylar →
-                    </button>
-                  </div>
 
-                  {/* Customer Info */}
-                  <div className="grid gap-4 md:grid-cols-2">
+                    {/* Customer Info */}
                     <div className="text-sm text-slate-600">
                       <p className="font-medium text-slate-900">{sample.customer.name}</p>
                       {sample.customer.company && <p>{sample.customer.company}</p>}
                       {sample.customer.phone && <p>{sample.customer.phone}</p>}
                       {sample.customer.email && <p>{sample.customer.email}</p>}
                     </div>
-                    {sample.trackingNumber && (
-                      <div className="text-sm">
-                        <span className="text-slate-500">Kargo Takip:</span>
-                        <span className="ml-2 font-mono font-medium text-slate-900">{sample.trackingNumber}</span>
+
+                    {/* Shipping Info */}
+                    {(sample.carrier || sample.trackingNumber) && (
+                      <div className="text-sm space-y-1 p-2 bg-slate-50 rounded-md">
+                        {sample.carrier && (
+                          <div>
+                            <span className="text-slate-500">Kargo:</span>
+                            <span className="ml-2 font-medium text-slate-900">{sample.carrier}</span>
+                          </div>
+                        )}
+                        {sample.trackingNumber && (
+                          <div>
+                            <span className="text-slate-500">Takip No:</span>
+                            <span className="ml-2 font-mono font-medium text-slate-900">{sample.trackingNumber}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
 
-                  {/* Items */}
-                  <div className="border-t border-slate-200 pt-3">
-                    <p className="text-sm font-medium text-slate-700 mb-2">
-                      Ürünler ({sample.items.length} ürün, {sample.items.reduce((sum, item) => sum + item.quantity, 0)} adet)
-                    </p>
-                    <div className="space-y-1">
-                      {sample.items.slice(0, 3).map((item) => (
-                        <div key={item.id} className="text-xs text-slate-600">
-                          {item.title} × {item.quantity} adet
-                        </div>
-                      ))}
-                      {sample.items.length > 3 && (
-                        <p className="text-xs text-slate-500">+{sample.items.length - 3} ürün daha...</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Shipping Fee and Actions */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3">
-                    <div>
-                      <p className="text-xs text-slate-500">Kargo Ücreti</p>
-                      <p className="text-lg font-bold text-slate-900">
-                        {currencyFormatter.format(sample.shippingFee)} <span className="text-xs text-slate-500">(KDV Dahil)</span>
+                  {/* Right side - Actions */}
+                  <div className="flex flex-col items-end gap-3">
+                    <div className="text-right text-sm">
+                      <p className="font-semibold text-slate-900">Toplam</p>
+                      <p className="text-lg font-semibold text-amber-600">
+                        {currencyFormatter.format(sample.shippingFee)}
                       </p>
                     </div>
-                    {sample.status === "requested" && (
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openSampleModal(sample)}
-                          disabled={updatingId === sample.id}
-                          className="rounded-md bg-amber-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          İncele
-                        </button>
-                      </div>
-                    )}
+
+                    {/* Status Buttons */}
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {statusOptions
+                        .filter((option) => option.value !== "all")
+                        .map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => {
+                              if (option.value === "shipped" && sample.status !== "shipped") {
+                                openSampleModal(sample);
+                              } else {
+                                handleStatusChange(sample.id, option.value);
+                              }
+                            }}
+                            disabled={updatingId === sample.id || sample.status === option.value}
+                            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-white ${
+                              sample.status === option.value
+                                ? 'border border-amber-200 bg-amber-50 text-amber-600'
+                                : 'border border-slate-200 text-slate-600 hover:bg-slate-100'
+                            } ${updatingId === sample.id ? 'opacity-60' : ''}`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Items Section */}
+                <div className="mt-4 border-t border-slate-200 pt-3">
+                  <h3 className="text-sm font-semibold text-slate-900">Numune Kalemleri</h3>
+                  <div className="mt-2 overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-200 text-sm">
+                      <thead className="bg-slate-100">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium text-slate-700">Ürün</th>
+                          <th className="px-3 py-2 text-right font-medium text-slate-700">Adet</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {sample.items.map((item) => (
+                          <tr key={item.id} className="hover:bg-slate-50">
+                            <td className="px-3 py-2 text-slate-700">{item.title}</td>
+                            <td className="px-3 py-2 text-right text-slate-600">{item.quantity}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </article>
@@ -244,7 +305,7 @@ export default function AdminSamplesPage() {
               </div>
               <button
                 type="button"
-                onClick={closeSampleModal}
+                onClick={() => setSelectedSample(null)}
                 className="text-slate-400 hover:text-slate-600"
               >
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -310,55 +371,71 @@ export default function AdminSamplesPage() {
               </div>
             )}
 
-            {/* Tracking Number (for shipped samples) */}
+            {/* Shipping Info (for shipped samples) */}
             {(selectedSample.status === "shipped" || selectedSample.status === "delivered") && (
               <div className="mb-4 rounded-lg border border-slate-200 p-4">
-                <h3 className="mb-2 font-semibold text-slate-900">Kargo Takip Numarası</h3>
-                <p className="font-mono text-lg text-slate-900">{selectedSample.trackingNumber || "Girilmedi"}</p>
+                <h3 className="mb-2 font-semibold text-slate-900">Kargo Bilgileri</h3>
+                <div className="grid gap-2 text-sm md:grid-cols-2">
+                  <div>
+                    <span className="text-slate-500">Kargo Firması:</span>
+                    <span className="ml-2 font-medium">{selectedSample.carrier || "Belirtilmedi"}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Takip No:</span>
+                    <span className="ml-2 font-mono font-medium">{selectedSample.trackingNumber || "Girilmedi"}</span>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Actions */}
-            {selectedSample.status === "requested" && (
-              <div className="flex gap-3">
+            {/* Shipping Form - shown when shipping is needed */}
+            {selectedSample.status !== "shipped" && selectedSample.status !== "delivered" && selectedSample.status !== "rejected" && (
+              <div className="space-y-4">
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                  <h4 className="mb-3 font-semibold text-indigo-900">Kargo Bilgileri</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">
+                        Kargo Firması <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={shippingForm.carrier}
+                        onChange={(e) => setShippingForm(prev => ({ ...prev, carrier: e.target.value }))}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                      >
+                        {carrierOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">
+                        Kargo Takip Numarası <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={shippingForm.trackingNumber}
+                        onChange={(e) => setShippingForm(prev => ({ ...prev, trackingNumber: e.target.value }))}
+                        placeholder="Takip numarasını girin..."
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
                 <button
                   type="button"
-                  onClick={() => handleStatusChange(selectedSample.id, "approved")}
-                  disabled={updatingId === selectedSample.id}
-                  className="flex-1 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => handleShipSample(selectedSample.id)}
+                  disabled={updatingId === selectedSample.id || !shippingForm.carrier || !shippingForm.trackingNumber}
+                  className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {updatingId === selectedSample.id ? "İşleniyor..." : "Onayla"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange(selectedSample.id, "rejected")}
-                  disabled={updatingId === selectedSample.id}
-                  className="flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {updatingId === selectedSample.id ? "İşleniyor..." : "Reddet"}
+                  {updatingId === selectedSample.id ? "İşleniyor..." : "Kargoya Ver"}
                 </button>
               </div>
             )}
-            {selectedSample.status === "approved" && (
-              <button
-                type="button"
-                onClick={() => handleStatusChange(selectedSample.id, "preparing")}
-                disabled={updatingId === selectedSample.id}
-                className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {updatingId === selectedSample.id ? "İşleniyor..." : "Hazırlanıyor Olarak İşaretle"}
-              </button>
-            )}
-            {selectedSample.status === "preparing" && (
-              <button
-                type="button"
-                onClick={() => handleStatusChange(selectedSample.id, "shipped")}
-                disabled={updatingId === selectedSample.id}
-                className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {updatingId === selectedSample.id ? "İşleniyor..." : "Kargoya Verildi Olarak İşaretle"}
-              </button>
-            )}
+
+            {/* Shipped - show delivered button */}
             {selectedSample.status === "shipped" && (
               <button
                 type="button"
@@ -369,6 +446,8 @@ export default function AdminSamplesPage() {
                 {updatingId === selectedSample.id ? "İşleniyor..." : "Teslim Edildi Olarak İşaretle"}
               </button>
             )}
+
+            {/* Final states */}
             {(selectedSample.status === "rejected" || selectedSample.status === "delivered") && (
               <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-center text-sm text-slate-600">
                 Bu numune talebi <span className="font-semibold">{statusLabels[selectedSample.status]}</span> durumunda.

@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import {
   getAllSettings,
+  getPublicSiteSettings,
   SiteSettings,
   PricingSettings,
   SiteInfoSettings,
@@ -25,10 +26,23 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Record<string, SiteSettings> | null>(null);
+  const [publicSiteSettings, setPublicSiteSettings] = useState<SiteInfoSettings | null>(null);
   const [userRole, setUserRole] = useState<UserRoleInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Load public site settings (no auth required) - for header/footer
+  const loadPublicSiteSettings = async () => {
+    try {
+      const pubSettings = await getPublicSiteSettings();
+      setPublicSiteSettings(pubSettings);
+    } catch (err) {
+      console.error("Failed to load public site settings:", err);
+      // Don't set error - use defaults
+    }
+  };
+
+  // Load all settings (requires auth) - for admin pages
   const refreshSettings = async () => {
     try {
       setIsLoading(true);
@@ -37,7 +51,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setSettings(allSettings);
     } catch (err) {
       console.error("Failed to load settings:", err);
-      setError(err instanceof Error ? err.message : "Failed to load settings");
+      // Don't set error for auth failures - just use public settings
+      if (err instanceof Error && !err.message.includes("Yetkisiz")) {
+        setError(err.message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -55,7 +72,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Load settings and user role on mount
+    // Load public site settings immediately (no auth needed)
+    loadPublicSiteSettings();
+
+    // Try to load all settings and user role (requires auth)
     const initialize = async () => {
       await Promise.all([refreshSettings(), refreshUserRole()]);
     };
@@ -64,8 +84,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Extract specific settings for convenience
+  // Use public settings as fallback if user is not authenticated
   const pricingSettings = settings?.pricing as PricingSettings | null;
-  const siteSettings = settings?.site as SiteInfoSettings | null;
+  const siteSettings = (settings?.site as SiteInfoSettings | null) || publicSiteSettings;
 
   return (
     <SettingsContext.Provider

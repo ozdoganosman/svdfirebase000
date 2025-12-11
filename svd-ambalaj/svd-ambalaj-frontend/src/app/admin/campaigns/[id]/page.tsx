@@ -15,7 +15,8 @@ import Link from "next/link";
 type Campaign = {
   id?: string;
   name: string;
-  type: "discount" | "free_shipping" | "bundle";
+  code: string;
+  type: "discount" | "free_shipping" | "bundle" | "coupon";
   description: string;
   discountType: "percentage" | "fixed";
   discountValue: number;
@@ -25,12 +26,14 @@ type Campaign = {
   priority: number;
   minOrderValue: number;
   maxUses: number;
+  maxUsesPerUser: number;
   applicableProducts: string[];
   applicableCategories: string[];
 };
 
 const emptyForm: Campaign = {
   name: "",
+  code: "",
   type: "discount",
   description: "",
   discountType: "percentage",
@@ -41,6 +44,7 @@ const emptyForm: Campaign = {
   priority: 0,
   minOrderValue: 0,
   maxUses: 0,
+  maxUsesPerUser: 0,
   applicableProducts: [],
   applicableCategories: [],
 };
@@ -73,6 +77,8 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
       if (response.campaign) {
         const campaign = {
           ...response.campaign,
+          code: response.campaign.code || "",
+          maxUsesPerUser: response.campaign.maxUsesPerUser || 0,
           startDate: response.campaign.startDate
             ? response.campaign.startDate.split("T")[0]
             : null,
@@ -121,6 +127,7 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
 
       const payload = {
         name: formData.name.trim(),
+        code: formData.code.trim() || null,
         type: formData.type,
         description: formData.description.trim(),
         discountType: formData.discountType,
@@ -131,6 +138,7 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
         priority: Number(formData.priority),
         minOrderValue: Number(formData.minOrderValue),
         maxUses: Number(formData.maxUses),
+        maxUsesPerUser: Number(formData.maxUsesPerUser),
         applicableProducts: formData.applicableProducts,
         applicableCategories: formData.applicableCategories,
       };
@@ -242,11 +250,12 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
             </SettingsField>
 
             <SettingsField label="Kampanya Tipi" required>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-4">
                 {[
                   { value: "discount", label: "İndirim" },
                   { value: "free_shipping", label: "Ücretsiz Kargo" },
                   { value: "bundle", label: "Paket" },
+                  { value: "coupon", label: "Kupon Kodu" },
                 ].map((option) => (
                   <label key={option.value} className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -260,6 +269,48 @@ export default function CampaignEditPage({ params }: { params: Promise<{ id: str
                 ))}
               </div>
             </SettingsField>
+          </SettingsSection>
+
+          <SettingsSection
+            title="Kupon Kodu"
+            description="Müşterilerin kullanabileceği promosyon kodu (opsiyonel)"
+          >
+            <SettingsField
+              label="Kupon Kodu"
+              description="Müşteriler bu kodu sepet veya ödeme sayfasında girebilir"
+            >
+              <SettingsInput
+                type="text"
+                value={formData.code}
+                onChange={(e) => handleChange("code", e.target.value.toUpperCase())}
+                placeholder="Örn: YAZ2024, HOSGELDIN10"
+                className="uppercase"
+              />
+            </SettingsField>
+
+            <SettingsField
+              label="Kullanıcı Başına Kullanım Limiti"
+              description="0 ise sınırsız kullanım"
+            >
+              <SettingsInput
+                type="number"
+                value={formData.maxUsesPerUser}
+                onChange={(e) => handleChange("maxUsesPerUser", Number(e.target.value))}
+                min="0"
+                placeholder="0"
+              />
+            </SettingsField>
+
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Not:</strong> Kupon kodu belirlendiğinde, müşteriler bu kodu checkout sayfasında girerek indirimi uygulayabilir.
+                {formData.code && (
+                  <span className="block mt-2 font-mono bg-blue-100 px-2 py-1 rounded inline-block">
+                    {formData.code.toUpperCase() || "..."}
+                  </span>
+                )}
+              </p>
+            </div>
           </SettingsSection>
 
           <SettingsSection

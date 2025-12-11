@@ -2,11 +2,77 @@
 
 **Proje:** SVD Ambalaj E-Ticaret Platformu
 **Başlangıç Tarihi:** 22 Ekim 2025
-**Son Güncelleme:** 9 Aralık 2025
+**Son Güncelleme:** 11 Aralık 2025
 
 ---
 
 ## 🆕 Son Eklenen Özellikler
+
+### 11 Aralık 2025
+1. **🎨 Landing Page CMS - Öne Çıkan Ürünler & Bölüm Sıralaması - ✅ TAMAMLANDI**
+   - Admin panelden anasayfa bölüm sıralaması değiştirme
+   - Öne çıkan ürünleri seçme ve sıralama
+   - Yukarı/aşağı oklar ile bölüm sırası düzenleme
+   - Ürün arama ve çoklu seçim
+   - Seçili ürünlerin sırasını değiştirme
+   - Dinamik anasayfa rendering (sectionOrder'a göre)
+   - Backend: featuredProducts ve sectionOrder alanları
+   - Admin: Sıralama ve Öne Çıkan Ürünler sekmeleri
+
+2. **🔐 Admin Kimlik Doğrulama Sistemi İyileştirmesi - ✅ TAMAMLANDI**
+   - Admin panel için ayrı token-based authentication sistemi
+   - Environment variable tabanlı admin credentials (ADMIN_EMAIL, ADMIN_PASSWORD)
+   - Bootstrap endpoint: İlk super admin oluşturma (/admin/bootstrap)
+   - Admin bootstrap sayfası (/admin/bootstrap)
+   - Session token yönetimi ve güvenli logout
+
+3. **🎨 Landing Page CMS Sistemi - ✅ TAMAMLANDI**
+   - 8 sekme: Sıralama, Öne Çıkan Ürünler, Hero, Avantajlar, Nasıl Çalışır, CTA, Güven Rozetleri, Bölüm Başlıkları
+   - EmojiPicker, ColorPicker, LinkSelector bileşenleri
+   - Şablondan hızlı ekleme (Avantajlar, Trust Badges, How It Works)
+   - Dropdown seçiciler ve önceden tanımlı seçenekler
+   - Canlı önizleme
+   - Backend landing content API
+
+4. **🔧 Teknik İyileştirmeler - ✅ TAMAMLANDI**
+   - Next.js 15.5.6 → 15.5.7 güncelleme (CVE-2025-55182 düzeltmesi)
+   - Firebase Hosting + Functions başarılı deployment
+   - Production environment aktif
+
+5. **📦 Numune Talepleri Sayfası İyileştirmesi - ✅ TAMAMLANDI**
+   - Siparişler sayfasıyla aynı görünüm ve işlevsellik
+   - Tüm durumlar için durum butonları (Talep Edildi, Onaylandı, Hazırlanıyor, Kargolandı, Teslim Edildi, Reddedildi)
+   - Kargo firması seçimi (Yurtiçi, Aras, MNG, PTT, Sürat, UPS, FedEx, DHL, Trendyol Express, Hepsijet, Getir)
+   - Kargo takip numarası girişi
+   - "Kargolandı" butonuna tıklandığında modal ile kargo bilgileri formu
+   - Kargo firması ve takip numarası zorunlu validasyon
+   - Backend: `carrier` ve `trackingNumber` alanları eklendi
+   - Backend: `updateSampleStatus` fonksiyonu kargo bilgilerini kabul ediyor
+   - Numune kalemleri tablo formatında gösterim
+
+6. **📧 E-posta Şablonları Düzenleme Sistemi - ✅ TAMAMLANDI**
+   - Admin panelden e-posta şablonları düzenleme (/admin/settings/email)
+   - 6 farklı şablon: Teklif Onaylandı, Teklif Reddedildi, Numune Onaylandı, Yeni Teklif (Admin), Yeni Numune (Admin), **Yeni Sipariş (Admin)**
+   - Handlebars-style template syntax: {{variable}}, {{#if condition}}, {{#each items}}
+   - Varsayılan şablonlara sıfırlama özelliği
+   - Firestore'da emailTemplates collection
+   - Backend: getEmailTemplate, getAllEmailTemplates, updateEmailTemplate, resetEmailTemplate
+   - API endpoints: GET/PUT /admin/email/templates/:id, POST /admin/email/templates/:id/reset
+   - Tab-based UI: SMTP Ayarları ve E-posta Şablonları
+
+7. **📋 Kullanıcı Sipariş Detay Sayfası - ✅ TAMAMLANDI**
+   - Yeni endpoint: `/user/orders/:id` (userId doğrulamalı)
+   - Yeni sayfa: `/account/orders/[id]` - sipariş detay görüntüleme
+   - Sipariş özeti, kargo takip bilgileri, ürün listesi, müşteri bilgileri
+   - Koli bazlı ürünler için detaylı gösterim (koli x adet = toplam)
+   - 401 hatası düzeltildi (admin route'larına düşme problemi)
+
+8. **💰 Sipariş Fiyat Hesaplama Düzeltmesi - ✅ TAMAMLANDI**
+   - Checkout'ta `getEffectivePrice()` kullanılarak doğru fiyat kaydı
+   - `calculateItemTotal()` ile packageInfo.itemsPerBox dahil hesaplama
+   - `totalItemCount` field'ı eklendi (gerçek adet sayısı)
+   - Backend mapOrderDoc güncellendi (packageInfo, totalItemCount desteği)
+   - Yeni siparişler doğru fiyatlarla kaydedilecek
 
 ### 9 Aralık 2025
 1. **💳 Faz 1.5 - PayTR Ödeme Entegrasyonu - ✅ TAMAMLANDI**
@@ -105,10 +171,10 @@
 
 ### 23 Ekim 2025
 1. Admin Ürünler sayfası USD-Only tamamlandı: TRY alanları kaldırıldı, 0.001 adımlı USD fiyat ve USD toplu fiyatlandırma (koli bazlı) aktif
-2. Tüm kritik sayfalarda Next.js Image’a geçiş: Ana sayfa ürün/kategori kartları, ürün detayları, admin medya, admin kategori, admin landing, medya seçici, galeri
+2. Tüm kritik sayfalarda Next.js Image'a geçiş: Ana sayfa ürün/kategori kartları, ürün detayları, admin medya, admin kategori, admin landing, medya seçici, galeri
 3. Ürün detaylarında görsel fallback düzeltildi: `/images/placeholders/product.jpg`
 4. Sepette ürün teknik özellikleri gösterimi eklendi (hortum boyu, hacim, renk, ağız çapı)
-5. Admin Ürünler başlığından “TL → USD Dönüştür” ve “Yenile” aksiyonları kaldırıldı (USD-Only mimariye uyum)
+5. Admin Ürünler başlığından "TL → USD Dönüştür" ve "Yenile" aksiyonları kaldırıldı (USD-Only mimariye uyum)
 6. Lint temizliği: Kullanılmayan değişkenler kaldırıldı; derleme uyarıları giderildi
 
 ### 22 Ekim 2025
@@ -125,21 +191,21 @@
 - ✅ ExchangeRateBanner component
 - ✅ Product schema USD support (priceUSD, bulkPricingUSD)
 - ✅ Firebase Functions deployed successfully
-- 🔄 Admin panel USD price input (ProductPayload type hazır)
-- ⏳ Ürün sayfalarında dual currency gösterimi
-- ⏳ Cart sisteminde USD hesaplamaları
-- ⏳ Landing page currency policy açıklaması
+- ✅ Admin panel USD price input (ProductPayload type hazır)
+- ✅ Ürün sayfalarında dual currency gösterimi
+- ✅ Cart sisteminde USD hesaplamaları
+- ✅ Landing page currency policy açıklaması
 
 ---
 
 ## 📊 Durum Özeti
 
-- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), Faz 1.4 (Firebase Auth), Faz 1.5 (PayTR Ödeme), Faz 2.1 (B2B Teklif & Numune), Faz 2.2 (VIP Müşteri Yönetimi), Faz 2.3 (Kombo İndirimi), UX İyileştirmeleri, PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon, USD → TRY Otomatik Çevirme
-- 🔄 Devam Ediyor: Faz 2.4 (Süper Admin Panel - Phase 1 Tamamlandı, Phase 2 Devam Ediyor)
-- Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı; VIP müşteri sistemi production'da; Kombo indirimi aktif; PayTR kredi kartı ödemesi aktif
+- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), Faz 1.4 (Firebase Auth), Faz 1.5 (PayTR Ödeme), Faz 2.1 (B2B Teklif & Numune), Faz 2.2 (VIP Müşteri Yönetimi), Faz 2.3 (Kombo İndirimi), **Faz 2.4 (Süper Admin Panel)**, UX İyileştirmeleri, PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon, USD → TRY Otomatik Çevirme, Landing Page CMS
+- 🔄 Devam Ediyor: Faz 2.5 (Promosyon ve Kampanya Kodu Sistemi)
+- Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı; VIP müşteri sistemi production'da; Kombo indirimi aktif; PayTR kredi kartı ödemesi aktif; Landing Page CMS tamamlandı
 
-**Son Deployment:** 9 Aralık 2025 - Production (Firebase Hosting + Functions)
-**Son Commit:** fix: PayTR payment amount calculation - use calculateItemTotal for correct TRY price
+**Son Deployment:** 11 Aralık 2025 - Production (Firebase Hosting + Functions)
+**Son Commit:** feat: Add Featured Products and Section Order to Landing CMS
 **Deployed Services:**
 - ✅ Frontend - https://svdfirebase000.web.app
 - ✅ API (us-central1) - https://api-tfi7rlxtca-uc.a.run.app
@@ -156,13 +222,14 @@
 - ✅ **Faz 2.1** - B2B Teklif & Numune Sistemi (11/11 görev)
 - ✅ **Faz 2.2** - VIP Müşteri Yönetimi ve Segmentasyon (9/9 görev)
 - ✅ **Faz 2.3** - Başlık-Şişe Kombo İndirimi (8/8 görev - 31 Ekim 2025)
+- ✅ **Faz 2.4** - Süper Admin Panel (12/12 görev - 11 Aralık 2025)
 
 **Devam Eden Fazlar:**
-- 🔄 **Faz 2.4** - Süper Admin Panel (Phase 1/3 Tamamlandı - 1 Kasım 2025)
+- 🔄 **Faz 2.5** - Promosyon ve Kampanya Kodu Sistemi (0/8 görev)
 
 ---
 
-## 🎯 FAZ 1: ACİL ÖNCELİKLER (1-2 Hafta)
+## 🎯 FAZ 1: ACİL ÖNCELİKLER (1-2 Hafta) - ✅ TAMAMLANDI
 
 ### 1.1 Döviz Kuru Sistemi (USD Bazlı Fiyatlandırma) 💵
 **Durum:** ✅ TAMAMLANDI (Core Features Complete)
@@ -184,163 +251,11 @@
 - [x] Admin panelinde USD fiyat girişi
 - [x] Landing page'de kur politikası açıklama bölümü
 - [x] Kur geçmişi takibi (history collection - 30 gün)
-- [ ] Sepet sisteminde USD hesaplama (opsiyonel - sonra)
-- [ ] Admin kur yönetim sayfası (opsiyonel - sonra)
-
-**Tamamlanan Dosyalar:**
-Backend:
-- ✅ `functions/services/exchange-rate.js` - TCMB XML API + doviz.com fallback
-- ✅ `functions/scheduled/update-exchange-rate.js` - Cron (16:00) + manual trigger
-- ✅ `functions/db/exchange-rates.js` - CRUD operations + history
-- ✅ `functions/db/catalog.js` - USD schema (priceUSD, bulkPricingUSD)
-- ✅ `functions/index.js` - API endpoints (GET/POST /exchange-rate)
-
-Frontend:
-- ✅ `src/lib/currency.ts` - Currency helpers (convert, format, cache)
-- ✅ `src/components/exchange-rate-banner.tsx` - Header banner (auto-refresh)
-- ✅ `src/app/layout.tsx` - ExchangeRateBanner integration
-- ✅ `src/app/page.tsx` - Landing page dual currency + policy section
-- ✅ `src/app/products/[slug]/page.tsx` - Product detail dual currency
-- ✅ `src/app/categories/[slug]/page.tsx` - Category page dual currency
-- ✅ `src/app/admin/products/page.tsx` - USD price input
-
-**İleriye Bırakılan (Non-Critical):**
-- ⏳ `src/context/CartContext.tsx` - Cart USD calculations (UI’de USD parantez opsiyonu)
-- ⏳ `src/app/admin/exchange-rates/page.tsx` - Admin rate management (nice-to-have)
-- ✅ Görsel optimizasyon (kritik sayfalar tamam) — kalan minör sayfalar için takip
-
-**Teknik Detaylar:**
-- TCMB API: XML parsing with date formatting (today/yesterday fallback)
-- Fallback: doviz.com JSON API
-- Cron: Cloud Scheduler, Europe/Istanbul timezone, 0 16 * * *
-- Cache: Client-side 5min cache for rates
-- Backward Compatibility: Falls back to TRY prices if USD not available
-- Function URLs: https://api-tfi7rlxtca-uc.a.run.app
-
-#### API Detayları:
-```javascript
-// TCMB API (XML formatında)
-// https://www.tcmb.gov.tr/kurlar/today.xml
-// veya
-// https://www.tcmb.gov.tr/kurlar/YYYYMM/DDMMYYYY.xml
-
-// Alternatif: doviz.com API
-// https://api.genelpara.com/embed/doviz.json
-```
-
-#### Firestore Koleksiyonu:
-```javascript
-exchangeRates/
-  - currency: "USD"
-  - rate: 34.5678
-  - effectiveDate: "2025-10-22"
-  - source: "TCMB"
-  - lastUpdated: timestamp
-  - isActive: true
-```
-
-#### Product Schema Değişikliği:
-```javascript
-// Mevcut products koleksiyonuna ekleme:
-{
-  // ... diğer alanlar
-  priceUSD: 0.15,  // USD fiyat (ana fiyat)
-  priceTL: null,   // Hesaplanacak (USD × kur)
-  bulkPricingUSD: [ // Toplu alım da USD olacak
-    { minQty: 50, priceUSD: 0.14 },
-    { minQty: 100, priceUSD: 0.13 }
-  ]
-}
-```
-
-#### Dosyalar:
-- `functions/services/exchange-rate.js` (yeni - TCMB API)
-- `functions/scheduled/update-exchange-rate.js` (yeni - cron job)
-- `functions/db/exchange-rates.js` (yeni - DB işlemleri)
-- `src/lib/currency.ts` (yeni - kur helpers)
-- `src/components/exchange-rate-banner.tsx` (yeni - header banner)
-- `src/app/page.tsx` (güncelle - landing page açıklama)
-- `src/app/products/[slug]/page.tsx` (güncelle - dual fiyat)
-- `src/app/admin/products/page.tsx` (güncelle - USD giriş)
-- `src/app/admin/exchange-rates/page.tsx` (yeni - kur yönetimi)
-
-#### Örnek Gösterim:
-```typescript
-// Header'da:
-"💵 Güncel Dolar Kuru: ₺34.5678 (TCMB - 22.10.2025)"
-
-// Ürün kartında:
-"₺5,00 +KDV"
-"($0.15 × 34.5678)"
-
-// Ürün detayında:
-"Birim Fiyat: $0.15 (₺5,00) +KDV"
-"Koli Fiyatı: $14.40 (₺498,98) +KDV"
-"* Fiyatlar güncel TCMB efektif satış kuruna göre hesaplanmaktadır."
-
-// Landing page'de:
-"💰 Fiyatlandırma Politikamız
-Tüm ürünlerimiz USD bazlı fiyatlandırılmaktadır. 
-TL fiyatlar, TCMB'nin günlük efektif satış kuruna göre hesaplanır.
-Güncel kur: $1 = ₺34.5678 (22.10.2025)"
-```
-
-#### Cron Job (Firebase Scheduled Functions):
-```javascript
-// Her gün saat 16:00'da (TCMB güncelleme sonrası) kur çek
-exports.updateExchangeRate = functions.pubsub
-  .schedule('0 16 * * *')
-  .timeZone('Europe/Istanbul')
-  .onRun(async (context) => {
-    // TCMB'den kur çek
-    // Firestore'a kaydet
-    // Admin'e bildirim gönder (isteğe bağlı)
-  });
-```
-
-#### Notlar:
-- Manuel kur güncelleme özelliği de olmalı (admin paneli)
-- Kur değişmediğinde eski kuru kullan
-- Hata durumunda yedek API'ye geç
-- Hafta sonu/tatil günleri son iş günü kuru kullan
+- [x] Sepet sisteminde USD hesaplama
+- [x] Admin kur yönetim sayfası
 
 ---
 
-### 1.2 Ürün Arama ve Filtreleme Sistemi 🔍
-**Durum:** ⏳ Beklemede
-**Tahmini Süre:** 3-4 gün
-**Bağımlılık:** 1.1 tamamlanmalı (kur sistemi fiyat hesaplamaları için gerekli)
-**Öncelik:** Yüksek
-
-#### Görevler:
-- [ ] Arama çubuğu komponenti oluştur
-- [ ] Fiyat aralığı filtresi ekle
-- [ ] Stok durumu filtresi (Stokta var/yok)
-- [ ] Sıralama seçenekleri (Fiyat artan/azalan, Yeni ürünler)
-- [ ] URL query parametreleri ile filtreleme
-- [ ] Filtreleri temizle butonu
-
-#### Dosyalar:
-- `src/components/product-filters.tsx` (yeni)
-- `src/components/product-search.tsx` (yeni)
-- `src/app/products/page.tsx` (güncelle)
-- `src/app/categories/[slug]/page.tsx` (güncelle)
-
-#### Notlar:
-```typescript
-// Örnek filtre yapısı:
-type ProductFilters = {
-  search: string;
-  minPrice: number;
-  maxPrice: number;
-  inStock: boolean;
-  sortBy: 'price-asc' | 'price-desc' | 'newest' | 'popular';
-}
-```
-
----
-
-### 1.2 Ürün Arama ve Filtreleme Sistemi 🔍
 ### 1.2 Ürün Arama ve Filtreleme Sistemi 🔍
 **Durum:** ✅ TAMAMLANDI
 **Tahmini Süre:** 3-4 gün
@@ -360,15 +275,6 @@ type ProductFilters = {
 - [x] Products page filter UI (accordion)
 - [x] URL query parametreleri ile filtreleme
 
-#### Tamamlanan Dosyalar:
-Backend:
-- ✅ `functions/db/catalog.js` - searchProducts() with specification filters
-- ✅ `functions/index.js` - /products/search and /products/specifications endpoints
-
-Frontend:
-- ✅ `src/app/products/page.tsx` - Complete filter UI with specifications
-- ✅ `src/components/site-header.tsx` - Search button redesign
-
 ---
 
 ### 1.3 Sipariş Takip Numarası Sistemi 📦
@@ -385,47 +291,6 @@ Frontend:
 - [x] Sipariş kaydında exchange rate ve order number kaydetme
 - [x] Admin orders page'de tracking number gösterimi
 - [x] Checkout success page'de sipariş no gösterimi
-
-#### Tamamlanan Dosyalar:
-Backend:
-- ✅ `functions/db/orders.js` - generateOrderNumber() ve createOrder() güncellemesi
-
-Frontend:
-- ✅ `src/app/admin/orders/page.tsx` - Order number display
-- ✅ `src/app/checkout/success/page.tsx` - Order number confirmation
-
-#### Order Schema Güncellemesi:
-```javascript
-{
-  orderNumber: "SVD-20251022-0001",
-  exchangeRate: 34.5678,  // Sipariş anındaki kur
-  currency: "USD",
-  items: [
-    {
-      priceUSD: 0.15,  // USD fiyat
-      priceTL: 5.00,   // TL karşılığı (sipariş anında)
-      // ...
-    }
-  ],
-  // ...
-}
-```
-
-#### Dosyalar:
-- `functions/db/orders.js` (güncelle - createOrder fonksiyonu)
-- `src/app/admin/orders/page.tsx` (güncelle)
-- `src/app/checkout/success/page.tsx` (güncelle)
-
-#### Notlar:
-```javascript
-// Sipariş no örneği: SVD-20251022-0001
-const generateOrderNumber = () => {
-  const date = new Date();
-  const dateStr = date.toISOString().slice(0,10).replace(/-/g, '');
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-  return `SVD-${dateStr}-${random}`;
-}
-```
 
 ---
 
@@ -451,42 +316,6 @@ const generateOrderNumber = () => {
 - [x] Backend address endpoints (auto-default first address)
 - [x] Checkout integration with saved addresses
 
-#### Dosyalar:
-- `src/lib/firebase-auth.ts` (yeni)
-- `src/context/AuthContext.tsx` (yeni)
-- `src/app/auth/login/page.tsx` (yeni)
-- `src/app/auth/register/page.tsx` (yeni)
-- `src/app/account/page.tsx` (yeni)
-- `src/app/account/orders/page.tsx` (yeni)
-- `src/app/account/addresses/page.tsx` (yeni)
-- `src/components/auth/auth-guard.tsx` (yeni)
-- `functions/db/users.js` (yeni)
-
-#### Firestore Koleksiyonlar:
-```
-users/
-  - uid (document ID)
-  - email
-  - name
-  - phone
-  - company
-  - taxNumber
-  - addresses[] (birden fazla adres)
-  - createdAt
-  - updatedAt
-  
-userAddresses/
-  - userId
-  - title (Ev, İş, vb.)
-  - name
-  - phone
-  - address
-  - city
-  - district
-  - postalCode
-  - isDefault
-```
-
 ---
 
 ### 1.5 Ödeme Entegrasyonu (PayTR) 💳
@@ -510,87 +339,6 @@ userAddresses/
 - [x] Admin ayarlar sayfası (PayTR credentials)
 - [x] Fiyat hesaplama düzeltmeleri
 
-#### Dosyalar:
-Backend:
-- `functions/payment/paytr.js` (yeni - PayTR servis fonksiyonları)
-- `functions/payment/hash.js` (yeni - HMAC-SHA256 hash)
-- `functions/payment/config.js` (yeni - PayTR config)
-- `functions/db/payments.js` (yeni - Payment CRUD)
-- `functions/index.js` (güncelle - 4 payment endpoint)
-
-Frontend:
-- `src/app/checkout/page.tsx` (güncelle - ödeme butonu)
-- `src/app/checkout/payment/page.tsx` (yeni - PayTR iframe)
-- `src/app/checkout/success/page.tsx` (yeni - başarılı ödeme)
-- `src/app/payment-failed/page.tsx` (yeni - başarısız ödeme)
-- `src/lib/paytr-client.ts` (yeni - PayTR helper)
-
-#### Firestore Collection (payments):
-```javascript
-{
-  id: "auto",
-  orderId: "ref",
-  userId: "uid",
-  paymentToken: "PayTR token",
-  merchantOid: "unique-order-id",
-  amount: 5106.00,        // TRY
-  amountUsd: 147.48,      // USD
-  exchangeRate: 34.5678,
-  status: "pending",      // pending/success/failed/cancelled
-  paymentMethod: "credit_card",
-  installment: 1,
-  paytrTransactionId: "xxx",
-  errorMessage: null,
-  ipAddress: "xxx",
-  createdAt: timestamp,
-  updatedAt: timestamp
-}
-```
-
-#### Environment Variables:
-```bash
-# functions/.env
-PAYTR_MERCHANT_ID=XXXXX
-PAYTR_MERCHANT_KEY=XXXXXXXXXXXXX
-PAYTR_MERCHANT_SALT=XXXXXXXXXXXXX
-PAYTR_TEST_MODE=true
-PAYTR_CALLBACK_URL=https://api-xxx.run.app/payment/callback
-PAYTR_SUCCESS_URL=https://yoursite.com/checkout/success
-PAYTR_FAIL_URL=https://yoursite.com/payment-failed
-```
-
-#### PayTR Endpoints:
-```javascript
-POST   /payment/create           // Token oluştur
-POST   /payment/callback         // IPN handler
-GET    /payment/status/:orderId  // Durum sorgula
-POST   /payment/verify           // Manuel verify
-```
-
-#### PayTR İframe Entegrasyon:
-- Müşteri siteden ayrılmaz (güven artırıcı)
-- Kolay entegrasyon (5-10 dakika)
-- PCI-DSS uyumluluk gerektirmez
-- 3D Secure otomatik
-- Taksit seçenekleri hazır
-- Test kartları: PayTR panelinden alınacak
-
-#### Ödeme Akışı:
-1. Kullanıcı checkout'ta "Ödemeye Geç" butonuna tıklar
-2. Backend'e sepet bilgisi gönderilir
-3. PayTR iframe token oluşturulur
-4. Payment sayfasında PayTR iframe açılır
-5. Kullanıcı kart bilgilerini girer (PayTR'de)
-6. PayTR ödemeyi işler ve callback gönderir
-7. Backend callback'i doğrular ve siparişi oluşturur
-8. Success/fail sayfasına yönlendirilir
-
-#### Notlar:
-- Komisyon: ~%1.95-2.95 (İyzico'dan daha ucuz)
-- Entegrasyon türü: iFrame API (önerilen)
-- Test modu: PayTR credentials gelene kadar hazırlık yapılacak
-- Dokümantasyon: https://dev.paytr.com/
-
 ---
 
 ## 🚀 FAZ 2: KISA VADELİ (2-4 Hafta)
@@ -598,7 +346,6 @@ POST   /payment/verify           // Manuel verify
 ### 2.1 B2B Teklif & Numune Sistemi 🏢
 **Durum:** ✅ TAMAMLANDI
 **Tahmini Süre:** 6-7 gün (Tamamlandı)
-**Bağımlılık:** 1.1 tamamlanmalı (teklif USD ve TL olarak gösterilecek)
 **Öncelik:** Orta
 
 #### Görevler:
@@ -618,57 +365,11 @@ POST   /payment/verify           // Manuel verify
 - [x] Teklif geçerlilik süresi (30 gün)
 - [x] Onaylı teklifi siparişe dönüştürme
 
-#### Firestore Koleksiyon:
-```
-quotations/
-  - quotationNumber (TEK-20251022-0001)
-  - userId
-  - customerInfo {}
-  - items[] (priceUSD ve priceTL ile)
-  - exchangeRate (teklif anındaki kur)
-  - totals {
-      subtotalUSD, subtotalTL,
-      cargoUSD, cargoTL,
-      kdvUSD, kdvTL,
-      totalUSD, totalTL
-    }
-  - status (pending/approved/rejected/converted)
-  - validUntil
-  - adminNotes
-  - createdAt
-  - approvedAt
-```
-
-#### Dosyalar:
-- `functions/db/quotations.js` (yeni)
-- `src/app/quotation/request/page.tsx` (yeni)
-- `src/app/admin/quotations/page.tsx` (yeni)
-- `src/components/quotation-pdf.tsx` (yeni)
-
-#### PDF İçeriği:
-```
-SVD Ambalaj - Teklif No: TEK-20251022-0001
-Geçerlilik: 30 gün
-Kur: $1 = ₺34.5678 (22.10.2025)
-
-Ürünler:
-- ... $0.15 (₺5.00) +KDV × 960 adet = $144.00 (₺4,986.00)
-
-Ara Toplam: $144.00 (₺4,986.00)
-Kargo: $3.48 (₺120.00)
-Toplam: $147.48 (₺5,106.00) +KDV
-KDV (%20): $29.50 (₺1,021.20)
-Genel Toplam: $176.98 (₺6,127.20)
-
-* Fiyatlar belirtilen kurdan hesaplanmıştır.
-```
-
 ---
 
 ### 2.2 VIP Müşteri Yönetimi ve Segmentasyon 👑
 **Durum:** ✅ TAMAMLANDI
 **Tahmini Süre:** 4-5 gün (Tamamlandı)
-**Bağımlılık:** Quotes & Orders sistemi tamamlanmalı
 **Öncelik:** Yüksek
 
 #### Görevler:
@@ -683,41 +384,11 @@ Genel Toplam: $176.98 (₺6,127.20)
 - [x] AuthContext'e VIP status entegrasyonu
 - [x] Account sayfasında VIP gösterimi
 
-#### VIP Tier Kriterleri:
-- **Platinum (20%)**: 50K+ sipariş, 10+ adet, 30%+ dönüşüm
-- **Gold (15%)**: 30K+ sipariş, 7+ adet, 25%+ dönüşüm
-- **Silver (10%)**: 15K+ sipariş, 5+ adet, 20%+ dönüşüm
-- **Bronze (5%)**: 5K+ sipariş, 3+ adet, 15%+ dönüşüm
-
-#### Müşteri Segmentleri:
-- **VIP**: Manuel veya otomatik VIP tier sahipleri
-- **High-Potential**: 2+ sipariş, 10K+ değer, aktif (3 ay)
-- **New**: 1 sipariş veya teklif, yeni müşteri
-- **Passive**: Eski müşteri, 6+ ay inaktif
-- **Standard**: Diğer müşteriler
-
-#### Backend API Endpoints:
-- `GET /user/vip-status` - Kullanıcı VIP bilgisi
-- `POST /admin/vip/calculate/:userId` - Tekil hesaplama
-- `PUT /admin/vip/set-tier/:userId` - Manuel atama
-- `POST /admin/vip/calculate-all` - Toplu hesaplama
-- `GET /vip/tiers` - Tier bilgileri
-- `GET /admin/customers` - Müşteri listesi (filtreleme)
-- `GET /admin/customers/:userId/stats` - Müşteri istatistikleri
-
-#### Dosyalar:
-- `functions/db/vip.js` - VIP hesaplama ve segmentasyon
-- `src/lib/pricing.ts` - VIP fiyatlama fonksiyonları
-- `src/components/VIPBadge.tsx` - VIP gösterimi
-- `src/app/admin/customers/page.tsx` - Admin müşteri yönetimi
-- `src/context/AuthContext.tsx` - VIP status entegrasyonu
-
 ---
 
 ### 2.3 Başlık-Şişe Kombinasyon İndirimi 🔄
-**Durum:** ✅ Tamamlandı (31 Ekim 2025)
+**Durum:** ✅ TAMAMLANDI (31 Ekim 2025)
 **Gerçek Süre:** 7 gün
-**Bağımlılık:** 1.1 tamamlanmalı (indirim USD üzerinden hesaplanacak)
 **Öncelik:** Yüksek
 
 #### Görevler:
@@ -729,313 +400,94 @@ Genel Toplam: $176.98 (₺6,127.20)
 - [x] Az olan miktara göre indirim uygulama
 - [x] Sepette kombinasyon indirimi gösterimi
 - [x] Admin panelinde kombinasyon ayarları
-- [x] **Ucuz ürünlere öncelik verme (maksimum tasarruf)**
-- [x] **Ürün bazında combo quantity gösterimi**
-- [x] **Çoklu ürün desteği (3+ ürün)**
-- [x] **Detaylı breakdown UI**
-- [x] **Frontend-Backend entegrasyonu**
-- [x] **Checkout'a combo discount entegrasyonu**
-- [x] **Order kayıtlarına combo bilgileri ekleme**
-
-#### Product Schema Güncellemesi:
-```javascript
-{
-  // ... diğer alanlar
-  productType: "başlık" | "şişe" | "nötr",
-  neckSize: "24/410" | "28/410" | "custom",
-  // Kombinasyon indirimi varsa
-  comboPriceUSD: 0.13, // Normal: 0.15, Kombo: 0.13
-}
-```
-
-#### Firestore Koleksiyon (Admin Ayarları):
-```javascript
-comboDiscountSettings/
-  - isActive: true
-  - discountType: "percentage" | "fixed" // %10 veya sabit $0.02
-  - discountValue: 10 // %10 veya $0.02
-  - applicableTypes: ["başlık", "şişe"]
-  - requireSameNeckSize: true
-  - minQuantity: 1000 // minimum kaç adet olmalı
-```
-
-#### Sepet Hesaplama Mantığı:
-```javascript
-// Örnek: 4500 başlık (24/410) + 3000 şişe (24/410)
-// Eşleşme: 3000 adet (az olan)
-// İndirim: 3000 başlık + 3000 şişe için
-
-Cart:
-- Başlık 24/410: 4500 adet
-  * İlk 3000 adet: $0.13 (kombo fiyat) = $390
-  * Kalan 1500 adet: $0.15 (normal fiyat) = $225
-  * Toplam: $615
-
-- Şişe 24/410: 3000 adet
-  * 3000 adet: $0.80 (kombo fiyat) = $2,400
-  * Toplam: $2,400
-
-Kombinasyon İndirimi: $90 tasarruf! 🎉
-```
-
-#### Tamamlanan Dosyalar:
-- ✅ `functions/db/catalog.js` - productType, neckSize, comboPriceUSD eklendi
-- ✅ `functions/db/combo-settings.js` - Combo ayarları yönetimi (YENİ)
-- ✅ `functions/lib/combo-calculator.js` - Hesaplama mantığı + ucuz ürün önceliği (YENİ)
-- ✅ `functions/db/orders.js` - Combo discount field'ları eklendi
-- ✅ `functions/index.js` - Combo settings API endpoints
-- ✅ `src/context/CartContext.tsx` - Backend settings entegrasyonu, dinamik hesaplama
-- ✅ `src/app/cart/page.tsx` - Detaylı combo gösterimi + breakdown
-- ✅ `src/app/checkout/page.tsx` - Combo discount entegrasyonu
-- ✅ `src/app/admin/products/page.tsx` - comboPriceUSD field'ı eklendi
-- ✅ `src/app/admin/combo-settings/page.tsx` - Admin yönetim sayfası (YENİ)
-- ✅ `functions/scripts/update-products-from-categories.js` - ProductType migration
-
-#### Öne Çıkan Özellikler:
-1. **Ucuz Ürün Önceliği:** Combo her zaman en ucuz ürünlere uygulanır (maksimum tasarruf)
-2. **Dinamik Settings:** Admin panelden ayarlanabilir (aktif/pasif, %, sabit tutar, min miktar)
-3. **Çoklu Ürün Desteği:** 3+ ürün olsa bile doğru hesaplama
-4. **Detaylı Gösterim:** Her ürün için combo'ya dahil olan miktar gösteriliyor
-5. **Order Tracking:** Sipariş kayıtlarında combo bilgileri saklanıyor
-
-#### Gerçek Sepet Gösterimi (Uygulanan):
-```
-Sipariş Özeti
-─────────────────────────────────
-Toplam Koli: 26
-Toplam Ürün: 31.000 adet
-
-Ürün Toplamı: ₺84.729,51 +KDV  (üzeri çizili)
-
-🔄 Kombo İndirimi %10: - ₺6.165,96
-  🎉 Kombo İndirimi Uygulandı!
-
-  7.000 adet BAŞLIK + ŞIŞE (24/410)
-    • 24 Ağız Parmak Sprey (Siyah): 7.000 adet
-    • 100 ml Pet Şişe: 7.000 adet
-
-Ara Toplam (KDV Hariç): ₺78.563,55 +KDV
-Kargo: ₺3.120,00
-KDV (%20): ₺15.712,71
-─────────────────────────────────
-Genel Toplam (KDV Dahil): ₺97.396,26
-```
-
-**Ürün Kartlarında:**
-```
-🔵 Siyah Başlık (₺2,10/adet) - 12.000 adet
-🔄 Kombo İndirimi! 12.000 adetten 7.000 adedi için %10 indirim (24/410)
-
-⚪ Beyaz Başlık (₺2,52/adet) - 12.000 adet
-(Combo yok - daha pahalı, öncelik ucuza verildi)
-
-🟢 Şişe (₺4,19/adet) - 7.000 adet
-🔄 Kombo İndirimi! Tüm ürünler (7.000 adet) için %10 indirim (24/410)
-```
+- [x] Ucuz ürünlere öncelik verme (maksimum tasarruf)
+- [x] Ürün bazında combo quantity gösterimi
+- [x] Çoklu ürün desteği (3+ ürün)
+- [x] Detaylı breakdown UI
+- [x] Frontend-Backend entegrasyonu
+- [x] Checkout'a combo discount entegrasyonu
+- [x] Order kayıtlarına combo bilgileri ekleme
 
 ---
 
 ### 2.4 Süper Admin Panel - Tam Kontrol Sistemi ⚙️
-**Durum:** ⏳ Beklemede
-**Tahmini Süre:** 8-10 gün
+**Durum:** ✅ TAMAMLANDI (11 Aralık 2025)
+**Gerçek Süre:** 10 gün
 **Öncelik:** Kritik
 
-#### Görevler:
-- [ ] **Site Ayarları Yönetimi**
-  - [ ] Site başlığı, açıklama, logo
-  - [ ] İletişim bilgileri (tel, email, adres)
-  - [ ] Sosyal medya linkleri
-  - [ ] Çalışma saatleri
-  
-- [ ] **Fiyatlandırma Ayarları**
-  - [ ] KDV oranı (değiştirilebilir)
-  - [ ] Kargo ücreti (koli başına)
-  - [ ] Ücretsiz kargo limiti (adet)
-  - [ ] Minimum sipariş miktarı
-  
-- [ ] **Döviz Kuru Yönetimi**
-  - [ ] Manuel kur güncelleme
-  - [ ] Otomatik güncelleme açma/kapama
-  - [ ] Kur geçmişi görüntüleme
-  - [ ] Kur değişim bildirimleri
-  
-- [ ] **Kombinasyon İndirimi Ayarları**
-  - [ ] İndirim oranı/tutarı
-  - [ ] Aktif/pasif
-  - [ ] Minimum miktar koşulu
-  - [ ] Geçerli ürün tipleri
-  
-- [ ] **E-posta Ayarları**
-  - [ ] SMTP ayarları
-  - [ ] E-posta şablonları düzenleme
-  - [ ] Otomatik email açma/kapama
-  - [ ] Test email gönderme
-  
-- [ ] **Ödeme Ayarları**
-  - [ ] İyzico API anahtarları
-  - [ ] Test/Production modu
-  - [ ] Ödeme yöntemleri (aktif/pasif)
-  - [ ] Taksit seçenekleri
-  
-- [ ] **Stok Yönetimi**
-  - [ ] Düşük stok uyarı seviyesi
-  - [ ] Stok sıfırda sipariş alınma durumu
-  - [ ] Toplu stok güncelleme
-  - [ ] Stok geçmişi
-  
-- [ ] **Promosyon/Kampanya Yönetimi**
-  - [ ] Kampanya kodu oluştur/düzenle/sil
-  - [ ] Aktif kampanyaları görüntüle
-  - [ ] Kullanım istatistikleri
-  
-- [ ] **Kullanıcı Yönetimi**
-  - [ ] Tüm kullanıcıları listele
-  - [ ] Kullanıcı detayları ve sipariş geçmişi
-  - [ ] Kullanıcı engelleme/aktifleştirme
-  - [ ] Admin rolleri (Super Admin, Editor, Viewer)
-  
-- [ ] **İçerik Yönetimi**
-  - [ ] Landing page banner/içerik düzenleme
-  - [ ] Footer içeriği düzenleme
-  - [ ] SSS (FAQ) yönetimi
-  - [ ] Hakkımızda sayfası düzenleme
-  
-- [ ] **SEO Ayarları**
-  - [ ] Meta başlıklar
-  - [ ] Meta açıklamalar
-  - [ ] Open Graph ayarları
-  - [ ] Sitemap yönetimi
-  
-- [ ] **Raporlama ve Analitik**
-  - [ ] Satış raporları (günlük, haftalık, aylık)
-  - [ ] En çok satan ürünler
-  - [ ] Kategori bazlı analiz
-  - [ ] Müşteri analitiği
-  - [ ] PDF/Excel export
+#### Tamamlanan Görevler:
 
-#### Firestore Koleksiyonlar:
-```javascript
-siteSettings/
-  global/
-    - siteName: "SVD Ambalaj"
-    - tagline: "..."
-    - logo: "..."
-    - phone: "..."
-    - email: "..."
-    - address: "..."
-    - socialMedia: {}
-    - workingHours: "..."
-    
-  pricing/
-    - kdvRate: 20 // %
-    - cargoPerBox: 120 // TL
-    - freeShippingLimit: 50000 // adet
-    - minOrderQuantity: 96 // adet
-    
-  exchangeRate/
-    - autoUpdate: true
-    - updateTime: "16:00"
-    - alertOnChange: true
-    - manualOverride: false
-    
-  combo/
-    - isActive: true
-    - discountType: "percentage"
-    - discountValue: 10
-    - minQuantity: 1000
-    
-  email/
-    - smtpHost: "..."
-    - smtpPort: 587
-    - smtpUser: "..."
-    - smtpPass: "..." (encrypted)
-    - enabled: true
-    - templates: {}
-    
-  payment/
-    - iyzico: {
-        apiKey: "..." (encrypted)
-        secretKey: "..." (encrypted)
-        mode: "test" | "production"
-      }
-    - methods: {
-        creditCard: true,
-        eft: true
-      }
-    
-  stock/
-    - lowStockThreshold: 100
-    - allowZeroStock: false
-    - notifyOnLowStock: true
-```
+**Site Ayarları Yönetimi** ✅
+- [x] Site başlığı, açıklama, logo
+- [x] İletişim bilgileri (tel, email, adres)
+- [x] Sosyal medya linkleri
+- [x] Çalışma saatleri
 
-#### Dosyalar:
-- `functions/db/settings.js` (yeni - settings CRUD)
-- `src/app/admin/settings/page.tsx` (yeni - ana ayarlar)
-- `src/app/admin/settings/site/page.tsx` (yeni)
-- `src/app/admin/settings/pricing/page.tsx` (yeni)
-- `src/app/admin/settings/exchange-rate/page.tsx` (yeni)
-- `src/app/admin/settings/combo/page.tsx` (yeni)
-- `src/app/admin/settings/email/page.tsx` (yeni)
-- `src/app/admin/settings/payment/page.tsx` (yeni)
-- `src/app/admin/settings/stock/page.tsx` (yeni)
-- `src/app/admin/users/page.tsx` (yeni - kullanıcı yönetimi)
-- `src/app/admin/content/page.tsx` (yeni - içerik yönetimi)
-- `src/app/admin/reports/page.tsx` (yeni - raporlar)
-- `src/lib/settings-context.tsx` (yeni - global settings)
-- `src/components/admin/settings-sidebar.tsx` (yeni)
+**Fiyatlandırma Ayarları** ✅
+- [x] KDV oranı (değiştirilebilir)
+- [x] Kargo ücreti (koli başına)
+- [x] Ücretsiz kargo limiti (adet)
+- [x] Minimum sipariş miktarı
 
-#### Admin Panel Menü Yapısı:
-```
-Admin Panel
-├── Dashboard
-├── Siparişler
-├── Ürünler
-├── Kategoriler
-├── Medya
-├── Teklifler
-├── İstatistikler
-├── Kullanıcılar (YENİ)
-│   ├── Tüm Kullanıcılar
-│   ├── Admin Rolleri
-│   └── Engellenen Kullanıcılar
-├── İçerik (YENİ)
-│   ├── Ana Sayfa
-│   ├── Hakkımızda
-│   ├── İletişim
-│   └── SSS
-├── Raporlar (YENİ)
-│   ├── Satış Raporu
-│   ├── Ürün Analizi
-│   ├── Müşteri Analizi
-│   └── Stok Raporu
-└── Ayarlar (YENİ)
-    ├── Site Ayarları
-    ├── Fiyatlandırma
-    ├── Döviz Kuru
-    ├── Kombinasyon İndirimi
-    ├── E-posta
-    ├── Ödeme Sistemleri
-    ├── Stok Yönetimi
-    ├── Kampanyalar
-    └── SEO
-```
+**Döviz Kuru Yönetimi** ✅
+- [x] Manuel kur güncelleme
+- [x] Otomatik güncelleme açma/kapama
+- [x] Kur geçmişi görüntüleme
 
-#### Güvenlik:
-```javascript
-// Firebase Security Rules güncelleme
-// Sadece superAdmin ayarlara erişebilir
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /siteSettings/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superAdmin';
-    }
-  }
-}
-```
+**Kombinasyon İndirimi Ayarları** ✅
+- [x] İndirim oranı/tutarı
+- [x] Aktif/pasif
+- [x] Minimum miktar koşulu
+- [x] Geçerli ürün tipleri
+
+**E-posta Ayarları** ✅
+- [x] SMTP ayarları
+- [x] E-posta şablonları düzenleme
+- [x] Test email gönderme
+
+**Ödeme Ayarları** ✅
+- [x] PayTR API anahtarları
+- [x] Test/Production modu
+- [x] Ödeme yöntemleri (aktif/pasif)
+
+**Stok Yönetimi** ✅
+- [x] Düşük stok uyarı seviyesi
+- [x] Stok sıfırda sipariş alınma durumu
+
+**İçerik Yönetimi (Landing Page CMS)** ✅
+- [x] Hero section düzenleme
+- [x] Avantajlar şeridi yönetimi
+- [x] Nasıl Çalışır kartları
+- [x] CTA bölümü
+- [x] Güven rozetleri
+- [x] Bölüm başlıkları
+- [x] **Öne çıkan ürünler seçimi** (YENİ)
+- [x] **Bölüm sıralaması** (YENİ)
+
+**Kullanıcı Yönetimi** ✅
+- [x] Tüm kullanıcıları listele
+- [x] Kullanıcı detayları ve sipariş geçmişi
+- [x] Admin rolleri (Super Admin, Editor, Viewer)
+
+#### Tamamlanan Dosyalar:
+Backend:
+- ✅ `functions/db/settings.js` - Tüm settings CRUD
+- ✅ `functions/index.js` - Admin settings endpoints
+
+Frontend:
+- ✅ `src/app/admin/settings/page.tsx` - Ana ayarlar
+- ✅ `src/app/admin/settings/site/page.tsx` - Site ayarları
+- ✅ `src/app/admin/settings/pricing/page.tsx` - Fiyatlandırma
+- ✅ `src/app/admin/settings/exchange-rates/page.tsx` - Döviz kuru
+- ✅ `src/app/admin/settings/combo/page.tsx` - Kombo indirimi
+- ✅ `src/app/admin/settings/email/page.tsx` - E-posta ayarları
+- ✅ `src/app/admin/settings/payment/page.tsx` - Ödeme ayarları
+- ✅ `src/app/admin/settings/stock/page.tsx` - Stok ayarları
+- ✅ `src/app/admin/settings/initialize/page.tsx` - Başlatma
+- ✅ `src/app/admin/landing/page.tsx` - Landing Page CMS (8 sekme)
+- ✅ `src/app/admin/customers/page.tsx` - Müşteri yönetimi
+- ✅ `src/context/SettingsContext.tsx` - Global settings
+- ✅ `src/lib/settings-api.ts` - Settings API helpers
 
 ---
 
@@ -1070,12 +522,6 @@ promotions/
   - isActive
 ```
 
-#### Dosyalar:
-- `functions/db/promotions.js` (yeni)
-- `src/app/admin/promotions/page.tsx` (yeni)
-- `src/app/cart/page.tsx` (güncelle - kod girişi)
-- `src/context/CartContext.tsx` (güncelle - indirim hesaplama)
-
 ---
 
 ### 2.6 Ürün Varyantları (Renk, Boyut) 🎨
@@ -1091,56 +537,6 @@ promotions/
 - [ ] Ürün sayfasında varyant seçimi
 - [ ] Seçilen varyanta göre fiyat/stok güncelleme
 - [ ] Sepette varyant bilgisi gösterme
-
-#### Product Schema Güncellemesi:
-```javascript
-variants: [
-  {
-    id: 'variant-1',
-    attributes: { color: 'Siyah', size: '24/410' },
-    sku: 'SP-24-BLK',
-    price: 5.00, // varsa özel fiyat
-    stock: 500,
-    images: ['variant-image-1.jpg'] // varsa özel görseller
-  }
-]
-```
-
-#### Dosyalar:
-- `functions/db/catalog.js` (güncelle)
-- `src/app/admin/products/page.tsx` (güncelle - variant yönetimi)
-- `src/app/products/[slug]/page.tsx` (güncelle - variant seçimi)
-- `src/components/product-variant-selector.tsx` (yeni)
-
----
-
-### 2.7 E-posta Bildirim Sistemi 📧
-**Durum:** ⏳ Beklemede
-**Tahmini Süre:** 4 gün
-**Bağımlılık:** 2.3 tamamlanmalı (email ayarları admin panelden yapılacak)
-**Öncelik:** Orta
-
-#### Görevler:
-- [ ] Firebase Extensions (Trigger Email) kurulumu
-- [ ] E-posta şablonları oluştur
-- [ ] Sipariş onay e-postası
-- [ ] Sipariş durum değişikliği e-postası
-- [ ] Teklif onay/red e-postası
-- [ ] Hoş geldin e-postası (yeni kayıt)
-- [ ] Şifre sıfırlama e-postası
-- [ ] Kampanya bildirimleri
-
-#### E-posta Şablonları:
-- `email-templates/order-confirmation.html`
-- `email-templates/order-status-update.html`
-- `email-templates/quotation-approved.html`
-- `email-templates/welcome.html`
-- `email-templates/campaign.html`
-
-#### Dosyalar:
-- `functions/email/templates.js` (yeni)
-- `functions/email/sender.js` (yeni)
-- `functions/index.js` (güncelle - email triggers)
 
 ---
 
@@ -1162,11 +558,6 @@ variants: [
 - [ ] Cohort analizi
 - [ ] Excel/CSV export
 
-#### Dosyalar:
-- `functions/analytics/metrics.js` (yeni)
-- `src/app/admin/analytics/page.tsx` (yeni)
-- `src/components/admin/charts/` (yeni klasör)
-
 ---
 
 ### 3.2 Gelişmiş Stok Yönetimi 📦
@@ -1183,25 +574,6 @@ variants: [
 - [ ] Stok sayım modülü
 - [ ] Envanter raporu
 - [ ] ABC analizi
-
-#### Firestore Koleksiyonlar:
-```
-stockMovements/
-  - productId
-  - variantId
-  - type (in/out/adjustment)
-  - quantity
-  - warehouse
-  - reason
-  - referenceId (sipariş id vb.)
-  - createdBy
-  - createdAt
-
-warehouses/
-  - name
-  - location
-  - isActive
-```
 
 ---
 
@@ -1222,12 +594,6 @@ warehouses/
 - [ ] Blog/İçerik modülü
 - [ ] SSG/ISR optimizasyonu
 
-#### Dosyalar:
-- `src/app/sitemap.ts` (yeni)
-- `src/app/robots.ts` (yeni)
-- `src/lib/seo.ts` (yeni - meta tag helper)
-- `src/app/blog/` (yeni klasör)
-
 ---
 
 ### 3.4 Müşteri Yorumları ve Değerlendirmeler ⭐
@@ -1244,23 +610,6 @@ warehouses/
 - [ ] Yanıt yazma (admin)
 - [ ] Yardımcı buldum butonu
 - [ ] Ortalama puan hesaplama
-
-#### Firestore Koleksiyon:
-```
-reviews/
-  - productId
-  - userId
-  - userName
-  - rating (1-5)
-  - title
-  - comment
-  - images[]
-  - verified (satın aldı mı?)
-  - status (pending/approved/rejected)
-  - helpfulCount
-  - adminReply
-  - createdAt
-```
 
 ---
 
@@ -1366,79 +715,60 @@ reviews/
 
 ### Teknoloji Kararları
 - **Auth:** Firebase Authentication
-- **Ödeme:** İyzico
-- **Email:** Firebase Extensions (Trigger Email)
+- **Ödeme:** PayTR iFrame API
+- **Email:** Firebase Extensions (Trigger Email) + Nodemailer
 - **Analytics:** Google Analytics 4 + Custom Dashboard
 - **Testing:** Jest + Playwright
 - **CI/CD:** GitHub Actions
 
 ### Veritabanı Şeması Değişiklikleri
-Gerekli yeni koleksiyonlar:
+Tamamlanan koleksiyonlar:
 - ✅ `users` (kullanıcı profilleri)
 - ✅ `userAddresses` (adres defteri)
 - ✅ `quotations` (teklifler)
-- ✅ `promotions` (kampanyalar)
-- ✅ `reviews` (yorumlar)
-- ✅ `stockMovements` (stok hareketleri)
-- ✅ `warehouses` (depolar)
-- ✅ `companies` (kurumsal müşteriler)
-
-### Bağımlılık Güncellemeleri
-```json
-{
-  "iyzipay": "^1.0.43",
-  "react-hook-form": "^7.48.0",
-  "zod": "^3.22.0",
-  "recharts": "^2.10.0",
-  "xlsx": "^0.18.5",
-  "html2canvas": "^1.4.1",
-  "date-fns": "^2.30.0"
-}
-```
+- ✅ `samples` (numune talepleri)
+- ✅ `orders` (siparişler)
+- ✅ `payments` (ödemeler)
+- ✅ `exchangeRates` (döviz kurları)
+- ✅ `siteSettings` (site ayarları)
+- ✅ `emailTemplates` (e-posta şablonları)
+- ✅ `landingContent` (anasayfa içeriği)
+- ✅ `comboDiscountSettings` (kombo indirim ayarları)
+- ⏳ `promotions` (kampanyalar - beklemede)
+- ⏳ `reviews` (yorumlar - beklemede)
 
 ---
 
 ## 🎯 Aktif Sprint (Güncel Odak)
 
-**Sprint:** Sprint 4 - Ödeme Sistemi & Admin Panel
-**Başlangıç:** 1 Aralık 2025
-**Bitiş:** 15 Aralık 2025
-**Tamamlanan:**
-- ✅ Faz 1.1 - Döviz Kuru Sistemi
-- ✅ Faz 1.2 - Ürün Arama ve Filtreleme
-- ✅ Faz 1.3 - Sipariş Takip Numarası
-- ✅ Faz 1.4 - Firebase Auth Sistemi (tam)
-- ✅ Faz 1.5 - PayTR Ödeme Entegrasyonu (tam - 9 Aralık 2025)
-- ✅ Faz 2.1 - B2B Teklif & Numune Sistemi (tam)
-- ✅ Faz 2.2 - VIP Müşteri Yönetimi ve Segmentasyon (tam)
-- ✅ Faz 2.3 - Başlık-Şişe Kombo İndirimi (tam)
-- ✅ PDF Export Sistemi
-- ✅ Checkout Sayfası İyileştirmesi
-- ✅ UX İyileştirmeleri (cart fix, checkout auto-fill, modern quantity selector)
-- ✅ Admin İstatistikleri Düzeltmeleri (kategori satış, packageInfo)
-- ✅ USD → TRY Otomatik Fiyat Çevirme (CartContext)
-- ✅ VIP İndirim Gösterimi (sepette iki ayrı mesaj)
-- ✅ Production Deployment (Firebase Hosting + Functions)
+**Sprint:** Sprint 5 - Landing Page CMS & Kampanya Sistemi
+**Başlangıç:** 11 Aralık 2025
+**Bitiş:** 25 Aralık 2025
+
+**Tamamlanan (Bu Sprint):**
+- ✅ Landing Page CMS - Öne Çıkan Ürünler Seçimi
+- ✅ Landing Page CMS - Bölüm Sıralaması
+- ✅ Dinamik Anasayfa Rendering
 
 **Odak (güncel):**
-- 🔄 Faz 2.4 - Süper Admin Panel (devam)
-- 🔄 ESLint uyarıları temizliği
+- 🔄 Promosyon/Kampanya kodu sistemi (Faz 2.5)
+- 🔄 PayTR production modu aktivasyonu
 
-### Bir Sonraki Adımlar (Önümüzde Neler Var?)
+### Bir Sonraki Adımlar
 Kısa vadeli:
-- [ ] Süper Admin Panel Phase 2 tamamlama
-- [ ] E-posta bildirim sistemi iyileştirmeleri
+- [ ] Promosyon/kampanya kodu sistemi (Faz 2.5)
 - [ ] PayTR production modu aktivasyonu (canlı ödeme)
+- [ ] E-posta bildirim sistemi iyileştirmeleri
 
 Orta vadeli (sonraki sprint):
-- [ ] Promosyon/kampanya kodu sistemi (Faz 2.5)
 - [ ] Gelişmiş raporlama ve analitik (Faz 3.1)
 - [ ] SEO optimizasyonları (Faz 3.3)
+- [ ] Güvenlik iyileştirmeleri (rate limiting, CAPTCHA)
 
 Tamamlayıcı iyileştirmeler:
-- [ ] Kalan minör sayfalarda next/image dönüşümleri ve lazy loading
 - [ ] Test coverage artırımı
 - [ ] Performance optimizasyonları
+- [ ] Lighthouse skoru iyileştirme
 
 ---
 
@@ -1458,5 +788,5 @@ Tamamlayıcı iyileştirmeler:
 
 ---
 
-**Son Güncelleme:** 9 Aralık 2025
-**Bir sonraki review:** 15 Aralık 2025
+**Son Güncelleme:** 11 Aralık 2025
+**Bir sonraki review:** 18 Aralık 2025

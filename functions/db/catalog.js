@@ -490,6 +490,89 @@ const deleteProduct = async (id) => {
   return existing;
 };
 
+/**
+ * Get products with low stock
+ * @param {number} lowThreshold - Low stock threshold (default: 100)
+ * @param {number} criticalThreshold - Critical stock threshold (default: 20)
+ * @returns {Promise<{low: Array, critical: Array, outOfStock: Array}>}
+ */
+const getLowStockProducts = async (lowThreshold = 100, criticalThreshold = 20) => {
+  const snapshot = await productsCollection.get();
+  const products = snapshot.docs.map(mapProductDoc).filter(Boolean);
+
+  const outOfStock = [];
+  const critical = [];
+  const low = [];
+
+  for (const product of products) {
+    const stock = product.stock || 0;
+
+    if (stock === 0) {
+      outOfStock.push(product);
+    } else if (stock <= criticalThreshold) {
+      critical.push(product);
+    } else if (stock <= lowThreshold) {
+      low.push(product);
+    }
+  }
+
+  return {
+    outOfStock,
+    critical,
+    low,
+    summary: {
+      outOfStockCount: outOfStock.length,
+      criticalCount: critical.length,
+      lowCount: low.length,
+      totalAlerts: outOfStock.length + critical.length + low.length,
+    }
+  };
+};
+
+/**
+ * Update product stock after order
+ * @param {string} productId - Product ID
+ * @param {number} quantity - Quantity to decrease
+ * @returns {Promise<{product: object, alert: string|null}>}
+ */
+const decreaseProductStock = async (productId, quantity, stockSettings = {}) => {
+  const product = await getProductById(productId);
+  if (!product) {
+    throw new Error(`Product not found: ${productId}`);
+  }
+
+  const currentStock = product.stock || 0;
+  const newStock = Math.max(0, currentStock - quantity);
+
+  await productsCollection.doc(productId).update({
+    stock: newStock,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  const updatedDoc = await productsCollection.doc(productId).get();
+  const updatedProduct = mapProductDoc(updatedDoc);
+
+  // Determine alert level
+  const lowThreshold = stockSettings.lowStockThreshold || 100;
+  const criticalThreshold = stockSettings.criticalStockThreshold || 20;
+
+  let alertLevel = null;
+  if (newStock === 0) {
+    alertLevel = 'out_of_stock';
+  } else if (newStock <= criticalThreshold) {
+    alertLevel = 'critical';
+  } else if (newStock <= lowThreshold) {
+    alertLevel = 'low';
+  }
+
+  return {
+    product: updatedProduct,
+    previousStock: currentStock,
+    newStock,
+    alertLevel,
+  };
+};
+
 export {
   listCategories,
   getCategoryById,
@@ -505,6 +588,8 @@ export {
   createProduct,
   updateProduct,
   deleteProduct,
+  getLowStockProducts,
+  decreaseProductStock,
 };
 
 // --- Migration utilities ---

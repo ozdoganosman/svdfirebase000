@@ -82,6 +82,19 @@ function CheckoutPageContent() {
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
 
+  // Coupon code state
+  const [couponCode, setCouponCode] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    id: string;
+    code: string;
+    discountAmount: number;
+    discountType: "percentage" | "fixed";
+    discountValue: number;
+    message: string;
+  } | null>(null);
+
   useEffect(() => {
     getCurrentRate().then(rate => setExchangeRate(rate.rate)).catch(() => setExchangeRate(null));
   }, []);
@@ -239,6 +252,65 @@ function CheckoutPageContent() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Apply coupon code
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError("Lütfen bir kupon kodu girin");
+      return;
+    }
+
+    setCouponLoading(true);
+    setCouponError("");
+
+    try {
+      const response = await fetch(`${apiBase}/coupon/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: couponCode.toUpperCase().trim(),
+          orderTotal: subtotal - (comboDiscount || 0),
+          userId: user?.uid || null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.valid) {
+        setAppliedCoupon({
+          id: result.campaign.id,
+          code: result.campaign.code,
+          discountAmount: result.discountAmount,
+          discountType: result.campaign.discountType,
+          discountValue: result.campaign.discountValue,
+          message: result.message,
+        });
+        setCouponCode("");
+        setCouponError("");
+      } else {
+        setCouponError(result.error || "Geçersiz kupon kodu");
+      }
+    } catch (error) {
+      console.error("Coupon validation failed:", error);
+      setCouponError("Kupon kodu doğrulanamadı");
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  // Remove applied coupon
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError("");
+  };
+
+  // Calculate totals with coupon
+  const couponDiscount = appliedCoupon?.discountAmount || 0;
+  const totalDiscount = (comboDiscount || 0) + couponDiscount;
+  const subtotalAfterDiscounts = subtotal - totalDiscount;
+  const taxAmount = subtotalAfterDiscounts * (taxRate / 100);
+  const grandTotal = subtotalAfterDiscounts + taxAmount;
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (items.length === 0) {
@@ -255,22 +327,38 @@ function CheckoutPageContent() {
         ...form,
         userId: user?.uid || null, // Add user ID if authenticated
       },
-      items: items.map((item) => ({
-        id: item.id,
-        title: item.title,
-        quantity: item.quantity,
-        price: item.price ?? 0,
-        subtotal: (item.price ?? 0) * item.quantity,
-        category: item.slug?.split('-')[0] || null, // Extract category from slug
-        packageInfo: item.packageInfo || null, // Include package info for statistics
-      })),
+      items: items.map((item) => {
+        const effectivePrice = getEffectivePrice(item);
+        const totalItemCount = getTotalItemCount(item);
+        const itemSubtotal = calculateItemTotal(item);
+
+        return {
+          id: item.id,
+          title: item.title,
+          quantity: item.quantity, // Box count (or item count if no packageInfo)
+          price: effectivePrice, // Effective unit price in TRY (with bulk pricing applied)
+          subtotal: itemSubtotal, // Total for this item (price * totalItemCount)
+          category: item.slug?.split('-')[0] || null, // Extract category from slug
+          packageInfo: item.packageInfo || null, // Include package info for statistics
+          totalItemCount, // Actual item count (quantity * itemsPerBox if applicable)
+        };
+      }),
       totals: {
         subtotal,
         comboDiscount: comboDiscount || 0,
-        finalTotal: subtotal - (comboDiscount || 0),
+        couponDiscount: couponDiscount,
+        totalDiscount: totalDiscount,
+        finalTotal: subtotalAfterDiscounts,
         currency: "TRY",
       },
       comboMatches: comboMatches || [],
+      coupon: appliedCoupon ? {
+        campaignId: appliedCoupon.id,
+        code: appliedCoupon.code,
+        discountAmount: appliedCoupon.discountAmount,
+        discountType: appliedCoupon.discountType,
+        discountValue: appliedCoupon.discountValue,
+      } : null,
       paymentMethod,
     };
 
@@ -303,11 +391,29 @@ function CheckoutPageContent() {
         }
       }
 
+      // Record coupon usage if a coupon was applied
+      if (appliedCoupon && orderId) {
+        try {
+          await fetch(`${apiBase}/coupon/use`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              campaignId: appliedCoupon.id,
+              userId: user?.uid || null,
+              orderId: orderId,
+            }),
+          });
+        } catch (couponError) {
+          console.error("Error recording coupon usage:", couponError);
+          // Don't fail the checkout if coupon recording fails
+        }
+      }
+
       // If credit card payment, redirect to PayTR
       if (paymentMethod === "credit_card" && paymentSettings?.paytrEnabled) {
         setProcessingPayment(true);
         try {
-          const totalAmount = (subtotal - (comboDiscount || 0)) * (1 + taxRate / 100);
+          const totalAmount = grandTotal; // Already includes all discounts and tax
           const paymentResponse = await fetch(`${apiBase}/payment/create-token`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -706,6 +812,55 @@ function CheckoutPageContent() {
               })}
             </ul>
             
+            {/* Coupon Code Section */}
+            <div className="border-t border-slate-200 pt-4">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Kupon Kodu</h3>
+              {appliedCoupon ? (
+                <div className="rounded-lg bg-green-50 border border-green-200 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🎟️</span>
+                      <div>
+                        <p className="font-semibold text-green-800">{appliedCoupon.code}</p>
+                        <p className="text-xs text-green-600">{appliedCoupon.message}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="text-xs text-red-600 hover:text-red-800 font-medium"
+                    >
+                      Kaldır
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => {
+                      setCouponCode(e.target.value.toUpperCase());
+                      setCouponError("");
+                    }}
+                    placeholder="Kupon kodu girin"
+                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm uppercase focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {couponLoading ? "..." : "Uygula"}
+                  </button>
+                </div>
+              )}
+              {couponError && (
+                <p className="mt-2 text-xs text-red-600">{couponError}</p>
+              )}
+            </div>
+
             <div className="space-y-3 border-t border-slate-200 pt-4">
               {totalBoxes > 0 && (
                 <div className="flex items-center justify-between text-sm text-slate-700">
@@ -731,16 +886,24 @@ function CheckoutPageContent() {
                   </span>
                 </div>
               )}
+              {couponDiscount > 0 && (
+                <div className="flex items-center justify-between text-sm text-green-600">
+                  <span>🎟️ Kupon İndirimi ({appliedCoupon?.code})</span>
+                  <span className="font-semibold">
+                    -{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, couponDiscount) : `$${couponDiscount.toFixed(2)}`}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between text-sm text-slate-500">
                 <span>KDV (%{taxRate})</span>
                 <span>
-                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (subtotal - (comboDiscount || 0)) * (taxRate / 100)) : `$${((subtotal - (comboDiscount || 0)) * (taxRate / 100)).toFixed(2)}`}
+                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, taxAmount) : `$${taxAmount.toFixed(2)}`}
                 </span>
               </div>
               <div className="flex items-center justify-between border-t border-slate-200 pt-3 text-base font-bold text-amber-700">
                 <span>Genel Toplam (KDV Dahil)</span>
                 <span>
-                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (subtotal - (comboDiscount || 0)) * (1 + taxRate / 100)) : `$${((subtotal - (comboDiscount || 0)) * (1 + taxRate / 100)).toFixed(2)}`}
+                  {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, grandTotal) : `$${grandTotal.toFixed(2)}`}
                 </span>
               </div>
               <p className="mt-2 text-xs text-slate-500">

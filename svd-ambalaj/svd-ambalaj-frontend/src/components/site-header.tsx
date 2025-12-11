@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { useSettings } from "@/context/SettingsContext";
 import ProductSearch from "@/components/product-search";
 
 const links = [
@@ -16,11 +17,17 @@ const links = [
 export function SiteHeader() {
   const { items, totalBoxes } = useCart();
   const { user, signOut } = useAuth();
+  const { siteSettings } = useSettings();
   const [showSearch, setShowSearch] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  
+
   // Show total boxes for packaged products, or item count for regular products
   const badgeCount = totalBoxes > 0 ? totalBoxes : items.length;
+
+  // Dynamic site name and logo
+  const siteName = siteSettings?.siteName || "SVD Ambalaj";
+  const logoUrl = siteSettings?.logoUrl || "/images/logo.png";
+  const logoAlt = siteSettings?.logoAlt || siteName;
 
   const handleSignOut = async () => {
     try {
@@ -30,21 +37,23 @@ export function SiteHeader() {
       console.error("Sign out error:", error);
     }
   };
-  
+
   return (
     <header className="border-b border-slate-200 bg-white/90 backdrop-blur sticky top-0 z-50">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4 sm:px-10">
         <Link href="/" className="flex items-center gap-3 flex-shrink-0">
-          <Image
-            src="/images/logo.png"
-            alt="SVD Ambalaj"
-            width={48}
-            height={48}
-            className="h-12 w-12"
-            priority
-          />
+          {logoUrl && (
+            <Image
+              src={logoUrl}
+              alt={logoAlt}
+              width={48}
+              height={48}
+              className="h-12 w-12 object-contain"
+              priority
+            />
+          )}
           <span className="text-xl font-bold tracking-tight text-amber-600">
-            SVD Ambalaj
+            {siteName}
           </span>
         </Link>
 

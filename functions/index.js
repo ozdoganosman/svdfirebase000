@@ -109,6 +109,14 @@ const requireSuperAdmin = async (req, res, next) => {
   }
 
   try {
+    // Check if this is the primary admin from .env (always has super_admin access)
+    const primaryAdminEmail = process.env.ADMIN_EMAIL;
+    if (primaryAdminEmail && req.admin.email.toLowerCase() === primaryAdminEmail.toLowerCase()) {
+      req.admin.userId = "primary_admin";
+      req.admin.isPrimaryAdmin = true;
+      return next();
+    }
+
     // Get user by email
     const user = await users.getUserByEmail(req.admin.email);
     if (!user) {
@@ -140,6 +148,14 @@ const requireAdmin = async (req, res, next) => {
   }
 
   try {
+    // Check if this is the primary admin from .env (always has admin access)
+    const primaryAdminEmail = process.env.ADMIN_EMAIL;
+    if (primaryAdminEmail && req.admin.email.toLowerCase() === primaryAdminEmail.toLowerCase()) {
+      req.admin.userId = "primary_admin";
+      req.admin.isPrimaryAdmin = true;
+      return next();
+    }
+
     const user = await users.getUserByEmail(req.admin.email);
     if (!user) {
       return res.status(401).json({ error: "User not found" });
@@ -896,9 +912,76 @@ app.put("/landing-media", requireAuth, async (req, res) => {
   }
 });
 
+// ==================== LANDING CONTENT (Homepage CMS) ====================
+
+// Public endpoint - get landing page content
+app.get("/landing-content", async (_req, res) => {
+  try {
+    const content = await settings.getLandingContent();
+    res.json({ content });
+  } catch (error) {
+    functions.logger.error("Error fetching landing content", error);
+    res.status(500).json({ error: "Failed to load landing content." });
+  }
+});
+
+// Admin endpoint - update entire landing content
+app.put("/admin/landing-content", requireAuth, async (req, res) => {
+  try {
+    const userId = req.admin?.email || "admin";
+    const content = await settings.setLandingContent(req.body, userId);
+    res.json({ content, message: "Landing content updated successfully" });
+  } catch (error) {
+    functions.logger.error("Error updating landing content", error);
+    res.status(500).json({ error: "Failed to update landing content." });
+  }
+});
+
+// Admin endpoint - update specific section
+app.put("/admin/landing-content/:section", requireAuth, async (req, res) => {
+  try {
+    const { section } = req.params;
+    const validSections = ["hero", "advantages", "howItWorks", "cta", "trustBadges", "sections"];
+
+    if (!validSections.includes(section)) {
+      return res.status(400).json({ error: `Invalid section. Valid sections: ${validSections.join(", ")}` });
+    }
+
+    const userId = req.admin?.email || "admin";
+    const content = await settings.updateLandingContent(section, req.body, userId);
+    res.json({ content, message: `${section} section updated successfully` });
+  } catch (error) {
+    functions.logger.error(`Error updating landing content section: ${req.params.section}`, error);
+    res.status(500).json({ error: "Failed to update landing content section." });
+  }
+});
+
+// Admin endpoint - reset landing content to defaults
+app.post("/admin/landing-content/reset", requireAuth, async (req, res) => {
+  try {
+    const { section } = req.body; // Optional: reset specific section
+    const userId = req.admin?.email || "admin";
+    const content = await settings.resetLandingContent(section || null, userId);
+    res.json({ content, message: section ? `${section} reset to defaults` : "All landing content reset to defaults" });
+  } catch (error) {
+    functions.logger.error("Error resetting landing content", error);
+    res.status(500).json({ error: "Failed to reset landing content." });
+  }
+});
+
 app.post("/orders", async (req, res) => {
   try {
     const order = await orders.createOrder(req.body || {});
+
+    // Send order confirmation email to customer
+    try {
+      await emailSender.sendOrderConfirmationEmail(order);
+      functions.logger.info("Order confirmation email sent", { orderId: order.id });
+    } catch (emailError) {
+      functions.logger.error("Failed to send order confirmation email", emailError);
+      // Don't fail the request if email fails
+    }
+
     res.status(201).send({ message: "Order received", order });
   } catch (error) {
     functions.logger.error("Error creating order", error);
@@ -923,6 +1006,34 @@ app.get("/user/orders", async (req, res) => {
   }
 });
 
+// Public endpoint for users to get a single order by ID
+app.get("/user/orders/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId parameter is required" });
+    }
+
+    const order = await orders.getOrderById(id);
+
+    if (!order) {
+      return res.status(404).json({ error: "Sipariş bulunamadı" });
+    }
+
+    // Verify that the order belongs to the user
+    if (order.customer?.userId !== userId) {
+      return res.status(403).json({ error: "Bu siparişe erişim yetkiniz yok" });
+    }
+
+    res.status(200).json({ order });
+  } catch (error) {
+    functions.logger.error("Error fetching user order", error);
+    res.status(500).json({ error: "Sipariş yüklenirken hata oluştu" });
+  }
+});
+
 // User profile endpoints
 app.get("/user/profile", async (req, res) => {
   try {
@@ -933,6 +1044,7 @@ app.get("/user/profile", async (req, res) => {
     }
 
     let user = await users.getUserById(userId);
+    let isNewUser = false;
 
     // If user profile doesn't exist in Firestore, create it from Firebase Auth
     if (!user) {
@@ -952,10 +1064,22 @@ app.get("/user/profile", async (req, res) => {
           taxNumber: "",
         });
 
+        isNewUser = true;
         functions.logger.info("User profile created successfully", { userId, email: authUser.email });
       } catch (createError) {
         functions.logger.error("Failed to create user profile from Auth", { userId, error: createError });
         return res.status(404).json({ error: "User not found" });
+      }
+    }
+
+    // Send welcome email if new user was created
+    if (isNewUser && user.email) {
+      try {
+        await emailSender.sendWelcomeEmail(user);
+        functions.logger.info("Welcome email sent to new user", { userId, email: user.email });
+      } catch (emailError) {
+        functions.logger.error("Failed to send welcome email", emailError);
+        // Don't fail the request if email fails
       }
     }
 
@@ -994,6 +1118,15 @@ app.post("/user/profile", async (req, res) => {
 
     const userData = req.body;
     const newUser = await users.createUser(userId, userData);
+
+    // Send welcome email to new user
+    try {
+      await emailSender.sendWelcomeEmail(newUser);
+      functions.logger.info("Welcome email sent", { userId, email: newUser.email });
+    } catch (emailError) {
+      functions.logger.error("Failed to send welcome email", emailError);
+      // Don't fail the request if email fails
+    }
 
     res.status(201).json({ user: newUser });
   } catch (error) {
@@ -1298,14 +1431,31 @@ app.get("/orders/:id", requireAuth, async (req, res) => {
 
 app.put("/orders/:id/status", requireAuth, async (req, res) => {
   try {
-    const { status } = req.body || {};
+    const { status, trackingNumber, trackingUrl, adminNotes } = req.body || {};
     if (!status) {
       return res.status(400).send({ error: "Status is required." });
     }
-    const order = await orders.updateOrderStatus(req.params.id, status);
+
+    // Build update payload with optional fields
+    const updateData = { status };
+    if (trackingNumber !== undefined) updateData.trackingNumber = trackingNumber;
+    if (trackingUrl !== undefined) updateData.trackingUrl = trackingUrl;
+    if (adminNotes !== undefined) updateData.adminNotes = adminNotes;
+
+    const order = await orders.updateOrderStatus(req.params.id, status, updateData);
     if (!order) {
       return res.status(404).send({ error: "Order not found." });
     }
+
+    // Send status update email to customer
+    try {
+      await emailSender.sendOrderStatusEmail(order);
+      functions.logger.info("Order status email sent", { orderId: order.id, status });
+    } catch (emailError) {
+      functions.logger.error("Failed to send order status email", emailError);
+      // Don't fail the request if email fails
+    }
+
     res.status(200).send({ order });
   } catch (error) {
     functions.logger.error("Error updating order status", error);
@@ -1385,11 +1535,12 @@ app.get("/samples/customer/:userId", async (req, res) => {
 // Update sample status (admin only)
 app.put("/samples/:id/status", requireAuth, async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, trackingNumber, carrier } = req.body;
     if (!status) {
       return res.status(400).json({ error: "status is required" });
     }
-    const updatedSample = await samples.updateSampleStatus(req.params.id, status);
+    const shippingInfo = { trackingNumber, carrier };
+    const updatedSample = await samples.updateSampleStatus(req.params.id, status, shippingInfo);
 
     // Send email notification when sample is approved
     if (status === "approved") {
@@ -1889,6 +2040,64 @@ app.get("/settings", requireAuth, async (_req, res) => {
   }
 });
 
+// Get public site settings (no auth required - for header/footer)
+app.get("/settings/site/public", async (_req, res) => {
+  try {
+    const siteSettings = await settings.getSiteSettings("site");
+
+    // Return public site settings (no sensitive data)
+    res.status(200).json({
+      settings: {
+        section: "site",
+        siteName: siteSettings?.siteName || "SVD Ambalaj",
+        siteDescription: siteSettings?.siteDescription || "",
+        supportEmail: siteSettings?.supportEmail || "",
+        supportPhone: siteSettings?.supportPhone || "",
+        // Logo
+        logoUrl: siteSettings?.logoUrl || "",
+        logoAlt: siteSettings?.logoAlt || "",
+        faviconUrl: siteSettings?.faviconUrl || "",
+        // Address
+        address: siteSettings?.address || "",
+        city: siteSettings?.city || "",
+        district: siteSettings?.district || "",
+        postalCode: siteSettings?.postalCode || "",
+        country: siteSettings?.country || "Türkiye",
+        mapUrl: siteSettings?.mapUrl || "",
+        // Social Media
+        socialMedia: siteSettings?.socialMedia || {},
+        // Working Hours
+        workingHours: siteSettings?.workingHours || "",
+        workingDays: siteSettings?.workingDays || "",
+      },
+    });
+  } catch (error) {
+    functions.logger.error("Failed to get public site settings", error);
+    // Return defaults on error
+    res.status(200).json({
+      settings: {
+        section: "site",
+        siteName: "SVD Ambalaj",
+        siteDescription: "",
+        supportEmail: "",
+        supportPhone: "",
+        logoUrl: "",
+        logoAlt: "",
+        faviconUrl: "",
+        address: "",
+        city: "",
+        district: "",
+        postalCode: "",
+        country: "Türkiye",
+        mapUrl: "",
+        socialMedia: {},
+        workingHours: "",
+        workingDays: "",
+      },
+    });
+  }
+});
+
 // Get public payment settings (no auth required - for checkout page)
 app.get("/settings/payment/public", async (_req, res) => {
   try {
@@ -2049,6 +2258,47 @@ app.delete("/admin/campaigns/:id", requireAuth, requireAdmin, async (req, res) =
   } catch (error) {
     functions.logger.error("Failed to delete campaign", error);
     res.status(500).json({ error: "Failed to delete campaign" });
+  }
+});
+
+// ==================== COUPON CODE ENDPOINTS ====================
+
+// Validate coupon code (public)
+app.post("/coupon/validate", async (req, res) => {
+  try {
+    const { code, orderTotal, userId } = req.body;
+
+    if (!code) {
+      return res.status(400).json({ error: "Kupon kodu gereklidir" });
+    }
+
+    const result = await settings.validateCouponCode(code, orderTotal || 0, userId || null);
+
+    if (result.valid) {
+      res.status(200).json(result);
+    } else {
+      res.status(400).json({ valid: false, error: result.error });
+    }
+  } catch (error) {
+    functions.logger.error("Failed to validate coupon", error);
+    res.status(500).json({ error: "Kupon doğrulama başarısız" });
+  }
+});
+
+// Record coupon usage (called after successful order)
+app.post("/coupon/use", async (req, res) => {
+  try {
+    const { campaignId, userId, orderId } = req.body;
+
+    if (!campaignId || !orderId) {
+      return res.status(400).json({ error: "campaignId and orderId are required" });
+    }
+
+    await settings.recordCouponUsage(campaignId, userId, orderId);
+    res.status(200).json({ success: true });
+  } catch (error) {
+    functions.logger.error("Failed to record coupon usage", error);
+    res.status(500).json({ error: "Failed to record coupon usage" });
   }
 });
 
@@ -2226,6 +2476,136 @@ app.post("/admin/email/test", requireAuth, requireSuperAdmin, async (req, res) =
   } catch (error) {
     functions.logger.error("Failed to send test email", error);
     res.status(500).json({ error: "Failed to send test email: " + error.message });
+  }
+});
+
+// ==================== EMAIL TEMPLATES ENDPOINTS ====================
+
+// Get all email templates (super admin only)
+app.get("/admin/email/templates", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const templates = await settings.getAllEmailTemplates();
+    res.status(200).json({ templates });
+  } catch (error) {
+    functions.logger.error("Failed to get email templates", error);
+    res.status(500).json({ error: "Failed to get email templates: " + error.message });
+  }
+});
+
+// Get single email template (super admin only)
+app.get("/admin/email/templates/:templateId", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const { templateId } = req.params;
+    const template = await settings.getEmailTemplate(templateId);
+
+    if (!template) {
+      return res.status(404).json({ error: "Template not found" });
+    }
+
+    res.status(200).json({ template });
+  } catch (error) {
+    functions.logger.error("Failed to get email template", error);
+    res.status(500).json({ error: "Failed to get email template: " + error.message });
+  }
+});
+
+// Update email template (super admin only)
+app.put("/admin/email/templates/:templateId", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const { templateId } = req.params;
+    const { subject, htmlTemplate, textTemplate } = req.body;
+
+    if (!subject && !htmlTemplate && !textTemplate) {
+      return res.status(400).json({ error: "At least one field (subject, htmlTemplate, textTemplate) is required" });
+    }
+
+    const updateData = {};
+    if (subject) updateData.subject = subject;
+    if (htmlTemplate) updateData.htmlTemplate = htmlTemplate;
+    if (textTemplate) updateData.textTemplate = textTemplate;
+
+    const template = await settings.updateEmailTemplate(templateId, updateData, req.admin.email);
+
+    functions.logger.info("Email template updated", { templateId, by: req.admin.email });
+    res.status(200).json({ template });
+  } catch (error) {
+    functions.logger.error("Failed to update email template", error);
+    res.status(500).json({ error: "Failed to update email template: " + error.message });
+  }
+});
+
+// Reset email template to default (super admin only)
+app.post("/admin/email/templates/:templateId/reset", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const { templateId } = req.params;
+    const template = await settings.resetEmailTemplate(templateId, req.admin.email);
+
+    functions.logger.info("Email template reset to default", { templateId, by: req.admin.email });
+    res.status(200).json({ template });
+  } catch (error) {
+    functions.logger.error("Failed to reset email template", error);
+    res.status(500).json({ error: "Failed to reset email template: " + error.message });
+  }
+});
+
+// ==================== STOCK ALERT ENDPOINTS ====================
+
+// Get low stock products (admin only)
+app.get("/admin/stock/alerts", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    // Get stock settings
+    const stockSettings = await settings.getSettings("stock");
+    const lowThreshold = stockSettings?.lowStockThreshold || 100;
+    const criticalThreshold = stockSettings?.criticalStockThreshold || 20;
+
+    const stockData = await catalog.getLowStockProducts(lowThreshold, criticalThreshold);
+
+    res.status(200).json(stockData);
+  } catch (error) {
+    functions.logger.error("Failed to get low stock products", error);
+    res.status(500).json({ error: "Failed to get low stock products: " + error.message });
+  }
+});
+
+// Send stock alert email (admin only)
+app.post("/admin/stock/send-alert", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    // Get stock settings
+    const stockSettings = await settings.getSettings("stock");
+
+    if (!stockSettings?.notifyOnLowStock) {
+      return res.status(400).json({ error: "Stok bildirimleri kapalı. Ayarlar > Stok sayfasından aktifleştirin." });
+    }
+
+    if (!stockSettings?.notifyEmail) {
+      return res.status(400).json({ error: "Bildirim e-posta adresi ayarlanmamış. Ayarlar > Stok sayfasından ayarlayın." });
+    }
+
+    const lowThreshold = stockSettings?.lowStockThreshold || 100;
+    const criticalThreshold = stockSettings?.criticalStockThreshold || 20;
+
+    const stockData = await catalog.getLowStockProducts(lowThreshold, criticalThreshold);
+
+    if (stockData.summary.totalAlerts === 0) {
+      return res.status(400).json({ error: "Stok uyarısı gerektiren ürün bulunmuyor." });
+    }
+
+    await emailSender.sendStockAlertEmail(stockData, stockSettings.notifyEmail);
+
+    functions.logger.info("Stock alert email sent", {
+      to: stockSettings.notifyEmail,
+      alerts: stockData.summary,
+      by: req.admin.email
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Stok uyarısı ${stockSettings.notifyEmail} adresine gönderildi`,
+      summary: stockData.summary
+    });
+  } catch (error) {
+    functions.logger.error("Failed to send stock alert email", error);
+    res.status(500).json({ error: "Stok uyarı e-postası gönderilemedi: " + error.message });
   }
 });
 

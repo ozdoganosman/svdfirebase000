@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { AppProviders } from "@/components/app-providers";
 import ExchangeRateBanner from "@/components/exchange-rate-banner";
+import { DynamicFavicon } from "@/components/dynamic-favicon";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +32,7 @@ export default function RootLayout({
     <html lang="tr">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-50 text-slate-900`}>
         <AppProviders>
+          <DynamicFavicon />
           <SiteHeader />
           <ExchangeRateBanner />
           <div className="min-h-screen">

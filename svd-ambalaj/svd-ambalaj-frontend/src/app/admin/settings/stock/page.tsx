@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getSettings, updateSettings, StockSettings } from "@/lib/settings-api";
+import { apiFetch } from "@/lib/admin-api";
 import {
   SettingsSection,
   SettingsField,
@@ -9,6 +10,18 @@ import {
   SettingsToggle,
   SettingsSaveBar,
 } from "@/components/admin/settings";
+
+type StockAlertData = {
+  outOfStock: Array<{ id: string; title: string; stock: number }>;
+  critical: Array<{ id: string; title: string; stock: number }>;
+  low: Array<{ id: string; title: string; stock: number }>;
+  summary: {
+    outOfStockCount: number;
+    criticalCount: number;
+    lowCount: number;
+    totalAlerts: number;
+  };
+};
 
 export default function StockSettingsPage() {
   const [settings, setSettings] = useState<StockSettings | null>(null);
@@ -25,9 +38,43 @@ export default function StockSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Stock alerts state
+  const [stockAlerts, setStockAlerts] = useState<StockAlertData | null>(null);
+  const [alertsLoading, setAlertsLoading] = useState(false);
+  const [sendingAlert, setSendingAlert] = useState(false);
+
   useEffect(() => {
     loadSettings();
+    loadStockAlerts();
   }, []);
+
+  const loadStockAlerts = async () => {
+    try {
+      setAlertsLoading(true);
+      const data = await apiFetch<StockAlertData>("/admin/stock/alerts");
+      setStockAlerts(data);
+    } catch (err) {
+      console.error("Failed to load stock alerts:", err);
+    } finally {
+      setAlertsLoading(false);
+    }
+  };
+
+  const handleSendAlert = async () => {
+    try {
+      setSendingAlert(true);
+      setError(null);
+      const result = await apiFetch<{ success: boolean; message: string }>("/admin/stock/send-alert", {
+        method: "POST",
+      });
+      setSuccessMessage(result.message);
+    } catch (err) {
+      console.error("Failed to send stock alert:", err);
+      setError(err instanceof Error ? err.message : "Stok uyarısı gönderilemedi");
+    } finally {
+      setSendingAlert(false);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -263,6 +310,165 @@ export default function StockSettingsPage() {
                   placeholder="stok@sirketim.com"
                 />
               </SettingsField>
+            </div>
+          )}
+        </SettingsSection>
+
+        {/* Stock Alerts Panel */}
+        <SettingsSection
+          title="Mevcut Stok Uyarıları"
+          description="Şu an dikkat gerektiren ürünleri görüntüleyin ve bildirim gönderin"
+        >
+          {alertsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : stockAlerts ? (
+            <div className="space-y-4">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="p-4 bg-red-100 border border-red-300 rounded-lg text-center">
+                  <span className="text-3xl">🚫</span>
+                  <p className="text-2xl font-bold text-red-700 mt-1">{stockAlerts.summary.outOfStockCount}</p>
+                  <p className="text-sm text-red-600">Stokta Yok</p>
+                </div>
+                <div className="p-4 bg-orange-100 border border-orange-300 rounded-lg text-center">
+                  <span className="text-3xl">🚨</span>
+                  <p className="text-2xl font-bold text-orange-700 mt-1">{stockAlerts.summary.criticalCount}</p>
+                  <p className="text-sm text-orange-600">Kritik</p>
+                </div>
+                <div className="p-4 bg-amber-100 border border-amber-300 rounded-lg text-center">
+                  <span className="text-3xl">⚠️</span>
+                  <p className="text-2xl font-bold text-amber-700 mt-1">{stockAlerts.summary.lowCount}</p>
+                  <p className="text-sm text-amber-600">Düşük</p>
+                </div>
+                <div className="p-4 bg-slate-100 border border-slate-300 rounded-lg text-center">
+                  <span className="text-3xl">📊</span>
+                  <p className="text-2xl font-bold text-slate-700 mt-1">{stockAlerts.summary.totalAlerts}</p>
+                  <p className="text-sm text-slate-600">Toplam Uyarı</p>
+                </div>
+              </div>
+
+              {/* Product Lists */}
+              {stockAlerts.outOfStock.length > 0 && (
+                <div className="border border-red-200 rounded-lg overflow-hidden">
+                  <div className="bg-red-50 px-4 py-2 border-b border-red-200">
+                    <h4 className="font-semibold text-red-900">🚫 Stokta Olmayan Ürünler ({stockAlerts.outOfStock.length})</h4>
+                  </div>
+                  <ul className="divide-y divide-red-100">
+                    {stockAlerts.outOfStock.slice(0, 5).map((product) => (
+                      <li key={product.id} className="px-4 py-2 flex justify-between items-center text-sm">
+                        <span className="text-slate-700">{product.title}</span>
+                        <span className="text-red-600 font-semibold">0 adet</span>
+                      </li>
+                    ))}
+                    {stockAlerts.outOfStock.length > 5 && (
+                      <li className="px-4 py-2 text-sm text-slate-500 text-center">
+                        +{stockAlerts.outOfStock.length - 5} ürün daha...
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {stockAlerts.critical.length > 0 && (
+                <div className="border border-orange-200 rounded-lg overflow-hidden">
+                  <div className="bg-orange-50 px-4 py-2 border-b border-orange-200">
+                    <h4 className="font-semibold text-orange-900">🚨 Kritik Stok ({stockAlerts.critical.length})</h4>
+                  </div>
+                  <ul className="divide-y divide-orange-100">
+                    {stockAlerts.critical.slice(0, 5).map((product) => (
+                      <li key={product.id} className="px-4 py-2 flex justify-between items-center text-sm">
+                        <span className="text-slate-700">{product.title}</span>
+                        <span className="text-orange-600 font-semibold">{product.stock} adet</span>
+                      </li>
+                    ))}
+                    {stockAlerts.critical.length > 5 && (
+                      <li className="px-4 py-2 text-sm text-slate-500 text-center">
+                        +{stockAlerts.critical.length - 5} ürün daha...
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {stockAlerts.low.length > 0 && (
+                <div className="border border-amber-200 rounded-lg overflow-hidden">
+                  <div className="bg-amber-50 px-4 py-2 border-b border-amber-200">
+                    <h4 className="font-semibold text-amber-900">⚠️ Düşük Stok ({stockAlerts.low.length})</h4>
+                  </div>
+                  <ul className="divide-y divide-amber-100">
+                    {stockAlerts.low.slice(0, 5).map((product) => (
+                      <li key={product.id} className="px-4 py-2 flex justify-between items-center text-sm">
+                        <span className="text-slate-700">{product.title}</span>
+                        <span className="text-amber-600 font-semibold">{product.stock} adet</span>
+                      </li>
+                    ))}
+                    {stockAlerts.low.length > 5 && (
+                      <li className="px-4 py-2 text-sm text-slate-500 text-center">
+                        +{stockAlerts.low.length - 5} ürün daha...
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {stockAlerts.summary.totalAlerts === 0 && (
+                <div className="p-6 bg-green-50 border border-green-200 rounded-lg text-center">
+                  <span className="text-4xl">✅</span>
+                  <p className="text-green-800 font-semibold mt-2">Tüm ürünler yeterli stokta!</p>
+                  <p className="text-sm text-green-600">Stok seviyelerinde herhangi bir uyarı bulunmuyor.</p>
+                </div>
+              )}
+
+              {/* Send Alert Button */}
+              {stockAlerts.summary.totalAlerts > 0 && formData.notifyOnLowStock && formData.notifyEmail && (
+                <div className="flex items-center justify-between p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                  <div>
+                    <p className="font-semibold text-indigo-900">Stok Uyarısı Gönder</p>
+                    <p className="text-sm text-indigo-700">
+                      {formData.notifyEmail} adresine e-posta gönder
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSendAlert}
+                    disabled={sendingAlert}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
+                  >
+                    {sendingAlert ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Gönderiliyor...
+                      </>
+                    ) : (
+                      <>
+                        <span>📧</span>
+                        Uyarı Gönder
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Refresh Button */}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={loadStockAlerts}
+                  disabled={alertsLoading}
+                  className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Yenile
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 bg-slate-50 rounded-lg text-center text-slate-500">
+              Stok verileri yüklenemedi
             </div>
           )}
         </SettingsSection>

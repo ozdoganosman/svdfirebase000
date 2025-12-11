@@ -102,6 +102,55 @@ async function getExchangeRate(apiBase: string): Promise<ExchangeRate | null> {
   }
 }
 
+type LandingContent = {
+  hero: {
+    badge: string;
+    title: string;
+    titleHighlight: string;
+    description: string;
+    primaryButton: { text: string; href: string };
+    secondaryButton: { text: string; href: string };
+    stats: { value: string; label: string }[];
+  };
+  advantages: { icon: string; title: string; description: string; highlight: string }[];
+  howItWorks: {
+    title: string;
+    subtitle: string;
+    cards: { icon: string; color: string; title: string; subtitle: string; description: string; example: string }[];
+  };
+  cta: {
+    title: string;
+    description: string;
+    primaryButton: { text: string; href: string };
+    secondaryButton: { text: string; href: string };
+  };
+  trustBadges: { icon: string; text: string }[];
+  sections: {
+    categoriesTitle: string;
+    categoriesSubtitle: string;
+    productsTitle: string;
+    productsSubtitle: string;
+  };
+  featuredProducts?: string[];
+  sectionOrder?: string[];
+};
+
+async function getLandingContent(apiBase: string): Promise<LandingContent | null> {
+  try {
+    const response = await fetch(`${apiBase}/landing-content`, {
+      next: { revalidate: 60 },
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const data = await response.json();
+    return data?.content ?? null;
+  } catch (error) {
+    console.error("Landing content fetch error", error);
+    return null;
+  }
+}
+
 export default async function Home() {
   const apiBase = resolveServerApiBase();
   const apiOrigin = resolveServerApiOrigin();
@@ -122,75 +171,110 @@ export default async function Home() {
   const resolveProductImage = (product: Product): string =>
     resolveMediaPath(product.images?.[0] ?? product.image) || '/images/placeholders/product.jpg';
 
-  const [products, categories, exchangeRate] = await Promise.all([
+  const [products, categories, exchangeRate, landingContent] = await Promise.all([
     getProducts(apiBase),
     getCategories(apiBase),
     getExchangeRate(apiBase),
+    getLandingContent(apiBase),
   ]);
 
-  // Avantajlar
-  const advantages = [
-    {
-      icon: "🔄",
-      title: "Kombo İndirimi",
-      description: "Başlık + Şişe birlikte alana %10 indirim",
-      highlight: "%10",
-    },
-    {
-      icon: "📦",
-      title: "Toplu Alım Avantajı",
-      description: "Adet arttıkça birim fiyat düşer",
-      highlight: "Kademeli Fiyat",
-    },
-    {
-      icon: "🚚",
-      title: "Hızlı Kargo",
-      description: "50.000+ adet siparişlerde ücretsiz kargo",
-      highlight: "Ücretsiz",
-    },
-    {
-      icon: "💳",
-      title: "Güvenli Ödeme",
-      description: "Kredi kartı ve havale ile ödeme",
-      highlight: "3D Secure",
-    },
+  // Fallback defaults if no landing content
+  const hero = landingContent?.hero ?? {
+    badge: "B2B Ambalaj Çözümleri",
+    title: "Sprey, Pompa ve PET Şişe",
+    titleHighlight: "Toptan Satış",
+    description: "Kozmetik, temizlik ve kişisel bakım sektörü için kaliteli ambalaj ürünleri. Toplu alımlarda özel fiyatlar.",
+    primaryButton: { text: "Ürünleri İncele", href: "/products" },
+    secondaryButton: { text: "Teklif Al", href: "/cart" },
+    stats: [{ value: "24", label: "Ülkeye İhracat" }],
+  };
+
+  const advantages = landingContent?.advantages ?? [
+    { icon: "🔄", title: "Kombo İndirimi", description: "Başlık + Şişe birlikte alana %10 indirim", highlight: "%10" },
+    { icon: "📦", title: "Toplu Alım Avantajı", description: "Adet arttıkça birim fiyat düşer", highlight: "Kademeli Fiyat" },
+    { icon: "🚚", title: "Hızlı Kargo", description: "50.000+ adet siparişlerde ücretsiz kargo", highlight: "Ücretsiz" },
+    { icon: "💳", title: "Güvenli Ödeme", description: "Kredi kartı ve havale ile ödeme", highlight: "3D Secure" },
   ];
 
-  return (
-    <main className="min-h-screen w-full bg-white text-slate-900">
-      {/* Hero Section - Kompakt */}
-      <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+  const howItWorks = landingContent?.howItWorks ?? {
+    title: "Nasıl Çalışır?",
+    subtitle: "Toplu alım avantajlarından yararlanın",
+    cards: [
+      { icon: "🔄", color: "amber", title: "Kombo İndirimi", subtitle: "%10 Anında İndirim", description: "Aynı ağız ölçüsüne sahip başlık + şişe birlikte aldığınızda otomatik %10 indirim!", example: "24/410 başlık + 24/410 şişe = Her iki üründe %10 indirim" },
+      { icon: "📊", color: "blue", title: "Kademeli Fiyat", subtitle: "Çok Al Az Öde", description: "Sipariş miktarı arttıkça birim fiyat düşer. Her ürünün fiyat tablosunu inceleyin.", example: "5 koli = ₺2.50/adet → 20 koli = ₺2.10/adet" },
+      { icon: "🚚", color: "green", title: "Kargo", subtitle: "50.000+ Adet Ücretsiz", description: "50.000 adet ve üzeri siparişlerde Türkiye geneli ücretsiz kargo.", example: "Altında: Koli başına ₺120 kargo ücreti uygulanır" },
+    ],
+  };
+
+  const cta = landingContent?.cta ?? {
+    title: "Toplu Sipariş mi Vermek İstiyorsunuz?",
+    description: "Özel fiyat teklifi için sepetinizi doldurun veya bizimle iletişime geçin.",
+    primaryButton: { text: "Teklif Oluştur", href: "/cart" },
+    secondaryButton: { text: "İletişime Geç", href: "mailto:info@svdambalaj.com" },
+  };
+
+  const trustBadges = landingContent?.trustBadges ?? [
+    { icon: "🏭", text: "1998'den Beri" },
+    { icon: "🌍", text: "24 Ülkeye İhracat" },
+    { icon: "✅", text: "ISO 9001:2015" },
+    { icon: "🔒", text: "Güvenli Ödeme" },
+    { icon: "📞", text: "7/24 Destek" },
+  ];
+
+  const sections = landingContent?.sections ?? {
+    categoriesTitle: "Kategoriler",
+    categoriesSubtitle: "İhtiyacınıza uygun ürünleri keşfedin",
+    productsTitle: "Öne Çıkan Ürünler",
+    productsSubtitle: "En çok tercih edilen ürünlerimiz",
+  };
+
+  // Featured products - filter by IDs or use first 8
+  const featuredProductIds = landingContent?.featuredProducts ?? [];
+  const featuredProducts = featuredProductIds.length > 0
+    ? featuredProductIds
+        .map((id) => products.find((p) => p.id === id))
+        .filter((p): p is Product => p !== undefined)
+    : products.slice(0, 8);
+
+  // Section order - default order if not set
+  const sectionOrder = landingContent?.sectionOrder ?? [
+    "hero", "advantages", "categories", "howItWorks", "products", "cta", "trustBadges"
+  ];
+
+  // Section components map
+  const sectionComponents: Record<string, React.ReactNode> = {
+    hero: (
+      <section key="hero" className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:gap-12">
             {/* Sol - Text */}
             <div className="flex-1 space-y-6">
               <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/20 px-4 py-2 text-sm font-medium text-amber-300">
                 <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400"></span>
-                B2B Ambalaj Çözümleri
+                {hero.badge}
               </div>
               <h1 className="text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
-                Sprey, Pompa ve PET Şişe
-                <span className="block text-amber-400">Toptan Satış</span>
+                {hero.title}
+                <span className="block text-amber-400">{hero.titleHighlight}</span>
               </h1>
               <p className="max-w-lg text-lg text-slate-300">
-                Kozmetik, temizlik ve kişisel bakım sektörü için kaliteli ambalaj ürünleri.
-                Toplu alımlarda özel fiyatlar.
+                {hero.description}
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link
-                  href="/products"
+                  href={hero.primaryButton.href}
                   className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-6 py-3 font-semibold text-white shadow-lg shadow-amber-500/25 transition hover:bg-amber-400"
                 >
-                  Ürünleri İncele
+                  {hero.primaryButton.text}
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </Link>
                 <Link
-                  href="/cart"
+                  href={hero.secondaryButton.href}
                   className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-3 font-semibold text-white transition hover:bg-white/10"
                 >
-                  Teklif Al
+                  {hero.secondaryButton.text}
                 </Link>
               </div>
               {/* Mini Stats */}
@@ -203,10 +287,12 @@ export default async function Home() {
                   <span className="text-2xl font-bold text-amber-400">{categories.length}</span>
                   <span className="ml-2 text-slate-400">Kategori</span>
                 </div>
-                <div>
-                  <span className="text-2xl font-bold text-amber-400">24</span>
-                  <span className="ml-2 text-slate-400">Ülkeye İhracat</span>
-                </div>
+                {hero.stats.map((stat, index) => (
+                  <div key={index}>
+                    <span className="text-2xl font-bold text-amber-400">{stat.value}</span>
+                    <span className="ml-2 text-slate-400">{stat.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -240,9 +326,9 @@ export default async function Home() {
           </div>
         </div>
       </section>
-
-      {/* Avantajlar Şeridi */}
-      <section className="border-b border-slate-100 bg-gradient-to-r from-amber-50 via-white to-amber-50">
+    ),
+    advantages: (
+      <section key="advantages" className="border-b border-slate-100 bg-gradient-to-r from-amber-50 via-white to-amber-50">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-8">
             {advantages.map((item) => (
@@ -267,14 +353,14 @@ export default async function Home() {
           </div>
         </div>
       </section>
-
-      {/* Kategoriler */}
-      <section className="bg-white py-12">
+    ),
+    categories: (
+      <section key="categories" className="bg-white py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Kategoriler</h2>
-              <p className="mt-1 text-sm text-slate-600">İhtiyacınıza uygun ürünleri keşfedin</p>
+              <h2 className="text-2xl font-bold text-slate-900">{sections.categoriesTitle}</h2>
+              <p className="mt-1 text-sm text-slate-600">{sections.categoriesSubtitle}</p>
             </div>
             <Link
               href="/categories"
@@ -328,78 +414,50 @@ export default async function Home() {
           </div>
         </div>
       </section>
-
-      {/* Fiyatlandırma Bilgi Kartları */}
-      <section className="bg-slate-50 py-12">
+    ),
+    howItWorks: (
+      <section key="howItWorks" className="bg-slate-50 py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-slate-900">Nasıl Çalışır?</h2>
-            <p className="mt-2 text-slate-600">Toplu alım avantajlarından yararlanın</p>
+            <h2 className="text-2xl font-bold text-slate-900">{howItWorks.title}</h2>
+            <p className="mt-2 text-slate-600">{howItWorks.subtitle}</p>
           </div>
 
           <div className="mt-8 grid gap-6 md:grid-cols-3">
-            {/* Kombo İndirimi */}
-            <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500 text-2xl text-white">
-                  🔄
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900">Kombo İndirimi</h3>
-                  <p className="text-sm text-amber-600 font-semibold">%10 Anında İndirim</p>
-                </div>
-              </div>
-              <div className="mt-4 space-y-2 text-sm text-slate-600">
-                <p>Aynı ağız ölçüsüne sahip <strong>başlık + şişe</strong> birlikte aldığınızda otomatik %10 indirim!</p>
-                <div className="rounded-lg bg-amber-100/50 p-3">
-                  <p className="text-xs text-amber-800">
-                    <strong>Örnek:</strong> 24/410 başlık + 24/410 şişe = Her iki üründe %10 indirim
-                  </p>
-                </div>
-              </div>
-            </div>
+            {howItWorks.cards.map((card, index) => {
+              const colorClasses: Record<string, { border: string; bg: string; icon: string; text: string; example: string }> = {
+                amber: { border: 'border-amber-200', bg: 'from-amber-50', icon: 'bg-amber-500', text: 'text-amber-600', example: 'bg-amber-100/50 text-amber-800' },
+                blue: { border: 'border-blue-200', bg: 'from-blue-50', icon: 'bg-blue-500', text: 'text-blue-600', example: 'bg-blue-100/50 text-blue-800' },
+                green: { border: 'border-green-200', bg: 'from-green-50', icon: 'bg-green-500', text: 'text-green-600', example: 'bg-green-100/50 text-green-800' },
+                purple: { border: 'border-purple-200', bg: 'from-purple-50', icon: 'bg-purple-500', text: 'text-purple-600', example: 'bg-purple-100/50 text-purple-800' },
+                red: { border: 'border-red-200', bg: 'from-red-50', icon: 'bg-red-500', text: 'text-red-600', example: 'bg-red-100/50 text-red-800' },
+              };
+              const colors = colorClasses[card.color] ?? colorClasses.amber;
 
-            {/* Kademeli Fiyatlandırma */}
-            <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500 text-2xl text-white">
-                  📊
+              return (
+                <div key={index} className={`rounded-2xl border ${colors.border} bg-gradient-to-br ${colors.bg} to-white p-6 shadow-sm`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${colors.icon} text-2xl text-white`}>
+                      {card.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900">{card.title}</h3>
+                      <p className={`text-sm ${colors.text} font-semibold`}>{card.subtitle}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-2 text-sm text-slate-600">
+                    <p>{card.description}</p>
+                    {card.example && (
+                      <div className={`rounded-lg ${colors.example} p-3`}>
+                        <p className="text-xs">
+                          <strong>Örnek:</strong> {card.example}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-slate-900">Kademeli Fiyat</h3>
-                  <p className="text-sm text-blue-600 font-semibold">Çok Al Az Öde</p>
-                </div>
-              </div>
-              <div className="mt-4 space-y-2 text-sm text-slate-600">
-                <p>Sipariş miktarı arttıkça <strong>birim fiyat düşer</strong>. Her ürünün fiyat tablosunu inceleyin.</p>
-                <div className="rounded-lg bg-blue-100/50 p-3">
-                  <p className="text-xs text-blue-800">
-                    <strong>Örnek:</strong> 5 koli = ₺2.50/adet → 20 koli = ₺2.10/adet
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Kargo Koşulları */}
-            <div className="rounded-2xl border border-green-200 bg-gradient-to-br from-green-50 to-white p-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-500 text-2xl text-white">
-                  🚚
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900">Kargo</h3>
-                  <p className="text-sm text-green-600 font-semibold">50.000+ Adet Ücretsiz</p>
-                </div>
-              </div>
-              <div className="mt-4 space-y-2 text-sm text-slate-600">
-                <p><strong>50.000 adet</strong> ve üzeri siparişlerde Türkiye geneli ücretsiz kargo.</p>
-                <div className="rounded-lg bg-green-100/50 p-3">
-                  <p className="text-xs text-green-800">
-                    <strong>Altında:</strong> Koli başına ₺120 kargo ücreti uygulanır
-                  </p>
-                </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
 
           {/* Döviz Kuru Bilgisi */}
@@ -418,14 +476,14 @@ export default async function Home() {
           )}
         </div>
       </section>
-
-      {/* Öne Çıkan Ürünler */}
-      <section className="bg-white py-12">
+    ),
+    products: (
+      <section key="products" className="bg-white py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Öne Çıkan Ürünler</h2>
-              <p className="mt-1 text-sm text-slate-600">En çok tercih edilen ürünlerimiz</p>
+              <h2 className="text-2xl font-bold text-slate-900">{sections.productsTitle}</h2>
+              <p className="mt-1 text-sm text-slate-600">{sections.productsSubtitle}</p>
             </div>
             <Link
               href="/products"
@@ -439,13 +497,13 @@ export default async function Home() {
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {products.length === 0 && (
+            {featuredProducts.length === 0 && (
               <div className="col-span-full rounded-xl border border-dashed border-slate-300 p-10 text-center text-slate-500">
                 Ürünler yükleniyor...
               </div>
             )}
 
-            {products.slice(0, 8).map((product) => (
+            {featuredProducts.map((product) => (
               <article
                 key={product.id}
                 className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-amber-300 hover:shadow-lg"
@@ -545,62 +603,55 @@ export default async function Home() {
           </div>
         </div>
       </section>
-
-      {/* CTA Section */}
-      <section className="bg-gradient-to-r from-amber-500 to-amber-600 py-12 text-white">
+    ),
+    cta: (
+      <section key="cta" className="bg-gradient-to-r from-amber-500 to-amber-600 py-12 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center gap-6 text-center lg:flex-row lg:justify-between lg:text-left">
             <div>
-              <h2 className="text-2xl font-bold">Toplu Sipariş mi Vermek İstiyorsunuz?</h2>
+              <h2 className="text-2xl font-bold">{cta.title}</h2>
               <p className="mt-2 text-amber-100">
-                Özel fiyat teklifi için sepetinizi doldurun veya bizimle iletişime geçin.
+                {cta.description}
               </p>
             </div>
             <div className="flex flex-wrap justify-center gap-3">
               <Link
-                href="/cart"
+                href={cta.primaryButton.href}
                 className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-amber-600 shadow-lg transition hover:bg-amber-50"
               >
-                Teklif Oluştur
+                {cta.primaryButton.text}
               </Link>
               <a
-                href="mailto:info@svdambalaj.com"
+                href={cta.secondaryButton.href}
                 className="inline-flex items-center gap-2 rounded-full border-2 border-white px-6 py-3 font-semibold text-white transition hover:bg-white/10"
               >
-                İletişime Geç
+                {cta.secondaryButton.text}
               </a>
             </div>
           </div>
         </div>
       </section>
-
-      {/* Footer Trust Badges */}
-      <section className="border-t border-slate-100 bg-slate-50 py-8">
+    ),
+    trustBadges: (
+      <section key="trustBadges" className="border-t border-slate-100 bg-slate-50 py-8">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-center justify-center gap-8 text-center text-sm text-slate-600">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🏭</span>
-              <span>1998&apos;den Beri</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🌍</span>
-              <span>24 Ülkeye İhracat</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg">✅</span>
-              <span>ISO 9001:2015</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🔒</span>
-              <span>Güvenli Ödeme</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg">📞</span>
-              <span>7/24 Destek</span>
-            </div>
+            {trustBadges.map((badge, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <span className="text-lg">{badge.icon}</span>
+                <span>{badge.text}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
+    ),
+  };
+
+  return (
+    <main className="min-h-screen w-full bg-white text-slate-900">
+      {/* Render sections in the order defined by sectionOrder */}
+      {sectionOrder.map((sectionId) => sectionComponents[sectionId])}
     </main>
   );
 }

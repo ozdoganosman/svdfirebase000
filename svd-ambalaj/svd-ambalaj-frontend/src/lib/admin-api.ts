@@ -472,6 +472,7 @@ export type AdminSample = {
   notes?: string;
   adminNotes?: string;
   trackingNumber?: string;
+  carrier?: string; // Kargo firması
   createdAt: string;
   updatedAt?: string;
 };

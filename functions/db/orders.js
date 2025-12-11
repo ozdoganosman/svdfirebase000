@@ -57,14 +57,26 @@ const mapOrderDoc = (doc) => {
   }
   const data = doc.data();
   const items = Array.isArray(data.items) ? data.items : [];
-  const mappedItems = items.map((item) => ({
-    id: item.id || item.product_id || "",
-    title: item.title || "",
-    quantity: parseNumber(item.quantity, 0),
-    price: parseNumber(item.price ?? item.unit_price, 0),
-    subtotal: parseNumber(item.subtotal, parseNumber(item.price ?? item.unit_price, 0) * parseNumber(item.quantity, 0)),
-    category: item.category || null,
-  }));
+  const mappedItems = items.map((item) => {
+    const quantity = parseNumber(item.quantity, 0);
+    const price = parseNumber(item.price ?? item.unit_price, 0);
+    const packageInfo = item.packageInfo || null;
+    // Calculate totalItemCount if not stored
+    const calculatedItemCount = packageInfo?.itemsPerBox
+      ? quantity * packageInfo.itemsPerBox
+      : quantity;
+
+    return {
+      id: item.id || item.product_id || "",
+      title: item.title || "",
+      quantity,
+      price,
+      subtotal: parseNumber(item.subtotal, price * calculatedItemCount),
+      category: item.category || null,
+      packageInfo,
+      totalItemCount: item.totalItemCount || calculatedItemCount,
+    };
+  });
 
   return {
     id: doc.id,
@@ -86,6 +98,13 @@ const mapOrderDoc = (doc) => {
     },
     comboMatches: data.comboMatches || [],
     metadata: data.metadata || {},
+    // Shipping and tracking info
+    shippingAddress: data.shippingAddress || null,
+    billingAddress: data.billingAddress || null,
+    trackingNumber: data.trackingNumber || null,
+    trackingUrl: data.trackingUrl || null,
+    adminNotes: data.adminNotes || null,
+    notes: data.notes || null,
   };
 };
 
@@ -231,6 +250,7 @@ const createOrder = async (payload) => {
         subtotal: parseNumber(item.subtotal, calculatedSubtotal),
         category: item.category || null,
         packageInfo: item.packageInfo || null,
+        totalItemCount: item.totalItemCount || actualQuantity, // Actual item count
       };
     }),
     totals: {
@@ -250,17 +270,30 @@ const createOrder = async (payload) => {
   return getOrderById(id);
 };
 
-const updateOrderStatus = async (id, status) => {
+const updateOrderStatus = async (id, status, additionalData = {}) => {
   const normalizedStatus = status ? status.toLowerCase() : null;
   if (!normalizedStatus) {
     throw new Error("Status value is required");
   }
 
   const now = FieldValue.serverTimestamp();
-  await ordersCollection.doc(id).update({
+  const updatePayload = {
     status: normalizedStatus,
     updatedAt: now,
-  });
+  };
+
+  // Add optional fields if provided
+  if (additionalData.trackingNumber !== undefined) {
+    updatePayload.trackingNumber = additionalData.trackingNumber;
+  }
+  if (additionalData.trackingUrl !== undefined) {
+    updatePayload.trackingUrl = additionalData.trackingUrl;
+  }
+  if (additionalData.adminNotes !== undefined) {
+    updatePayload.adminNotes = additionalData.adminNotes;
+  }
+
+  await ordersCollection.doc(id).update(updatePayload);
 
   return getOrderById(id);
 };

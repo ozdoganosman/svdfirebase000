@@ -39,7 +39,7 @@ async function sendEmail(to, subject, html, text, attachments = []) {
  * Send quote approved notification to customer
  */
 export async function sendQuoteApprovedEmail(quote, pdfBuffer = null) {
-  const { subject, html, text } = templates.quoteApprovedTemplate(quote);
+  const { subject, html, text } = await templates.quoteApprovedTemplate(quote);
 
   const attachments = [];
   if (pdfBuffer) {
@@ -58,7 +58,7 @@ export async function sendQuoteApprovedEmail(quote, pdfBuffer = null) {
  * Send quote rejected notification to customer
  */
 export async function sendQuoteRejectedEmail(quote) {
-  const { subject, html, text } = templates.quoteRejectedTemplate(quote);
+  const { subject, html, text } = await templates.quoteRejectedTemplate(quote);
   return sendEmail(quote.customer.email, subject, html, text);
 }
 
@@ -66,7 +66,7 @@ export async function sendQuoteRejectedEmail(quote) {
  * Send sample approved notification to customer
  */
 export async function sendSampleApprovedEmail(sample) {
-  const { subject, html, text } = templates.sampleApprovedTemplate(sample);
+  const { subject, html, text } = await templates.sampleApprovedTemplate(sample);
   return sendEmail(sample.customer.email, subject, html, text);
 }
 
@@ -74,7 +74,7 @@ export async function sendSampleApprovedEmail(sample) {
  * Send new quote notification to admin
  */
 export async function sendNewQuoteAdminEmail(quote, adminEmail) {
-  const { subject, html, text } = templates.newQuoteAdminTemplate(quote);
+  const { subject, html, text } = await templates.newQuoteAdminTemplate(quote);
   return sendEmail(adminEmail, subject, html, text);
 }
 
@@ -82,7 +82,7 @@ export async function sendNewQuoteAdminEmail(quote, adminEmail) {
  * Send new sample notification to admin
  */
 export async function sendNewSampleAdminEmail(sample, adminEmail) {
-  const { subject, html, text } = templates.newSampleAdminTemplate(sample);
+  const { subject, html, text } = await templates.newSampleAdminTemplate(sample);
   return sendEmail(adminEmail, subject, html, text);
 }
 
@@ -103,4 +103,63 @@ export async function sendTestEmail(to) {
   const text = "Bu e-posta, SVD Ambalaj admin panelinden SMTP ayarlarınızı test etmek için gönderilmiştir. E-posta ayarlarınız doğru bir şekilde yapılandırılmış.";
 
   return sendEmail(to, subject, html, text);
+}
+
+/**
+ * Send stock alert email to admin
+ */
+export async function sendStockAlertEmail(stockData, adminEmail) {
+  const { subject, html, text } = await templates.stockAlertTemplate(stockData);
+  return sendEmail(adminEmail, subject, html, text);
+}
+
+/**
+ * Send order confirmation email to customer
+ */
+export async function sendOrderConfirmationEmail(order) {
+  const customerEmail = order.customer?.email || order.billingAddress?.email;
+  if (!customerEmail) {
+    console.warn("No customer email for order confirmation:", order.id);
+    return { success: false, error: "No customer email" };
+  }
+
+  const { subject, html, text } = await templates.orderConfirmationTemplate(order);
+  return sendEmail(customerEmail, subject, html, text);
+}
+
+/**
+ * Send order status update email to customer
+ */
+export async function sendOrderStatusEmail(order) {
+  const customerEmail = order.customer?.email || order.billingAddress?.email;
+  if (!customerEmail) {
+    console.warn("No customer email for order status:", order.id);
+    return { success: false, error: "No customer email" };
+  }
+
+  const { subject, html, text } = await templates.orderStatusTemplate(order);
+  return sendEmail(customerEmail, subject, html, text);
+}
+
+/**
+ * Send welcome email to new user
+ */
+export async function sendWelcomeEmail(user) {
+  if (!user.email) {
+    console.warn("No email for welcome email:", user.uid || user.id);
+    return { success: false, error: "No user email" };
+  }
+
+  const { subject, html, text } = await templates.welcomeTemplate(user);
+  return sendEmail(user.email, subject, html, text);
+}
+
+/**
+ * Send new order notification to admin
+ */
+export async function sendNewOrderAdminEmail(order, adminEmail) {
+  // Use orderConfirmation template but send to admin
+  const { html, text } = await templates.orderConfirmationTemplate(order);
+  const subject = `Yeni Sipariş - #${order.orderNumber || order.id}`;
+  return sendEmail(adminEmail, subject, html, text);
 }

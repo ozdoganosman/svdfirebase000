@@ -7,7 +7,8 @@ import Link from "next/link";
 type Campaign = {
   id: string;
   name: string;
-  type: "discount" | "free_shipping" | "bundle";
+  code: string | null;
+  type: "discount" | "free_shipping" | "bundle" | "coupon";
   description: string;
   discountType: "percentage" | "fixed";
   discountValue: number;
@@ -17,6 +18,7 @@ type Campaign = {
   priority: number;
   minOrderValue: number;
   maxUses: number;
+  maxUsesPerUser: number;
   usedCount: number;
   createdAt: string;
   updatedAt: string;
@@ -93,6 +95,8 @@ export default function CampaignsPage() {
         return "Ücretsiz Kargo";
       case "bundle":
         return "Paket";
+      case "coupon":
+        return "Kupon";
       default:
         return type;
     }
@@ -106,6 +110,8 @@ export default function CampaignsPage() {
         return "bg-green-100 text-green-800";
       case "bundle":
         return "bg-purple-100 text-purple-800";
+      case "coupon":
+        return "bg-amber-100 text-amber-800";
       default:
         return "bg-slate-100 text-slate-800";
     }
@@ -237,6 +243,11 @@ export default function CampaignsPage() {
                   <td className="px-4 py-4">
                     <div>
                       <p className="font-medium text-slate-900">{campaign.name}</p>
+                      {campaign.code && (
+                        <p className="text-xs text-amber-600 font-mono bg-amber-50 px-1.5 py-0.5 rounded inline-block mt-1">
+                          {campaign.code}
+                        </p>
+                      )}
                       {campaign.description && (
                         <p className="text-sm text-slate-500 mt-0.5 line-clamp-1">
                           {campaign.description}

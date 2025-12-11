@@ -59,22 +59,34 @@ const mapSampleDoc = (doc) => {
       shippingFee: data.shippingFee || 200,
       status: data.status || "requested",
       notes: data.notes || "",
+      trackingNumber: data.trackingNumber || "",
+      carrier: data.carrier || "",
       createdAt: mapTimestamp(data.createdAt),
       updatedAt: mapTimestamp(data.updatedAt),
     };
   }
 
-  // Old format (single product)
+  // Old format (single product) - convert to new format for frontend compatibility
   return {
     id: doc.id,
-    name: data.name || "",
-    company: data.company || "",
-    email: data.email || "",
-    phone: data.phone || "",
-    product: data.product || "",
-    quantity: data.quantity || "",
-    notes: data.notes || "",
+    sampleNumber: null,
+    customer: {
+      name: data.name || "",
+      company: data.company || "",
+      email: data.email || "",
+      phone: data.phone || "",
+      userId: null,
+    },
+    items: data.product ? [{
+      id: doc.id,
+      title: data.product,
+      quantity: data.quantity ? parseInt(data.quantity, 10) || 1 : 1,
+    }] : [],
+    shippingFee: 200,
     status: data.status || "requested",
+    notes: data.notes || "",
+    trackingNumber: data.trackingNumber || "",
+    carrier: data.carrier || "",
     createdAt: mapTimestamp(data.createdAt),
     updatedAt: mapTimestamp(data.updatedAt),
   };
@@ -168,7 +180,7 @@ const getSamplesByCustomer = async (userId) => {
 };
 
 // Update sample status
-const updateSampleStatus = async (sampleId, status) => {
+const updateSampleStatus = async (sampleId, status, shippingInfo = {}) => {
   const docRef = samplesCollection.doc(sampleId);
   const doc = await docRef.get();
 
@@ -176,10 +188,20 @@ const updateSampleStatus = async (sampleId, status) => {
     throw new Error("Sample not found");
   }
 
-  await docRef.update({
+  const updateData = {
     status,
     updatedAt: FieldValue.serverTimestamp(),
-  });
+  };
+
+  // Add shipping info if provided (for shipped status)
+  if (shippingInfo.trackingNumber) {
+    updateData.trackingNumber = shippingInfo.trackingNumber;
+  }
+  if (shippingInfo.carrier) {
+    updateData.carrier = shippingInfo.carrier;
+  }
+
+  await docRef.update(updateData);
 
   const updatedDoc = await docRef.get();
   return mapSampleDoc(updatedDoc);
