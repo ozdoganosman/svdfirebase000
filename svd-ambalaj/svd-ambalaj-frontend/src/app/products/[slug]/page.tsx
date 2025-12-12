@@ -4,6 +4,7 @@ import Image from "next/image";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { resolveServerApiUrl, resolveServerApiBase } from "@/lib/server-api";
 import { formatDualPrice, type ExchangeRate } from "@/lib/currency";
+import { ProductJsonLd, BreadcrumbJsonLd } from "@/components/seo/json-ld";
 
 type BulkTier = {
   minQty: number;
@@ -93,6 +94,8 @@ async function getExchangeRate(): Promise<ExchangeRate | null> {
   }
 }
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spreyvalfdunyasi.com";
+
 export async function generateMetadata({
   params,
 }: {
@@ -103,13 +106,49 @@ export async function generateMetadata({
 
   if (!product) {
     return {
-      title: "Ürün bulunamadı | SVD Ambalaj",
+      title: "Ürün bulunamadı",
     };
   }
 
+  const productImage = product.images?.[0] || "/og-image.jpg";
+  const productUrl = `${siteUrl}/products/${slug}`;
+  const description = product.description?.slice(0, 160) || `${product.title} - Toptan fiyatlarla satışta. Hızlı teslimat, uygun fiyat.`;
+
   return {
-    title: `${product.title} | SVD Ambalaj`,
-    description: product.description,
+    title: product.title,
+    description,
+    keywords: [
+      product.title,
+      "sprey valf",
+      "ambalaj",
+      product.specifications?.neckSize ? `${product.specifications.neckSize} ağız` : "",
+      product.specifications?.volume || "",
+    ].filter(Boolean),
+    openGraph: {
+      type: "website",
+      locale: "tr_TR",
+      url: productUrl,
+      siteName: "Sprey Valf Dünyası",
+      title: product.title,
+      description,
+      images: [
+        {
+          url: productImage,
+          width: 800,
+          height: 600,
+          alt: product.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: product.title,
+      description,
+      images: [productImage],
+    },
+    alternates: {
+      canonical: productUrl,
+    },
   };
 }
 
@@ -154,8 +193,27 @@ export default async function ProductDetailPage({
     ? product.images
     : ["/images/placeholders/product.jpg"];
 
+  const breadcrumbItems = [
+    { name: "Ana Sayfa", url: "/" },
+    { name: "Ürünler", url: "/products" },
+    ...(category ? [{ name: category.name, url: `/categories/${category.slug}` }] : []),
+    { name: product.title, url: `/products/${slug}` },
+  ];
+
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-16 text-slate-900">
+    <>
+      <ProductJsonLd
+        name={product.title}
+        description={product.description}
+        image={galleryImages[0]}
+        slug={slug}
+        price={tryUnitPrice || undefined}
+        priceCurrency="TRY"
+        availability={product.stock && product.stock > 0 ? "InStock" : "OutOfStock"}
+        category={category?.name}
+      />
+      <BreadcrumbJsonLd items={breadcrumbItems} />
+      <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-16 text-slate-900">
       <div className="mx-auto max-w-6xl px-6 sm:px-10">
         <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr]">
           <section className="space-y-6">
@@ -433,5 +491,6 @@ export default async function ProductDetailPage({
         </div>
       </div>
     </main>
+    </>
   );
 }

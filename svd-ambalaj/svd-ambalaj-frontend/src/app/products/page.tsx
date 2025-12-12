@@ -5,9 +5,29 @@ import { AddToCartButton } from "@/components/add-to-cart-button";
 import { resolveServerApiUrl, resolveServerApiBase } from "@/lib/server-api";
 import { formatDualPrice, type ExchangeRate } from "@/lib/currency";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spreyvalfdunyasi.com";
+
 export const metadata: Metadata = {
-  title: "Tüm Ürünler | SVD Ambalaj",
-  description: "SVD Ambalaj ürün kataloğu - Sprey, pompa ve ambalaj çözümleri",
+  title: "Tüm Ürünler",
+  description: "Sprey valf, pompa başlık, pet şişe ve ambalaj ürünleri. Toptan fiyatlarla geniş ürün yelpazesi. Hızlı teslimat, uygun fiyat garantisi.",
+  keywords: ["sprey valf", "pompa başlık", "pet şişe", "ambalaj ürünleri", "toptan ambalaj"],
+  openGraph: {
+    type: "website",
+    locale: "tr_TR",
+    url: `${siteUrl}/products`,
+    siteName: "Sprey Valf Dünyası",
+    title: "Tüm Ürünler | Sprey Valf Dünyası",
+    description: "Sprey valf, pompa başlık, pet şişe ve ambalaj ürünleri. Toptan fiyatlarla geniş ürün yelpazesi.",
+    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "Sprey Valf Dünyası Ürünleri" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tüm Ürünler | Sprey Valf Dünyası",
+    description: "Sprey valf, pompa başlık, pet şişe ve ambalaj ürünleri. Toptan fiyatlarla geniş ürün yelpazesi.",
+  },
+  alternates: {
+    canonical: `${siteUrl}/products`,
+  },
 };
 
 export const dynamic = 'force-dynamic';

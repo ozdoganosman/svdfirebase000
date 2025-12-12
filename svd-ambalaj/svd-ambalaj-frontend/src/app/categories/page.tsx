@@ -1,4 +1,30 @@
+import type { Metadata } from "next";
 import { resolveServerApiUrl } from "@/lib/server-api";
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spreyvalfdunyasi.com";
+
+export const metadata: Metadata = {
+  title: "Kategoriler",
+  description: "Sprey valf, pompa başlık, pet şişe ve ambalaj kategorileri. İhtiyacınıza uygun ürünleri kolayca bulun.",
+  keywords: ["sprey kategorileri", "ambalaj kategorileri", "ürün kategorileri"],
+  openGraph: {
+    type: "website",
+    locale: "tr_TR",
+    url: `${siteUrl}/categories`,
+    siteName: "Sprey Valf Dünyası",
+    title: "Ürün Kategorileri | Sprey Valf Dünyası",
+    description: "Sprey valf, pompa başlık, pet şişe ve ambalaj kategorileri. İhtiyacınıza uygun ürünleri kolayca bulun.",
+    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "Sprey Valf Dünyası Kategorileri" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Ürün Kategorileri | Sprey Valf Dünyası",
+    description: "Sprey valf, pompa başlık, pet şişe ve ambalaj kategorileri.",
+  },
+  alternates: {
+    canonical: `${siteUrl}/categories`,
+  },
+};
 
 type Category = {
   id: string;

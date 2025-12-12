@@ -88,6 +88,8 @@ async function getExchangeRate(): Promise<ExchangeRate | null> {
   }
 }
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spreyvalfdunyasi.com";
+
 export async function generateMetadata({
   params,
 }: {
@@ -98,13 +100,34 @@ export async function generateMetadata({
 
   if (!category) {
     return {
-      title: "Kategori bulunamadı | SVD Ambalaj",
+      title: "Kategori bulunamadı",
     };
   }
 
+  const categoryUrl = `${siteUrl}/categories/${slug}`;
+  const description = category.description || `${category.name} kategorisindeki tüm ürünleri keşfedin. Toptan fiyatlarla kaliteli ambalaj ürünleri.`;
+
   return {
-    title: `${category.name} | SVD Ambalaj`,
-    description: category.description,
+    title: category.name,
+    description,
+    keywords: [category.name, "sprey valf", "ambalaj", "toptan"],
+    openGraph: {
+      type: "website",
+      locale: "tr_TR",
+      url: categoryUrl,
+      siteName: "Sprey Valf Dünyası",
+      title: `${category.name} | Sprey Valf Dünyası`,
+      description,
+      images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: category.name }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${category.name} | Sprey Valf Dünyası`,
+      description,
+    },
+    alternates: {
+      canonical: categoryUrl,
+    },
   };
 }
 
