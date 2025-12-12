@@ -18,7 +18,6 @@ import * as auth from "./db/auth.js";
 import * as exchangeRates from "./db/exchange-rates.js";
 import * as users from "./db/users.js";
 import * as quotes from "./db/quotes.js";
-import * as vip from "./db/vip.js";
 import * as comboSettings from "./db/combo-settings.js";
 import * as settings from "./db/settings.js";
 import * as adminRoles from "./db/admin-roles.js";
@@ -1571,84 +1570,6 @@ app.get("/admin/samples", requireAuth, async (req, res) => {
   }
 });
 
-// ============ VIP CUSTOMER MANAGEMENT ENDPOINTS ============
-
-// Get user VIP status (authenticated users)
-app.get("/user/vip-status", async (req, res) => {
-  try {
-    const { userId } = req.query;
-    if (!userId) {
-      return res.status(400).json({ error: "userId parameter is required" });
-    }
-
-    const user = await vip.getUserWithVIPStatus(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    res.status(200).json({ vipStatus: user.vipStatus });
-  } catch (error) {
-    functions.logger.error("Error fetching VIP status", error);
-    res.status(500).json({ error: "Failed to fetch VIP status." });
-  }
-});
-
-// Update VIP status for a user (recalculate based on stats)
-app.post("/admin/vip/calculate/:userId", requireAuth, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const vipStatus = await vip.updateUserVIPStatus(userId);
-    res.status(200).json({ message: "VIP status updated", vipStatus });
-  } catch (error) {
-    functions.logger.error("Error calculating VIP status", error);
-    res.status(500).json({ error: "Failed to calculate VIP status." });
-  }
-});
-
-// Manually set VIP tier (admin override)
-app.put("/admin/vip/set-tier/:userId", requireAuth, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { tier } = req.body;
-
-    if (!tier && tier !== null) {
-      return res.status(400).json({ error: "tier is required" });
-    }
-
-    const vipStatus = await vip.manuallySetVIPTier(userId, tier);
-    res.status(200).json({ message: "VIP tier set manually", vipStatus });
-  } catch (error) {
-    functions.logger.error("Error setting VIP tier", error);
-    res.status(500).json({ error: error.message || "Failed to set VIP tier." });
-  }
-});
-
-// Calculate all customer VIP statuses (batch operation)
-app.post("/admin/vip/calculate-all", requireAuth, async (_req, res) => {
-  try {
-    functions.logger.info("Starting batch VIP calculation for all customers");
-    const results = await vip.calculateAllCustomerVIPStatuses();
-    res.status(200).json({
-      message: "Batch VIP calculation completed",
-      results,
-    });
-  } catch (error) {
-    functions.logger.error("Error in batch VIP calculation", error);
-    res.status(500).json({ error: "Failed to calculate VIP statuses." });
-  }
-});
-
-// Get all VIP tiers information
-app.get("/vip/tiers", async (_req, res) => {
-  try {
-    const tiers = vip.getAllVIPTiers();
-    res.status(200).json({ tiers });
-  } catch (error) {
-    functions.logger.error("Error fetching VIP tiers", error);
-    res.status(500).json({ error: "Failed to fetch VIP tiers." });
-  }
-});
-
 // ===== COMBO DISCOUNT SETTINGS =====
 
 // Get combo discount settings
@@ -1707,27 +1628,25 @@ app.post("/admin/combo-settings/toggle", requireAuth, async (req, res) => {
   }
 });
 
-// List customers with VIP/segment filtering (admin)
+// List customers (admin)
 app.get("/admin/customers", requireAuth, async (req, res) => {
   try {
-    const { tier, segment } = req.query;
-    const customers = await vip.listCustomersWithVIP({ tier, segment });
+    const usersCollection = db.collection("users");
+    const snapshot = await usersCollection.get();
+    const customers = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        uid: doc.id,
+        email: data.email || "",
+        displayName: data.displayName || "",
+        company: data.company || "",
+        createdAt: data.createdAt,
+      };
+    });
     res.status(200).json({ customers });
   } catch (error) {
     functions.logger.error("Error listing customers", error);
     res.status(500).json({ error: "Failed to list customers." });
-  }
-});
-
-// Get customer statistics (admin)
-app.get("/admin/customers/:userId/stats", requireAuth, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const stats = await vip.calculateCustomerStats(userId);
-    res.status(200).json({ stats });
-  } catch (error) {
-    functions.logger.error("Error fetching customer stats", error);
-    res.status(500).json({ error: "Failed to fetch customer stats." });
   }
 });
 
@@ -2160,145 +2079,6 @@ app.post("/admin/settings/initialize", requireAuth, requireSuperAdmin, async (_r
   } catch (error) {
     functions.logger.error("Failed to initialize settings", error);
     res.status(500).json({ error: "Failed to initialize settings" });
-  }
-});
-
-// ==================== CAMPAIGNS ENDPOINTS ====================
-
-// Get all campaigns
-app.get("/admin/campaigns", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { isActive, type } = req.query;
-    const filters = {};
-
-    if (isActive !== undefined) {
-      filters.isActive = isActive === "true";
-    }
-    if (type) {
-      filters.type = type;
-    }
-
-    const campaigns = await settings.getAllCampaigns(filters);
-    res.status(200).json({ campaigns });
-  } catch (error) {
-    functions.logger.error("Failed to get campaigns", error);
-    res.status(500).json({ error: "Failed to get campaigns" });
-  }
-});
-
-// Get active campaigns (public)
-app.get("/campaigns/active", async (_req, res) => {
-  try {
-    const campaigns = await settings.getActiveCampaigns();
-    res.status(200).json({ campaigns });
-  } catch (error) {
-    functions.logger.error("Failed to get active campaigns", error);
-    res.status(500).json({ error: "Failed to get campaigns" });
-  }
-});
-
-// Get campaign by ID
-app.get("/admin/campaigns/:id", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const campaign = await settings.getCampaign(id);
-
-    if (!campaign) {
-      return res.status(404).json({ error: "Campaign not found" });
-    }
-
-    res.status(200).json({ campaign });
-  } catch (error) {
-    functions.logger.error("Failed to get campaign", error);
-    res.status(500).json({ error: "Failed to get campaign" });
-  }
-});
-
-// Create campaign
-app.post("/admin/campaigns", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const campaignData = req.body;
-    const userId = req.admin.userId;
-
-    const campaign = await settings.createCampaign(campaignData, userId);
-
-    functions.logger.info("Campaign created", { campaignId: campaign.id, userId });
-    res.status(201).json({ campaign });
-  } catch (error) {
-    functions.logger.error("Failed to create campaign", error);
-    res.status(500).json({ error: "Failed to create campaign: " + error.message });
-  }
-});
-
-// Update campaign
-app.put("/admin/campaigns/:id", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updates = req.body;
-    const userId = req.admin.userId;
-
-    const campaign = await settings.updateCampaign(id, updates, userId);
-
-    functions.logger.info("Campaign updated", { campaignId: id, userId });
-    res.status(200).json({ campaign });
-  } catch (error) {
-    functions.logger.error("Failed to update campaign", error);
-    res.status(500).json({ error: "Failed to update campaign: " + error.message });
-  }
-});
-
-// Delete campaign
-app.delete("/admin/campaigns/:id", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    await settings.deleteCampaign(id);
-
-    functions.logger.info("Campaign deleted", { campaignId: id });
-    res.status(200).json({ success: true });
-  } catch (error) {
-    functions.logger.error("Failed to delete campaign", error);
-    res.status(500).json({ error: "Failed to delete campaign" });
-  }
-});
-
-// ==================== COUPON CODE ENDPOINTS ====================
-
-// Validate coupon code (public)
-app.post("/coupon/validate", async (req, res) => {
-  try {
-    const { code, orderTotal, userId } = req.body;
-
-    if (!code) {
-      return res.status(400).json({ error: "Kupon kodu gereklidir" });
-    }
-
-    const result = await settings.validateCouponCode(code, orderTotal || 0, userId || null);
-
-    if (result.valid) {
-      res.status(200).json(result);
-    } else {
-      res.status(400).json({ valid: false, error: result.error });
-    }
-  } catch (error) {
-    functions.logger.error("Failed to validate coupon", error);
-    res.status(500).json({ error: "Kupon doğrulama başarısız" });
-  }
-});
-
-// Record coupon usage (called after successful order)
-app.post("/coupon/use", async (req, res) => {
-  try {
-    const { campaignId, userId, orderId } = req.body;
-
-    if (!campaignId || !orderId) {
-      return res.status(400).json({ error: "campaignId and orderId are required" });
-    }
-
-    await settings.recordCouponUsage(campaignId, userId, orderId);
-    res.status(200).json({ success: true });
-  } catch (error) {
-    functions.logger.error("Failed to record coupon usage", error);
-    res.status(500).json({ error: "Failed to record coupon usage" });
   }
 });
 

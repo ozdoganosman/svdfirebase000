@@ -38,7 +38,7 @@ type Product = {
 
 export default function CartPage() {
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
-  const { user, vipStatus } = useAuth();
+  const { user } = useAuth();
   const {
     items,
     updateQuantity,
@@ -50,7 +50,6 @@ export default function CartPage() {
     comboMatches,
     comboDiscountLabel,
     taxRate,
-    exchangeRate: cartExchangeRate,
     getEffectivePrice,
     getAppliedTier,
     getNextTier,
@@ -69,15 +68,6 @@ export default function CartPage() {
     }
     return 0;
   };
-
-  // Calculate VIP-discounted subtotal
-  const vipDiscount = vipStatus?.discount || 0;
-  const vipSubtotal = items.reduce((total, item) => {
-    const bulkPrice = getEffectivePrice(item);
-    const vipPrice = bulkPrice * (1 - vipDiscount / 100);
-    const totalItemCount = getTotalItemCount(item);
-    return total + (vipPrice * totalItemCount);
-  }, 0);
 
   // Modal states
   const [showQuoteModal, setShowQuoteModal] = useState(false);
@@ -650,10 +640,7 @@ export default function CartPage() {
             )}
 
             {items.map((item) => {
-              const bulkEffectivePrice = getEffectivePrice(item);
-              // Apply VIP discount on top of bulk pricing
-              const vipDiscount = vipStatus?.discount || 0;
-              const effectivePrice = bulkEffectivePrice * (1 - vipDiscount / 100);
+              const effectivePrice = getEffectivePrice(item);
               const appliedTier = getAppliedTier(item);
               const nextTier = getNextTier(item);
               const totalItemCount = getTotalItemCount(item);
@@ -664,13 +651,10 @@ export default function CartPage() {
                 ? item.priceUSD * exchangeRate
                 : (item.priceTRY ?? item.price ?? 0);
 
-              // Calculate separate savings for bulk and VIP discounts
+              // Calculate savings for bulk discounts
               const bulkSavings = item.packageInfo
-                ? (basePrice - bulkEffectivePrice) * totalItemCount
-                : (basePrice - bulkEffectivePrice) * item.quantity;
-              const vipSavings = vipDiscount > 0
-                ? (item.packageInfo ? bulkEffectivePrice * (vipDiscount / 100) * totalItemCount : bulkEffectivePrice * (vipDiscount / 100) * item.quantity)
-                : 0;
+                ? (basePrice - effectivePrice) * totalItemCount
+                : (basePrice - effectivePrice) * item.quantity;
 
               return (
               <div
@@ -786,17 +770,10 @@ export default function CartPage() {
                     </div>
                   )}
 
-                  {vipStatus && vipDiscount > 0 && vipStatus.tier && (
-                    <div className="rounded-lg bg-purple-50 px-3 py-2 text-xs text-purple-700">
-                      💎 {vipStatus.tier.charAt(0).toUpperCase() + vipStatus.tier.slice(1)} VIP indirimi (%{vipDiscount}) uygulandı!
-                      {vipSavings > 0 && ` - ${exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, vipSavings) : "₺" + vipSavings.toLocaleString("tr-TR")} ek tasarruf`}
-                    </div>
-                  )}
-
                   {nextTier && exchangeRate && (
                     <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
                       💡 {nextTier.minQty - item.quantity} {item.packageInfo?.boxLabel.toLowerCase() || 'adet'} daha ekleyin,
-                      birim fiyat {formatDualPrice(undefined, exchangeRate, true, 1, (nextTier.price * exchangeRate) * (1 - vipDiscount / 100))} +KDV olsun!
+                      birim fiyat {formatDualPrice(undefined, exchangeRate, true, 1, nextTier.price * exchangeRate)} +KDV olsun!
                     </div>
                   )}
 
@@ -852,7 +829,7 @@ export default function CartPage() {
                 {comboDiscount > 0 && (
                   <div className="flex items-center justify-between text-slate-500">
                     <dt>Ürün Toplamı</dt>
-                    <dd className="line-through">{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, vipSubtotal) : "₺" + vipSubtotal.toLocaleString("tr-TR")} <span className="text-xs font-normal">+KDV</span></dd>
+                    <dd className="line-through">{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, subtotal) : "₺" + subtotal.toLocaleString("tr-TR")} <span className="text-xs font-normal">+KDV</span></dd>
                   </div>
                 )}
 
@@ -906,7 +883,7 @@ export default function CartPage() {
 
                 <div className="flex items-center justify-between text-slate-700 font-semibold">
                   <dt>Ara Toplam (KDV Hariç)</dt>
-                  <dd className="text-amber-700">{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, vipSubtotal - comboDiscount) : "₺" + (vipSubtotal - comboDiscount).toLocaleString("tr-TR")} <span className="text-xs font-normal text-slate-500">+KDV</span></dd>
+                  <dd className="text-amber-700">{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, subtotal - comboDiscount) : "₺" + (subtotal - comboDiscount).toLocaleString("tr-TR")} <span className="text-xs font-normal text-slate-500">+KDV</span></dd>
                 </div>
 
                 <div className="flex items-center justify-between text-slate-700">
@@ -941,16 +918,16 @@ export default function CartPage() {
 
                 <div className="flex items-center justify-between text-slate-500 pt-2 border-t border-amber-100">
                   <dt>KDV (%{taxRate})</dt>
-                  <dd>{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (vipSubtotal - comboDiscount) * (taxRate / 100)) : "₺" + ((vipSubtotal - comboDiscount) * (taxRate / 100)).toLocaleString("tr-TR")}</dd>
+                  <dd>{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (subtotal - comboDiscount) * (taxRate / 100)) : "₺" + ((subtotal - comboDiscount) * (taxRate / 100)).toLocaleString("tr-TR")}</dd>
                 </div>
               </dl>
               <div className="mt-6 border-t border-amber-100 pt-4">
                 <div className="flex items-center justify-between text-base font-bold text-amber-700">
                   <span>Genel Toplam (KDV Dahil)</span>
-                  <span>{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, ((vipSubtotal - comboDiscount) * (1 + taxRate / 100)) + (totalItems >= 50000 ? 0 : totalBoxes * 120)) : "₺" + (((vipSubtotal - comboDiscount) * (1 + taxRate / 100)) + (totalItems >= 50000 ? 0 : totalBoxes * 120)).toLocaleString("tr-TR")}</span>
+                  <span>{exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, ((subtotal - comboDiscount) * (1 + taxRate / 100)) + (totalItems >= 50000 ? 0 : totalBoxes * 120)) : "₺" + (((subtotal - comboDiscount) * (1 + taxRate / 100)) + (totalItems >= 50000 ? 0 : totalBoxes * 120)).toLocaleString("tr-TR")}</span>
                 </div>
                 <p className="mt-2 text-xs text-slate-600">
-                  KDV hariç: {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (vipSubtotal - comboDiscount) + (totalItems >= 50000 ? 0 : totalBoxes * 120)) : "₺" + ((vipSubtotal - comboDiscount) + (totalItems >= 50000 ? 0 : totalBoxes * 120)).toLocaleString("tr-TR")} +KDV
+                  KDV hariç: {exchangeRate ? formatDualPrice(undefined, exchangeRate, true, 1, (subtotal - comboDiscount) + (totalItems >= 50000 ? 0 : totalBoxes * 120)) : "₺" + ((subtotal - comboDiscount) + (totalItems >= 50000 ? 0 : totalBoxes * 120)).toLocaleString("tr-TR")} +KDV
                 </p>
               </div>
 

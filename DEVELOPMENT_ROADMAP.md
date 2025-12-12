@@ -2,11 +2,22 @@
 
 **Proje:** SVD Ambalaj E-Ticaret Platformu
 **Başlangıç Tarihi:** 22 Ekim 2025
-**Son Güncelleme:** 11 Aralık 2025
+**Son Güncelleme:** 12 Aralık 2025
 
 ---
 
 ## 🆕 Son Eklenen Özellikler
+
+### 12 Aralık 2025
+1. **🧹 Kod Temizliği - VIP ve Kampanya Sistemleri Kaldırıldı**
+   - VIP üyelik sistemi kaldırıldı (Platin, Gold, Silver, Bronze)
+   - Promosyon/Kampanya kodu sistemi kaldırıldı
+   - Admin kampanyalar sayfası silindi
+   - VIPBadge bileşeni silindi
+   - AuthContext'ten VIP status kaldırıldı
+   - Cart sayfasından VIP indirim gösterimi kaldırıldı
+   - Müşteri yönetimi sayfası sadeleştirildi
+   - Backend VIP ve kampanya endpoint'leri kaldırıldı
 
 ### 11 Aralık 2025
 1. **🎨 Landing Page CMS - Öne Çıkan Ürünler & Bölüm Sıralaması - ✅ TAMAMLANDI**
@@ -95,36 +106,12 @@
      - Sepet tutarı ile ödeme tutarı uyumu sağlandı
 
 ### 29 Ekim 2025
-1. **👑 Faz 2.2 - VIP Müşteri Yönetimi - ✅ TAMAMLANDI**
-   - VIP Tier Sistemi (Platinum 20%, Gold 15%, Silver 10%, Bronze 5%)
-   - Otomatik müşteri segmentasyonu (VIP, High-Potential, New, Passive, Standard)
-   - Sipariş ve teklif bazlı VIP belirleme (LTV hesaplama)
-   - Account sayfasında VIP badge gösterimi (💎 Platinum, 🥇 Gold, vb.)
-   - Sepette VIP indirim uygulaması ve gösterimi
-   - İki ayrı indirim mesajı:
-     - ✅ Toplu alım indirimi (yeşil kutu)
-     - 💎 VIP indirimi (mor kutu) - ek tasarruf miktarıyla
-   - Next tier önerisinde VIP indirimli fiyat gösterimi
-   - Backend VIP endpoints:
-     - GET /user/vip-status (kullanıcı VIP bilgisi)
-     - POST /admin/vip/calculate/:userId (tekil hesaplama)
-     - PUT /admin/vip/set-tier/:userId (manuel atama)
-     - POST /admin/vip/calculate-all (toplu hesaplama)
-     - GET /admin/customers (müşteri listesi + filtreleme)
-     - GET /admin/customers/:userId/stats (müşteri istatistikleri)
-   - Admin customers sayfası (müşteri listesi, VIP yönetimi, segmentasyon)
-   - AuthContext VIP status entegrasyonu
-2. **💱 USD → TRY Otomatik Fiyat Çevirme - ✅ TAMAMLANDI**
+1. **💱 USD → TRY Otomatik Fiyat Çevirme - ✅ TAMAMLANDI**
    - CartContext'e exchange rate fetch eklendi
    - Sadece USD fiyatı olan ürünler için otomatik TRY çevirme
    - Fallback mekanizması (34.0 TRY default)
    - getEffectivePrice: priceTRY ?? price ?? (priceUSD × rate)
    - Sorun çözüldü: Fiyatı olmayan ürünler artık çalışıyor
-3. **📋 VIP Pricing Altyapısı - ✅ TAMAMLANDI**
-   - src/lib/pricing.ts - VIP fiyatlama fonksiyonları
-   - calculateVIPPrice, formatVIPPrice
-   - getVIPTierBadge, calculateCartTotal
-   - src/components/VIPBadge.tsx - VIP gösterimi
 
 ### 26 Ekim 2025
 1. **👤 Faz 1.4 - Firebase Auth Sistemi - ✅ TAMAMLANDI**
@@ -200,12 +187,11 @@
 
 ## 📊 Durum Özeti
 
-- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), Faz 1.4 (Firebase Auth), Faz 1.5 (PayTR Ödeme), Faz 2.1 (B2B Teklif & Numune), Faz 2.2 (VIP Müşteri Yönetimi), Faz 2.3 (Kombo İndirimi), **Faz 2.4 (Süper Admin Panel)**, UX İyileştirmeleri, PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon, USD → TRY Otomatik Çevirme, Landing Page CMS
-- 🔄 Devam Ediyor: Faz 2.5 (Promosyon ve Kampanya Kodu Sistemi)
-- Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı; VIP müşteri sistemi production'da; Kombo indirimi aktif; PayTR kredi kartı ödemesi aktif; Landing Page CMS tamamlandı
+- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), Faz 1.4 (Firebase Auth), Faz 1.5 (PayTR Ödeme), Faz 2.1 (B2B Teklif & Numune), Faz 2.2 (Kombo İndirimi), **Faz 2.3 (Süper Admin Panel)**, UX İyileştirmeleri, PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon, USD → TRY Otomatik Çevirme, Landing Page CMS
+- Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı; Kombo indirimi aktif; PayTR kredi kartı ödemesi aktif; Landing Page CMS tamamlandı
 
-**Son Deployment:** 11 Aralık 2025 - Production (Firebase Hosting + Functions)
-**Son Commit:** feat: Add Featured Products and Section Order to Landing CMS
+**Son Deployment:** 12 Aralık 2025 - Production (Firebase Hosting + Functions)
+**Son Commit:** chore: Remove VIP and Campaign systems
 **Deployed Services:**
 - ✅ Frontend - https://svdfirebase000.web.app
 - ✅ API (us-central1) - https://api-tfi7rlxtca-uc.a.run.app
@@ -220,12 +206,8 @@
 - ✅ **Faz 1.4** - Firebase Auth Sistemi (13/13 görev)
 - ✅ **Faz 1.5** - PayTR Ödeme Entegrasyonu (11/11 görev - 9 Aralık 2025)
 - ✅ **Faz 2.1** - B2B Teklif & Numune Sistemi (11/11 görev)
-- ✅ **Faz 2.2** - VIP Müşteri Yönetimi ve Segmentasyon (9/9 görev)
-- ✅ **Faz 2.3** - Başlık-Şişe Kombo İndirimi (8/8 görev - 31 Ekim 2025)
-- ✅ **Faz 2.4** - Süper Admin Panel (12/12 görev - 11 Aralık 2025)
-
-**Devam Eden Fazlar:**
-- 🔄 **Faz 2.5** - Promosyon ve Kampanya Kodu Sistemi (0/8 görev)
+- ✅ **Faz 2.2** - Başlık-Şişe Kombo İndirimi (8/8 görev - 31 Ekim 2025)
+- ✅ **Faz 2.3** - Süper Admin Panel (12/12 görev - 11 Aralık 2025)
 
 ---
 
@@ -367,26 +349,7 @@
 
 ---
 
-### 2.2 VIP Müşteri Yönetimi ve Segmentasyon 👑
-**Durum:** ✅ TAMAMLANDI
-**Tahmini Süre:** 4-5 gün (Tamamlandı)
-**Öncelik:** Yüksek
-
-#### Görevler:
-- [x] VIP tier sistemi (Platinum 20%, Gold 15%, Silver 10%, Bronze 5%)
-- [x] Otomatik müşteri segmentasyonu (VIP, High-Potential, New, Passive, Standard)
-- [x] Sipariş ve teklif bazlı VIP belirleme
-- [x] Admin müşteri yönetim sayfası
-- [x] Manuel VIP tier atama
-- [x] Batch VIP hesaplama
-- [x] VIP pricing altyapısı (calculateVIPPrice, formatVIPPrice)
-- [x] VIP badge ve progress bileşenleri
-- [x] AuthContext'e VIP status entegrasyonu
-- [x] Account sayfasında VIP gösterimi
-
----
-
-### 2.3 Başlık-Şişe Kombinasyon İndirimi 🔄
+### 2.2 Başlık-Şişe Kombinasyon İndirimi 🔄
 **Durum:** ✅ TAMAMLANDI (31 Ekim 2025)
 **Gerçek Süre:** 7 gün
 **Öncelik:** Yüksek
@@ -410,7 +373,7 @@
 
 ---
 
-### 2.4 Süper Admin Panel - Tam Kontrol Sistemi ⚙️
+### 2.3 Süper Admin Panel - Tam Kontrol Sistemi ⚙️
 **Durum:** ✅ TAMAMLANDI (11 Aralık 2025)
 **Gerçek Süre:** 10 gün
 **Öncelik:** Kritik
@@ -461,12 +424,11 @@
 - [x] CTA bölümü
 - [x] Güven rozetleri
 - [x] Bölüm başlıkları
-- [x] **Öne çıkan ürünler seçimi** (YENİ)
-- [x] **Bölüm sıralaması** (YENİ)
+- [x] **Öne çıkan ürünler seçimi**
+- [x] **Bölüm sıralaması**
 
 **Kullanıcı Yönetimi** ✅
 - [x] Tüm kullanıcıları listele
-- [x] Kullanıcı detayları ve sipariş geçmişi
 - [x] Admin rolleri (Super Admin, Editor, Viewer)
 
 #### Tamamlanan Dosyalar:
@@ -491,40 +453,7 @@ Frontend:
 
 ---
 
-### 2.5 Promosyon ve Kampanya Kodu Sistemi 🎁
-**Durum:** ⏳ Beklemede
-**Tahmini Süre:** 3-4 gün
-**Öncelik:** Orta
-
-#### Görevler:
-- [ ] Kampanya kodu oluşturma (admin)
-- [ ] İndirim türleri (yüzde, sabit tutar, ücretsiz kargo)
-- [ ] Minimum sepet tutarı koşulu
-- [ ] Kategori/ürün kısıtlamaları
-- [ ] Kullanım limiti
-- [ ] Geçerlilik tarihi
-- [ ] Sepette kod uygulama
-- [ ] İndirim hesaplama ve gösterim
-
-#### Firestore Koleksiyon:
-```
-promotions/
-  - code (YILBASI2025)
-  - type (percentage/fixed/free_shipping)
-  - value (20 veya 100)
-  - minOrderAmount
-  - applicableCategories[]
-  - applicableProducts[]
-  - maxUsage
-  - currentUsage
-  - validFrom
-  - validUntil
-  - isActive
-```
-
----
-
-### 2.6 Ürün Varyantları (Renk, Boyut) 🎨
+### 2.4 Ürün Varyantları (Renk, Boyut) 🎨
 **Durum:** ⏳ Beklemede
 **Tahmini Süre:** 5-6 gün
 **Öncelik:** Düşük (productType ve neckSize ile kısmen çözüldü)
@@ -721,6 +650,11 @@ promotions/
 - **Testing:** Jest + Playwright
 - **CI/CD:** GitHub Actions
 
+### Kaldırılan Özellikler (12 Aralık 2025)
+- ❌ VIP üyelik sistemi (Platin/Gold/Silver/Bronze)
+- ❌ Promosyon/Kampanya kodu sistemi
+- ❌ VIP indirim hesaplamaları
+
 ### Veritabanı Şeması Değişiklikleri
 Tamamlanan koleksiyonlar:
 - ✅ `users` (kullanıcı profilleri)
@@ -734,36 +668,34 @@ Tamamlanan koleksiyonlar:
 - ✅ `emailTemplates` (e-posta şablonları)
 - ✅ `landingContent` (anasayfa içeriği)
 - ✅ `comboDiscountSettings` (kombo indirim ayarları)
-- ⏳ `promotions` (kampanyalar - beklemede)
 - ⏳ `reviews` (yorumlar - beklemede)
 
 ---
 
 ## 🎯 Aktif Sprint (Güncel Odak)
 
-**Sprint:** Sprint 5 - Landing Page CMS & Kampanya Sistemi
-**Başlangıç:** 11 Aralık 2025
-**Bitiş:** 25 Aralık 2025
+**Sprint:** Sprint 6 - Kod Temizliği & Stabilizasyon
+**Başlangıç:** 12 Aralık 2025
+**Bitiş:** 20 Aralık 2025
 
 **Tamamlanan (Bu Sprint):**
-- ✅ Landing Page CMS - Öne Çıkan Ürünler Seçimi
-- ✅ Landing Page CMS - Bölüm Sıralaması
-- ✅ Dinamik Anasayfa Rendering
+- ✅ VIP sistemi kaldırıldı
+- ✅ Kampanya/promosyon sistemi kaldırıldı
+- ✅ Kod temizliği ve sadeleştirme
 
 **Odak (güncel):**
-- 🔄 Promosyon/Kampanya kodu sistemi (Faz 2.5)
 - 🔄 PayTR production modu aktivasyonu
+- 🔄 E-posta bildirim sistemi iyileştirmeleri
 
 ### Bir Sonraki Adımlar
 Kısa vadeli:
-- [ ] Promosyon/kampanya kodu sistemi (Faz 2.5)
 - [ ] PayTR production modu aktivasyonu (canlı ödeme)
 - [ ] E-posta bildirim sistemi iyileştirmeleri
+- [ ] Güvenlik iyileştirmeleri (rate limiting, CAPTCHA)
 
 Orta vadeli (sonraki sprint):
 - [ ] Gelişmiş raporlama ve analitik (Faz 3.1)
 - [ ] SEO optimizasyonları (Faz 3.3)
-- [ ] Güvenlik iyileştirmeleri (rate limiting, CAPTCHA)
 
 Tamamlayıcı iyileştirmeler:
 - [ ] Test coverage artırımı
@@ -788,5 +720,5 @@ Tamamlayıcı iyileştirmeler:
 
 ---
 
-**Son Güncelleme:** 11 Aralık 2025
-**Bir sonraki review:** 18 Aralık 2025
+**Son Güncelleme:** 12 Aralık 2025
+**Bir sonraki review:** 20 Aralık 2025

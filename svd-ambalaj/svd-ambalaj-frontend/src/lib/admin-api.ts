@@ -477,45 +477,12 @@ export type AdminSample = {
   updatedAt?: string;
 };
 
-export type VIPTier = "platinum" | "gold" | "silver" | "bronze" | null;
-export type CustomerSegment = "vip" | "high-potential" | "new" | "passive" | "standard";
-
-export type VIPStatus = {
-  tier: VIPTier;
-  discount: number;
-  manuallySet: boolean;
-  autoCalculated: boolean;
-  lastCalculatedAt?: string;
-  stats?: {
-    totalOrdersValue: number;
-    totalOrdersCount: number;
-    totalQuotesCount: number;
-    approvedQuotesCount: number;
-    convertedQuotesCount: number;
-    quoteToOrderConversion: number;
-    firstOrderAt?: string;
-    lastOrderAt?: string;
-  };
-  segment?: CustomerSegment;
-};
-
 export type AdminCustomer = {
   uid: string;
   email: string;
   displayName: string;
   company: string;
-  vipStatus: VIPStatus | null;
   createdAt?: string;
-};
-
-export type VIPTierInfo = {
-  name: string;
-  label: string;
-  icon: string;
-  discount: number;
-  minOrderValue: number;
-  minOrderCount: number;
-  minQuoteConversion: number;
 };
 
 export async function fetchStatsOverview(filters: StatsFiltersPayload = {}): Promise<AdminStatsOverview> {
@@ -538,44 +505,7 @@ export async function fetchStatsOverview(filters: StatsFiltersPayload = {}): Pro
   return apiFetch<AdminStatsOverview>(path);
 }
 
-export async function fetchCustomers(filters: { tier?: VIPTier; segment?: CustomerSegment } = {}): Promise<AdminCustomer[]> {
-  const query = new URLSearchParams();
-  if (filters.tier) {
-    query.set("tier", filters.tier);
-  }
-  if (filters.segment) {
-    query.set("segment", filters.segment);
-  }
-
-  const search = query.toString();
-  const path = `/admin/customers${search ? `?${search}` : ""}`;
-  const response = await apiFetch<{ customers: AdminCustomer[] }>(path);
+export async function fetchCustomers(): Promise<AdminCustomer[]> {
+  const response = await apiFetch<{ customers: AdminCustomer[] }>("/admin/customers");
   return response.customers ?? [];
-}
-
-export async function setCustomerVIPTier(userId: string, tier: VIPTier): Promise<VIPStatus> {
-  const response = await apiFetch<{ vipStatus: VIPStatus }>(`/admin/vip/set-tier/${userId}`, {
-    method: "PUT",
-    body: JSON.stringify({ tier }),
-  });
-  return response.vipStatus;
-}
-
-export async function calculateCustomerVIP(userId: string): Promise<VIPStatus> {
-  const response = await apiFetch<{ vipStatus: VIPStatus }>(`/admin/vip/calculate/${userId}`, {
-    method: "POST",
-  });
-  return response.vipStatus;
-}
-
-export async function calculateAllCustomersVIP(): Promise<{ success: number; failed: number; errors: Array<{ userId: string; error: string }> }> {
-  const response = await apiFetch<{ results: { success: number; failed: number; errors: Array<{ userId: string; error: string }> } }>("/admin/vip/calculate-all", {
-    method: "POST",
-  });
-  return response.results;
-}
-
-export async function fetchVIPTiers(): Promise<Record<string, VIPTierInfo>> {
-  const response = await apiFetch<{ tiers: Record<string, VIPTierInfo> }>("/vip/tiers");
-  return response.tiers;
 }

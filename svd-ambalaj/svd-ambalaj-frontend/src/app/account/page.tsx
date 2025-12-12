@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { useAuth } from "@/context/AuthContext";
-import { VIPBadge, VIPProgress } from "@/components/VIPBadge";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -20,7 +19,7 @@ export default function AccountPage() {
 }
 
 function AccountPageContent() {
-  const { user, vipStatus, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const router = useRouter();
   const [showEditModal, setShowEditModal] = useState(false);
   const [userProfile, setUserProfile] = useState({
@@ -116,21 +115,11 @@ function AccountPageContent() {
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-16 text-slate-900">
       <div className="mx-auto max-w-4xl px-6">
         <div className="mb-8">
-          <div className="flex flex-wrap items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold text-slate-900">Hesabım</h1>
-            {vipStatus?.tier && <VIPBadge vipStatus={vipStatus} size="lg" />}
-          </div>
+          <h1 className="text-3xl font-bold text-slate-900">Hesabım</h1>
           <p className="mt-2 text-slate-600">
             Hoş geldiniz, <span className="font-semibold">{user?.displayName || user?.email}</span>
           </p>
         </div>
-
-        {/* VIP Progress */}
-        {vipStatus && (
-          <div className="mb-6">
-            <VIPProgress vipStatus={vipStatus} />
-          </div>
-        )}
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Profile Card */}

@@ -14,7 +14,6 @@ const NAV_ITEMS = [
   { href: "/admin/samples", label: "Numune Talepleri", icon: "🧪" },
   { href: "/admin/customers", label: "Müşteriler", icon: "👥" },
   { href: "/admin/stats", label: "İstatistikler", icon: "📈" },
-  { href: "/admin/campaigns", label: "Kampanyalar", icon: "🏷️" },
   // Ayarlar sayfaları
   { href: "/admin/settings/site", label: "Site Ayarları", icon: "🏢" },
   { href: "/admin/settings/pricing", label: "Fiyatlandırma", icon: "💰" },
