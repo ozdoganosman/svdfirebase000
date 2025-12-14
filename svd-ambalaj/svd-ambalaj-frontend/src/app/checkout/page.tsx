@@ -461,7 +461,7 @@ function CheckoutPageContent() {
       // For bank transfer, redirect to success page
       clearCart();
       setForm(defaultState);
-      router.push(`/checkout/success?id=${orderId}&number=${orderNumber || orderId}`);
+      router.push(`/checkout/success?id=${orderId}&number=${orderNumber || orderId}&total=${grandTotal.toFixed(2)}`);
     } catch (error) {
       console.error("Order submission failed", error);
       setStatus("error");

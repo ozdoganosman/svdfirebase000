@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { loadRecaptcha, executeRecaptcha } from "@/lib/recaptcha";
 
 const apiBase =
   process.env.NEXT_PUBLIC_API_URL ??
@@ -35,6 +36,11 @@ export function SampleRequestForm({ categories }: SampleRequestFormProps) {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [message, setMessage] = useState<string>("");
 
+  // Load reCAPTCHA on component mount
+  useEffect(() => {
+    loadRecaptcha().catch(console.error);
+  }, []);
+
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -48,14 +54,18 @@ export function SampleRequestForm({ categories }: SampleRequestFormProps) {
     setMessage("");
 
     try {
+      // Get reCAPTCHA token
+      const recaptchaToken = await executeRecaptcha("sample_request");
+
       const response = await fetch(`${apiBase}/sample-requests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, recaptchaToken }),
       });
 
       if (!response.ok) {
-        throw new Error("Request failed");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Request failed");
       }
 
       setStatus("success");
@@ -64,7 +74,7 @@ export function SampleRequestForm({ categories }: SampleRequestFormProps) {
     } catch (error) {
       console.error("Sample request failed", error);
       setStatus("error");
-      setMessage("Numune talebi sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.");
+      setMessage(error instanceof Error ? error.message : "Numune talebi sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.");
     }
   };
 

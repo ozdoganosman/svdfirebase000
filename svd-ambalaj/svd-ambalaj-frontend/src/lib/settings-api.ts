@@ -68,6 +68,7 @@ export type EmailSettings = SiteSettings & {
   smtpPassword?: string; // Encrypted
   fromEmail?: string;
   fromName?: string;
+  notificationEmail?: string; // Admin notification email address
 };
 
 export type PaymentSettings = SiteSettings & {

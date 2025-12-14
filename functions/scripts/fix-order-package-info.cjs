@@ -3,20 +3,20 @@
  * Run with: node scripts/fix-order-package-info.js
  */
 
-const admin = require('firebase-admin');
+const admin = require("firebase-admin");
 
 // Initialize with application default credentials (uses Firebase CLI authentication)
 admin.initializeApp({
-  projectId: 'svdfirebase000'
+  projectId: "svdfirebase000"
 });
 
 const db = admin.firestore();
 
 async function fixOrders() {
-  console.log('🔄 Starting order migration...');
+  console.log("🔄 Starting order migration...");
 
-  const ordersRef = db.collection('orders');
-  const productsRef = db.collection('products');
+  const ordersRef = db.collection("orders");
+  const productsRef = db.collection("products");
 
   // Get all orders
   const ordersSnapshot = await ordersRef.get();
@@ -84,8 +84,8 @@ async function fixOrders() {
 
         await ordersRef.doc(orderId).update({
           items: updatedItems,
-          'totals.subtotal': newSubtotal,
-          'totals.total': newTotal,
+          "totals.subtotal": newSubtotal,
+          "totals.total": newTotal,
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
@@ -103,21 +103,21 @@ async function fixOrders() {
     }
   }
 
-  console.log('\n' + '='.repeat(60));
-  console.log('✨ Migration complete!');
+  console.log("\n" + "=".repeat(60));
+  console.log("✨ Migration complete!");
   console.log(`✅ Updated: ${updatedCount} orders`);
   console.log(`⏭️  Skipped: ${skippedCount} orders`);
   console.log(`❌ Errors: ${errorCount} orders`);
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
 }
 
 // Run the migration
 fixOrders()
   .then(() => {
-    console.log('\n✅ Script completed successfully');
+    console.log("\n✅ Script completed successfully");
     process.exit(0);
   })
   .catch((error) => {
-    console.error('\n❌ Script failed:', error);
+    console.error("\n❌ Script failed:", error);
     process.exit(1);
   });

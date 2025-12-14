@@ -1,4 +1,5 @@
 import * as functions from "firebase-functions";
+import { onRequest } from "firebase-functions/v2/https";
 import { getStorage } from "firebase-admin/storage";
 import express from "express";
 import cors from "cors";
@@ -21,11 +22,26 @@ import * as quotes from "./db/quotes.js";
 import * as comboSettings from "./db/combo-settings.js";
 import * as settings from "./db/settings.js";
 import * as adminRoles from "./db/admin-roles.js";
+import * as analytics from "./db/analytics.js";
 import * as emailSender from "./email/sender.js";
 import * as paytr from "./payment/paytr.js";
 import { fetchTCMBRate } from "./services/exchange-rate.js";
 import { db } from "./db/client.js";
 import admin from "firebase-admin";
+
+// Security middleware
+import {
+  generalLimiter,
+  authLimiter,
+  paymentLimiter,
+  formLimiter,
+  securityHeaders,
+  sanitizeBody,
+  sanitizeQuery,
+  preventNoSQLInjection,
+  securityLogger,
+  recaptchaMiddleware
+} from "./middleware/security.js";
 
 // Load environment variables
 dotenv.config();
@@ -182,9 +198,19 @@ const app = express();
 // Apply CORS middleware first
 app.use(cors({ origin: "*", credentials: true }));
 
+// Security middleware - applied before other middleware
+app.use(securityHeaders); // Helmet security headers
+app.use(securityLogger); // Request logging for security monitoring
+app.use(generalLimiter); // General rate limiting (100 req/15min)
+
 // Then add other middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Input sanitization and protection
+app.use(sanitizeBody); // XSS protection for request body
+app.use(sanitizeQuery); // XSS protection for query params
+app.use(preventNoSQLInjection); // NoSQL injection prevention
 
 // Configure CORS for media uploads first
 app.options("/media", cors({ 
@@ -393,6 +419,18 @@ const handleError = (res, error, statusCode = 500) => {
   res.status(statusCode).send({ error: error.message || "Bir hata oluştu." });
 };
 
+// Decode HTML entities that may have been encoded by browser/framework
+const decodeHtmlEntities = (str) => {
+  if (typeof str !== "string") return str;
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+};
+
 const parseBulkPricing = (input, fallback = []) => {
   if (input === undefined || input === null || input === "") {
     return fallback;
@@ -400,7 +438,9 @@ const parseBulkPricing = (input, fallback = []) => {
 
   let source = input;
   if (typeof source === "string") {
-    const trimmed = source.trim();
+    // Decode HTML entities first (browser may encode JSON strings)
+    const decoded = decodeHtmlEntities(source);
+    const trimmed = decoded.trim();
     if (!trimmed) {
       return fallback;
     }
@@ -509,7 +549,8 @@ const sanitizeLandingMedia = (input, fallback = defaultLandingMedia) => {
   };
 };
 
-app.post("/auth/login", async (req, res) => {
+// Auth login with strict rate limiting (5 attempts per 15 min)
+app.post("/auth/login", authLimiter, async (req, res) => {
   const { email, password } = req.body || {};
   const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
   const providedPassword = typeof password === "string" ? password : "";
@@ -671,6 +712,24 @@ app.get("/products", async (_req, res) => {
   }
 });
 
+// Debug endpoint to see raw product data from Firestore
+app.get("/admin/products/:id/raw", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const docRef = db.collection("products").doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+    res.status(200).json({
+      id: doc.id,
+      rawData: doc.data(),
+    });
+  } catch (error) {
+    functions.logger.error("Error getting raw product", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get unique specification values for filtering
 app.get("/products/specifications", async (_req, res) => {
   try {
@@ -813,6 +872,15 @@ app.put("/products/:id", requireAuth, async (req, res) => {
     }
 
     const body = req.body || {};
+
+    // Debug logging
+    functions.logger.info("Product update request", {
+      productId: req.params.id,
+      bulkPricingUSD_raw: body.bulkPricingUSD,
+      bulkPricingUSD_type: typeof body.bulkPricingUSD,
+      bulkPricingUSD_parsed: body.bulkPricingUSD !== undefined ? parseBulkPricing(body.bulkPricingUSD) : 'not_provided',
+    });
+
     const payload = {
       title: body.title,
       slug: body.slug,
@@ -826,6 +894,7 @@ app.put("/products/:id", requireAuth, async (req, res) => {
       priceUSD: body.priceUSD,
       bulkPricing: body.bulkPricing !== undefined ? parseBulkPricing(body.bulkPricing) : undefined,
       bulkPricingUSD: body.bulkPricingUSD !== undefined ? parseBulkPricing(body.bulkPricingUSD) : undefined,
+      comboPriceUSD: body.comboPriceUSD,
     };
 
     // Filter out undefined values so they don't overwrite existing data
@@ -968,7 +1037,8 @@ app.post("/admin/landing-content/reset", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/orders", async (req, res) => {
+// Create order (rate limited: 10 per hour)
+app.post("/orders", formLimiter, async (req, res) => {
   try {
     const order = await orders.createOrder(req.body || {});
 
@@ -979,6 +1049,17 @@ app.post("/orders", async (req, res) => {
     } catch (emailError) {
       functions.logger.error("Failed to send order confirmation email", emailError);
       // Don't fail the request if email fails
+    }
+
+    // Send new order notification to admin
+    try {
+      const adminEmail = await emailSender.getAdminNotificationEmail();
+      if (adminEmail) {
+        await emailSender.sendNewOrderAdminEmail(order, adminEmail);
+        functions.logger.info("New order admin notification sent", { orderId: order.id, adminEmail });
+      }
+    } catch (emailError) {
+      functions.logger.error("Failed to send admin order notification", emailError);
     }
 
     res.status(201).send({ message: "Order received", order });
@@ -1224,10 +1305,22 @@ app.put("/user/addresses/:addressId/set-default", async (req, res) => {
 
 // ============ QUOTES ENDPOINTS ============
 
-// Create new quote request
-app.post("/quotes", async (req, res) => {
+// Create new quote request (rate limited: 10 per hour, reCAPTCHA protected)
+app.post("/quotes", formLimiter, recaptchaMiddleware("quote_request"), async (req, res) => {
   try {
     const quote = await quotes.createQuote(req.body);
+
+    // Send new quote notification to admin
+    try {
+      const adminEmail = await emailSender.getAdminNotificationEmail();
+      if (adminEmail) {
+        await emailSender.sendNewQuoteAdminEmail(quote, adminEmail);
+        functions.logger.info("New quote admin notification sent", { quoteId: quote.id, adminEmail });
+      }
+    } catch (emailError) {
+      functions.logger.error("Failed to send admin quote notification", emailError);
+    }
+
     res.status(201).json({ quote });
   } catch (error) {
     functions.logger.error("Error creating quote", error);
@@ -1430,7 +1523,7 @@ app.get("/orders/:id", requireAuth, async (req, res) => {
 
 app.put("/orders/:id/status", requireAuth, async (req, res) => {
   try {
-    const { status, trackingNumber, trackingUrl, adminNotes } = req.body || {};
+    const { status, trackingNumber, trackingUrl, adminNotes, carrier } = req.body || {};
     if (!status) {
       return res.status(400).send({ error: "Status is required." });
     }
@@ -1440,16 +1533,25 @@ app.put("/orders/:id/status", requireAuth, async (req, res) => {
     if (trackingNumber !== undefined) updateData.trackingNumber = trackingNumber;
     if (trackingUrl !== undefined) updateData.trackingUrl = trackingUrl;
     if (adminNotes !== undefined) updateData.adminNotes = adminNotes;
+    if (carrier !== undefined) updateData.carrier = carrier;
+    if (status === "shipped") updateData.shippedAt = new Date().toISOString();
 
     const order = await orders.updateOrderStatus(req.params.id, status, updateData);
     if (!order) {
       return res.status(404).send({ error: "Order not found." });
     }
 
-    // Send status update email to customer
+    // Send email notification based on status
     try {
-      await emailSender.sendOrderStatusEmail(order);
-      functions.logger.info("Order status email sent", { orderId: order.id, status });
+      if (status === "shipped" && trackingNumber) {
+        // Send dedicated shipping notification with tracking info
+        await emailSender.sendShippingNotificationEmail(order);
+        functions.logger.info("Shipping notification email sent", { orderId: order.id, trackingNumber });
+      } else {
+        // Send general status update email
+        await emailSender.sendOrderStatusEmail(order);
+        functions.logger.info("Order status email sent", { orderId: order.id, status });
+      }
     } catch (emailError) {
       functions.logger.error("Failed to send order status email", emailError);
       // Don't fail the request if email fails
@@ -1475,6 +1577,79 @@ const statsOverviewHandler = async (req, res) => {
 app.get("/orders/stats/overview", requireAuth, statsOverviewHandler);
 app.get("/stats/overview", requireAuth, statsOverviewHandler);
 
+// ===== ADVANCED ANALYTICS ENDPOINTS =====
+
+// Dashboard summary - quick overview for admin home
+app.get("/admin/analytics/dashboard", requireAuth, async (req, res) => {
+  try {
+    const summary = await analytics.getDashboardSummary();
+    res.status(200).json(summary);
+  } catch (error) {
+    functions.logger.error("Error getting dashboard summary", error);
+    res.status(500).json({ error: "Failed to get dashboard summary" });
+  }
+});
+
+// Sales report - detailed sales breakdown
+app.get("/admin/analytics/sales", requireAuth, async (req, res) => {
+  try {
+    const { period, from, to, groupBy } = req.query;
+    const report = await analytics.getSalesReport({ period, from, to, groupBy });
+    res.status(200).json(report);
+  } catch (error) {
+    functions.logger.error("Error getting sales report", error);
+    res.status(500).json({ error: "Failed to get sales report" });
+  }
+});
+
+// Customer analytics
+app.get("/admin/analytics/customers", requireAuth, async (req, res) => {
+  try {
+    const { period } = req.query;
+    const customerData = await analytics.getCustomerAnalytics({ period });
+    res.status(200).json(customerData);
+  } catch (error) {
+    functions.logger.error("Error getting customer analytics", error);
+    res.status(500).json({ error: "Failed to get customer analytics" });
+  }
+});
+
+// Product analytics
+app.get("/admin/analytics/products", requireAuth, async (req, res) => {
+  try {
+    const { period, limit } = req.query;
+    const productData = await analytics.getProductAnalytics({
+      period,
+      limit: limit ? parseInt(limit, 10) : 20,
+    });
+    res.status(200).json(productData);
+  } catch (error) {
+    functions.logger.error("Error getting product analytics", error);
+    res.status(500).json({ error: "Failed to get product analytics" });
+  }
+});
+
+// Export data to CSV
+app.get("/admin/analytics/export/:type", requireAuth, async (req, res) => {
+  try {
+    const { type } = req.params;
+    const { period, from, to, groupBy } = req.query;
+
+    if (!["orders", "customers", "products", "sales"].includes(type)) {
+      return res.status(400).json({ error: "Invalid export type" });
+    }
+
+    const csvData = await analytics.exportToCSV(type, { period, from, to, groupBy });
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename=${type}-export-${new Date().toISOString().slice(0, 10)}.csv`);
+    res.status(200).send("\uFEFF" + csvData); // BOM for Excel UTF-8 compatibility
+  } catch (error) {
+    functions.logger.error("Error exporting data", error);
+    res.status(500).json({ error: "Failed to export data" });
+  }
+});
+
 // OLD: Single product sample request (legacy)
 const createSampleRequestHandler = async (req, res) => {
   try {
@@ -1490,15 +1665,27 @@ const createSampleRequestHandler = async (req, res) => {
   }
 };
 
-app.post("/sample-requests", createSampleRequestHandler);
-app.post("/samples", createSampleRequestHandler);
+app.post("/sample-requests", formLimiter, recaptchaMiddleware("sample_request"), createSampleRequestHandler);
+app.post("/samples", formLimiter, recaptchaMiddleware("sample_request"), createSampleRequestHandler);
 
 // ============ SAMPLES ENDPOINTS (NEW SYSTEM) ============
 
-// NEW: Create sample request from cart
-app.post("/samples/from-cart", async (req, res) => {
+// NEW: Create sample request from cart (rate limited: 10 per hour, reCAPTCHA protected)
+app.post("/samples/from-cart", formLimiter, recaptchaMiddleware("sample_from_cart"), async (req, res) => {
   try {
     const sample = await samples.createSampleFromCart(req.body);
+
+    // Send new sample notification to admin
+    try {
+      const adminEmail = await emailSender.getAdminNotificationEmail();
+      if (adminEmail) {
+        await emailSender.sendNewSampleAdminEmail(sample, adminEmail);
+        functions.logger.info("New sample admin notification sent", { sampleId: sample.id, adminEmail });
+      }
+    } catch (emailError) {
+      functions.logger.error("Failed to send admin sample notification", emailError);
+    }
+
     res.status(201).json({ sample });
   } catch (error) {
     functions.logger.error("Error creating cart sample", error);
@@ -1552,6 +1739,17 @@ app.put("/samples/:id/status", requireAuth, async (req, res) => {
       }
     }
 
+    // Send shipping notification when sample is shipped
+    if (status === "shipped" && trackingNumber) {
+      try {
+        await emailSender.sendSampleShippingNotificationEmail(updatedSample);
+        functions.logger.info(`Sample shipping notification sent to ${updatedSample.customer?.email}`);
+      } catch (emailError) {
+        functions.logger.error("Error sending sample shipping notification", emailError);
+        // Don't fail the request if email fails
+      }
+    }
+
     res.status(200).json({ sample: updatedSample });
   } catch (error) {
     functions.logger.error("Error updating sample status", error);
@@ -1567,6 +1765,70 @@ app.get("/admin/samples", requireAuth, async (req, res) => {
   } catch (error) {
     functions.logger.error("Error listing samples", error);
     res.status(500).json({ error: "Failed to list samples." });
+  }
+});
+
+// ============ CONTACT ENDPOINT ============
+
+// Contact form submission (rate limited: 10 per hour, reCAPTCHA protected)
+app.post("/contact", formLimiter, recaptchaMiddleware("contact_form"), async (req, res) => {
+  try {
+    const { name, email, phone, subject, message } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !subject || !message) {
+      return res.status(400).json({ error: "Ad, e-posta, konu ve mesaj alanları zorunludur." });
+    }
+
+    // Save contact message to Firestore
+    const contactRef = db.collection("contactMessages").doc();
+    const contactData = {
+      id: contactRef.id,
+      name,
+      email,
+      phone: phone || "",
+      subject,
+      message,
+      status: "unread",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      ip: req.headers["x-forwarded-for"] || req.ip,
+      recaptchaScore: req.recaptchaResult?.score || null,
+    };
+
+    await contactRef.set(contactData);
+
+    // Send email notification to admin
+    try {
+      const adminEmail = await emailSender.getAdminNotificationEmail();
+      if (adminEmail) {
+        await emailSender.sendMail({
+          to: adminEmail,
+          subject: `[Yeni İletişim] ${subject}`,
+          html: `
+            <h2>Yeni İletişim Formu Mesajı</h2>
+            <p><strong>Ad Soyad:</strong> ${name}</p>
+            <p><strong>E-posta:</strong> ${email}</p>
+            <p><strong>Telefon:</strong> ${phone || "Belirtilmedi"}</p>
+            <p><strong>Konu:</strong> ${subject}</p>
+            <p><strong>Mesaj:</strong></p>
+            <p>${message.replace(/\n/g, "<br>")}</p>
+            <hr>
+            <p style="color: #666; font-size: 12px;">
+              Bu mesaj spreyvalfdunyasi.com iletişim formundan gönderilmiştir.
+            </p>
+          `,
+        });
+        functions.logger.info("Contact form admin notification sent", { contactId: contactRef.id, adminEmail });
+      }
+    } catch (emailError) {
+      functions.logger.error("Failed to send contact admin notification", emailError);
+      // Don't fail the request if email fails
+    }
+
+    res.status(201).json({ success: true, message: "Mesajınız başarıyla gönderildi." });
+  } catch (error) {
+    functions.logger.error("Error processing contact form", error);
+    res.status(500).json({ error: "Mesaj gönderilirken bir hata oluştu." });
   }
 });
 
@@ -2389,10 +2651,105 @@ app.post("/admin/stock/send-alert", requireAuth, requireSuperAdmin, async (req, 
   }
 });
 
+// ==================== DATA FIX ENDPOINTS ====================
+
+// Fix HTML-encoded product data (one-time use)
+app.post("/admin/fix-encoded-products", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    // Helper function to decode HTML entities
+    const decodeHtmlEntities = (str) => {
+      if (typeof str !== "string") return str;
+      return str
+        .replace(/&#x2F;/g, "/")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#x27;/g, "'")
+        .replace(/&#x60;/g, "`")
+        // Handle double-encoded entities
+        .replace(/&amp;#x2F;/g, "/")
+        .replace(/&amp;amp;/g, "&");
+    };
+
+    // Recursively decode object
+    const decodeObject = (obj) => {
+      if (obj === null || obj === undefined) return obj;
+      if (typeof obj === "string") return decodeHtmlEntities(obj);
+      if (Array.isArray(obj)) return obj.map(decodeObject);
+      if (typeof obj === "object") {
+        const decoded = {};
+        for (const [key, value] of Object.entries(obj)) {
+          decoded[key] = decodeObject(value);
+        }
+        return decoded;
+      }
+      return obj;
+    };
+
+    // Check if string has encoded entities
+    const hasEncodedEntities = (str) => {
+      if (typeof str !== "string") return false;
+      return /&#x2F;|&amp;|&lt;|&gt;|&quot;|&#x27;|&#x60;/.test(str);
+    };
+
+    const objectHasEncodedEntities = (obj) => {
+      if (obj === null || obj === undefined) return false;
+      if (typeof obj === "string") return hasEncodedEntities(obj);
+      if (Array.isArray(obj)) return obj.some(objectHasEncodedEntities);
+      if (typeof obj === "object") {
+        return Object.values(obj).some(objectHasEncodedEntities);
+      }
+      return false;
+    };
+
+    // Get all products
+    const productsRef = db.collection("products");
+    const snapshot = await productsRef.get();
+
+    let fixedCount = 0;
+    const fixedProducts = [];
+    const batch = db.batch();
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+
+      if (objectHasEncodedEntities(data)) {
+        const decoded = decodeObject(data);
+        batch.update(doc.ref, decoded);
+        fixedCount++;
+        fixedProducts.push({
+          id: doc.id,
+          originalTitle: data.title,
+          fixedTitle: decoded.title,
+        });
+      }
+    }
+
+    if (fixedCount > 0) {
+      await batch.commit();
+      functions.logger.info("Fixed encoded products", {
+        count: fixedCount,
+        products: fixedProducts,
+        by: req.admin.email
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `${fixedCount} ürün düzeltildi`,
+      fixedProducts,
+    });
+  } catch (error) {
+    functions.logger.error("Failed to fix encoded products", error);
+    res.status(500).json({ error: "Veriler düzeltilemedi: " + error.message });
+  }
+});
+
 // ==================== PAYMENT ENDPOINTS ====================
 
-// Create PayTR payment token
-app.post("/payment/create-token", async (req, res) => {
+// Create PayTR payment token (rate limited: 10 per hour)
+app.post("/payment/create-token", paymentLimiter, async (req, res) => {
   try {
     const { orderId, customer, cart_items, total_amount } = req.body;
 
@@ -2519,6 +2876,14 @@ app.get("/admin/me/role", requireAuth, async (req, res) => {
 });
 
 // Export scheduled functions
-export { updateExchangeRate, forceUpdateExchangeRate } from "./scheduled/update-exchange-rate.js";
+export { updateExchangeRate, forceUpdateExchangeRate, keepSiteWarm } from "./scheduled/update-exchange-rate.js";
 
-export const api = functions.https.onRequest(app);
+// Export API handler with v2 functions (increased memory for media uploads)
+export const api = onRequest(
+  {
+    memory: "512MiB",
+    timeoutSeconds: 120,
+    cors: true,
+  },
+  app
+);

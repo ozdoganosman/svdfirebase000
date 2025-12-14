@@ -2,14 +2,126 @@
 
 **Proje:** SVD Ambalaj E-Ticaret Platformu
 **Başlangıç Tarihi:** 22 Ekim 2025
-**Son Güncelleme:** 12 Aralık 2025
+**Son Güncelleme:** 14 Aralık 2025
 
 ---
 
 ## 🆕 Son Eklenen Özellikler
 
+### 14 Aralık 2025
+1. **🎨 UI/UX İyileştirmeleri - ✅ TAMAMLANDI**
+   - Mobil header yeniden tasarlandı (amber gradient, tab bar navigation)
+   - Toplu fiyatlandırma tablosu sadeleştirildi (kart tasarımı, indirim badge'leri)
+   - Landing page'den "Avantajlar" bölümü kaldırıldı (yukarıda zaten gösteriliyor)
+
+2. **🔧 Firebase Functions v2 Migration - ✅ TAMAMLANDI**
+   - API fonksiyonu Firebase Functions v2'ye geçirildi
+   - Memory limit 256MiB → 512MiB (medya yükleme için)
+   - Timeout 60s → 120s
+   - CORS ve cloud run optimizasyonları
+
+3. **🔄 Keep-warm Function - ✅ TAMAMLANDI**
+   - Cold start önleme için 5 dakikada bir site ping'leme
+   - SSR fonksiyonlarının hızlı cevap vermesi için
+
+### 13 Aralık 2025
+1. **🔍 SEO Sayfaları ve Schema İyileştirmeleri - ✅ TAMAMLANDI**
+   - SSS (FAQ) Sayfası (`/faq`):
+     - 15 sık sorulan soru ve cevap
+     - FAQJsonLd yapılandırılmış veri (Google rich snippets)
+     - Accordion tasarım
+   - Hakkımızda Sayfası (`/hakkimizda`):
+     - Firma tanıtımı ve avantajlar
+     - 6 özellik kartı
+     - İstatistikler (500+ ürün, 1000+ müşteri, 81 il)
+   - İletişim Sayfası (`/iletisim`):
+     - İletişim formu (ad, e-posta, telefon, konu, mesaj)
+     - WhatsApp, telefon, e-posta linkleri
+     - Çalışma saatleri ve adres bilgileri
+   - Ürün Schema İyileştirmesi:
+     - AggregateOffer desteği (toplu fiyat aralığı)
+     - lowPrice/highPrice/offerCount
+   - İlgili Ürünler Bölümü:
+     - Ürün detay sayfasında aynı kategoriden 4 ürün
+     - Dinamik yükleme
+   - Footer Güncellemesi:
+     - SSS, Hakkımızda, İletişim linkleri eklendi
+
+2. **📊 Google Analytics 4 Entegrasyonu - ✅ TAMAMLANDI**
+   - GA4 Measurement ID: G-2KYBSZFN7G
+   - E-ticaret tracking eventleri:
+     - `view_item` - Ürün detay sayfası görüntüleme
+     - `add_to_cart` - Sepete ekleme
+     - `purchase` - Satın alma tamamlama
+   - Next.js Script ile gtag.js entegrasyonu
+   - TypeScript tip tanımları (window.gtag, window.dataLayer)
+   - ProductViewTracker client component (server component wrapper)
+
+2. **🔒 Güvenlik İyileştirmeleri (Faz 5.2) - ✅ TAMAMLANDI**
+   - Rate Limiting implementasyonu (express-rate-limit)
+     - Genel API: 100 istek/15 dakika
+     - Login: 5 deneme/15 dakika (brute-force koruması)
+     - Ödeme: 10 istek/saat
+     - Form (sipariş/teklif/numune): 10/saat
+   - Security Headers (Helmet.js):
+     - HSTS (1 yıl, preload)
+     - X-Frame-Options: DENY
+     - X-Content-Type-Options: nosniff
+     - Referrer-Policy: strict-origin-when-cross-origin
+     - X-XSS-Protection
+   - XSS ve Injection Koruması:
+     - Input sanitization (validator.js)
+     - NoSQL injection önleme
+     - Request body/query sanitization
+   - Security logging (başarısız istekler loglanıyor)
+
+2. **⚡ Performans Optimizasyonları (Faz 5.1) - ✅ TAMAMLANDI**
+   - Bundle size optimizasyonu: Cart sayfası 140KB → 12KB (%91 azalma!)
+   - jsPDF dynamic import (code splitting)
+   - Image lazy loading (tüm ürün resimleri)
+   - Priority loading (above-the-fold resimler)
+   - Font optimizasyonu (display: swap, preload: true)
+   - Next.js config optimizasyonları:
+     - removeConsole (production)
+     - optimizePackageImports (Firebase tree-shaking)
+     - compress: true
+     - poweredByHeader: false
+     - generateEtags: true
+
+3. **📊 Gelişmiş Raporlama ve Analitik (Faz 3.1) - ✅ TAMAMLANDI**
+   - Yeni raporlar sayfası: `/admin/reports`
+   - 4 sekme: Genel Bakış, Satış Raporları, Müşteri Analizi, Ürün Performansı
+   - Tarih filtresi: Bugün, Son 7/30 gün, Bu ay, Geçen ay, Bu yıl, Özel tarih
+   - Gruplama seçenekleri: Günlük, Haftalık, Aylık
+   - Dashboard özet istatistikleri (toplam gelir, sipariş sayısı, müşteri sayısı, ortalama sipariş)
+   - Satış raporları (dönemsel karşılaştırma, sipariş durumu dağılımı, günlük/haftalık trend)
+   - Müşteri analitiği (yeni/tekrar eden/sadık/pasif müşteri segmentasyonu, en iyi müşteriler)
+   - Ürün performansı (en çok satanlar, kategori performansı, düşük stok/stoksuz uyarıları)
+   - CSV export (siparişler, müşteriler, ürünler, satışlar) - UTF-8 BOM ile Excel uyumlu
+   - Backend: 5 yeni API endpoint (`/admin/analytics/*`)
+   - Frontend: Yeni analytics API fonksiyonları ve TypeScript tipleri
+
+4. **📧 E-posta Bildirim Sistemi İyileştirmeleri - ✅ TAMAMLANDI**
+   - Admin bildirim e-postaları aktif edildi (yeni sipariş, teklif, numune)
+   - Kargo bildirimi e-postası eklendi (müşteriye)
+   - Numune kargo bildirimi eklendi
+   - Admin e-posta ayarları sayfasına bildirim adresi alanı eklendi
+   - Türk kargo firmaları için otomatik takip linki oluşturma (Yurtiçi, Aras, MNG, PTT, Sürat, UPS, DHL, FedEx)
+   - Database'den admin bildirim e-postası okuma (fallback: ADMIN_EMAIL env)
+
 ### 12 Aralık 2025
-1. **🧹 Kod Temizliği - VIP ve Kampanya Sistemleri Kaldırıldı**
+1. **🔍 SEO Optimizasyonları (Faz 3.3) - ✅ TAMAMLANDI**
+   - Dinamik meta tags (title, description, keywords)
+   - Open Graph tags (Facebook, LinkedIn paylaşımları)
+   - Twitter Card tags (summary_large_image)
+   - JSON-LD yapılandırılmış veri (Organization, WebSite, LocalBusiness, Product, Breadcrumb)
+   - sitemap.xml otomatik oluşturma (ürünler ve kategoriler dahil)
+   - robots.txt SEO-friendly yapılandırma
+   - Canonical URL'ler
+   - Google Search Console entegrasyonu (TXT doğrulama)
+   - Custom domain setup (spreyvalfdunyasi.com)
+
+2. **🧹 Kod Temizliği - VIP ve Kampanya Sistemleri Kaldırıldı**
    - VIP üyelik sistemi kaldırıldı (Platin, Gold, Silver, Bronze)
    - Promosyon/Kampanya kodu sistemi kaldırıldı
    - Admin kampanyalar sayfası silindi
@@ -187,10 +299,10 @@
 
 ## 📊 Durum Özeti
 
-- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), Faz 1.4 (Firebase Auth), Faz 1.5 (PayTR Ödeme), Faz 2.1 (B2B Teklif & Numune), Faz 2.2 (Kombo İndirimi), **Faz 2.3 (Süper Admin Panel)**, UX İyileştirmeleri, PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon, USD → TRY Otomatik Çevirme, Landing Page CMS
-- Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı; Kombo indirimi aktif; PayTR kredi kartı ödemesi aktif; Landing Page CMS tamamlandı
+- ✅ Tamamlandı: Faz 1.1 (Döviz Kuru), Faz 1.2 (Arama/Filtreleme), Faz 1.3 (Sipariş Takip), Faz 1.4 (Firebase Auth), Faz 1.5 (PayTR Ödeme), Faz 2.1 (B2B Teklif & Numune), Faz 2.2 (Kombo İndirimi), **Faz 2.3 (Süper Admin Panel)**, **Faz 3.1 (Raporlama & Analitik)**, **Faz 3.3 (SEO Optimizasyonları)**, **Faz 5.1 (Performans Optimizasyonu)**, UX İyileştirmeleri, PDF Export, Checkout İyileştirme, USD-Only Admin, Görsel optimizasyon, USD → TRY Otomatik Çevirme, Landing Page CMS, **Google Analytics 4**
+- Not: Proje genelinde dual currency gösterim aktif; satış TL, fiyatlama USD mimarisi kararlı; Kombo indirimi aktif; PayTR kredi kartı ödemesi aktif; Landing Page CMS tamamlandı; SEO optimizasyonları tamamlandı; Gelişmiş raporlama sistemi aktif; Custom domain (spreyvalfdunyasi.com) kurulumu yapıldı; Performans optimizasyonları tamamlandı (Cart: 140KB → 12KB); **GA4 e-ticaret tracking aktif**
 
-**Son Deployment:** 12 Aralık 2025 - Production (Firebase Hosting + Functions)
+**Son Deployment:** 13 Aralık 2025 - Production (Firebase Hosting + Functions)
 **Son Commit:** chore: Remove VIP and Campaign systems
 **Deployed Services:**
 - ✅ Frontend - https://svdfirebase000.web.app
@@ -208,6 +320,9 @@
 - ✅ **Faz 2.1** - B2B Teklif & Numune Sistemi (11/11 görev)
 - ✅ **Faz 2.2** - Başlık-Şişe Kombo İndirimi (8/8 görev - 31 Ekim 2025)
 - ✅ **Faz 2.3** - Süper Admin Panel (12/12 görev - 11 Aralık 2025)
+- ✅ **Faz 3.1** - Gelişmiş Raporlama ve Analitik (6/6 görev - 13 Aralık 2025)
+- ✅ **Faz 3.3** - SEO Optimizasyonları (9/12 görev - 12 Aralık 2025)
+- ✅ **Faz 5.1** - Performans Optimizasyonu (6/8 görev - 13 Aralık 2025)
 
 ---
 
@@ -507,21 +622,25 @@ Frontend:
 ---
 
 ### 3.3 SEO Optimizasyonları 🔍
-**Durum:** ⏳ Beklemede
-**Tahmini Süre:** 4-5 gün
+**Durum:** ✅ TAMAMLANDI
+**Gerçek Süre:** 1 gün
+**Başlangıç:** 12 Aralık 2025
+**Bitiş:** 12 Aralık 2025
 **Öncelik:** Orta
 
 #### Görevler:
-- [ ] Dinamik meta tags (her sayfa için)
-- [ ] Open Graph tags
-- [ ] Twitter Card tags
-- [ ] JSON-LD yapılandırılmış veri
-- [ ] Sitemap.xml otomatik oluşturma
-- [ ] robots.txt düzenleme
-- [ ] Canonical URL'ler
-- [ ] Alt text optimizasyonu
-- [ ] Blog/İçerik modülü
-- [ ] SSG/ISR optimizasyonu
+- [x] Dinamik meta tags (her sayfa için)
+- [x] Open Graph tags
+- [x] Twitter Card tags
+- [x] JSON-LD yapılandırılmış veri (Organization, WebSite, LocalBusiness, Product, Breadcrumb)
+- [x] Sitemap.xml otomatik oluşturma
+- [x] robots.txt düzenleme
+- [x] Canonical URL'ler
+- [x] Google Search Console entegrasyonu
+- [x] Custom domain setup (spreyvalfdunyasi.com)
+- [ ] Alt text optimizasyonu (beklemede)
+- [ ] Blog/İçerik modülü (beklemede)
+- [ ] SSG/ISR optimizasyonu (beklemede)
 
 ---
 
@@ -595,17 +714,20 @@ Frontend:
 ## 🔧 FAZ 5: TEKNİK İYİLEŞTİRMELER
 
 ### 5.1 Performans Optimizasyonu ⚡
-**Durum:** 🔄 Devam Ediyor
+**Durum:** ✅ TAMAMLANDI
+**Gerçek Süre:** 1 gün
+**Bitiş:** 13 Aralık 2025
 **Öncelik:** Orta
 
 #### Görevler:
 - [x] Image optimization (Next.js Image) — Ana sayfa, ürünler, ürün detay, admin: ürünler/kategoriler/landing/medya, medya seçici, galeri
-- [ ] Lazy loading
-- [ ] Code splitting
-- [ ] Redis cache
-- [ ] CDN kullanımı
-- [ ] Bundle size analizi
-- [ ] Lighthouse skoru iyileştirme
+- [x] Lazy loading (tüm ürün resimleri, priority loading for above-the-fold)
+- [x] Code splitting (jsPDF dynamic import: 140KB → 12KB)
+- [x] Bundle size analizi ve optimizasyonu
+- [x] Next.js config optimizasyonları (removeConsole, optimizePackageImports, compress)
+- [x] Font optimizasyonu (display: swap, preload: true)
+- [ ] Redis cache (opsiyonel)
+- [ ] CDN kullanımı (Firebase Hosting zaten CDN kullanıyor)
 
 ---
 
@@ -646,7 +768,7 @@ Frontend:
 - **Auth:** Firebase Authentication
 - **Ödeme:** PayTR iFrame API
 - **Email:** Firebase Extensions (Trigger Email) + Nodemailer
-- **Analytics:** Google Analytics 4 + Custom Dashboard
+- **Analytics:** Google Analytics 4 (G-2KYBSZFN7G) + Custom Dashboard
 - **Testing:** Jest + Playwright
 - **CI/CD:** GitHub Actions
 
@@ -674,7 +796,7 @@ Tamamlanan koleksiyonlar:
 
 ## 🎯 Aktif Sprint (Güncel Odak)
 
-**Sprint:** Sprint 6 - Kod Temizliği & Stabilizasyon
+**Sprint:** Sprint 6 - Kod Temizliği & SEO
 **Başlangıç:** 12 Aralık 2025
 **Bitiş:** 20 Aralık 2025
 
@@ -682,25 +804,35 @@ Tamamlanan koleksiyonlar:
 - ✅ VIP sistemi kaldırıldı
 - ✅ Kampanya/promosyon sistemi kaldırıldı
 - ✅ Kod temizliği ve sadeleştirme
+- ✅ SEO Optimizasyonları (Faz 3.3)
+- ✅ Custom domain setup (spreyvalfdunyasi.com)
+- ✅ Google Search Console entegrasyonu
+- ✅ E-posta bildirim sistemi iyileştirmeleri
+- ✅ Gelişmiş Raporlama ve Analitik (Faz 3.1)
+- ✅ Performans Optimizasyonları (Faz 5.1) - Bundle: 140KB → 12KB
+- ✅ Google Analytics 4 Entegrasyonu (e-ticaret tracking)
+- ✅ Microsoft Clarity (session replay, heatmap)
+- ✅ SEO Sayfaları (/faq, /hakkimizda, /iletisim)
+- ✅ Ürün Schema AggregateOffer (toplu fiyat)
+- ✅ İlgili Ürünler bölümü
 
 **Odak (güncel):**
+- 🔄 SSL sertifikası bekliyor (spreyvalfdunyasi.com)
 - 🔄 PayTR production modu aktivasyonu
-- 🔄 E-posta bildirim sistemi iyileştirmeleri
 
 ### Bir Sonraki Adımlar
 Kısa vadeli:
+- [ ] SSL sertifikası aktif olunca Google Search Console sitemap submit
 - [ ] PayTR production modu aktivasyonu (canlı ödeme)
-- [ ] E-posta bildirim sistemi iyileştirmeleri
 - [ ] Güvenlik iyileştirmeleri (rate limiting, CAPTCHA)
 
 Orta vadeli (sonraki sprint):
-- [ ] Gelişmiş raporlama ve analitik (Faz 3.1)
-- [ ] SEO optimizasyonları (Faz 3.3)
+- [x] Gelişmiş raporlama ve analitik (Faz 3.1) - ✅ TAMAMLANDI (13 Aralık 2025)
+- [x] Performans optimizasyonları (Faz 5.1) - ✅ TAMAMLANDI (13 Aralık 2025)
 
 Tamamlayıcı iyileştirmeler:
 - [ ] Test coverage artırımı
-- [ ] Performance optimizasyonları
-- [ ] Lighthouse skoru iyileştirme
+- [ ] Güvenlik iyileştirmeleri (rate limiting, CAPTCHA)
 
 ---
 
@@ -720,5 +852,5 @@ Tamamlayıcı iyileştirmeler:
 
 ---
 
-**Son Güncelleme:** 12 Aralık 2025
-**Bir sonraki review:** 20 Aralık 2025
+**Son Güncelleme:** 14 Aralık 2025
+**Bir sonraki review:** 21 Aralık 2025

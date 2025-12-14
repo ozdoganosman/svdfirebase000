@@ -95,6 +95,7 @@ export default function EmailSettingsPage() {
     smtpPassword: "",
     fromEmail: "",
     fromName: "",
+    notificationEmail: "",
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -141,6 +142,7 @@ export default function EmailSettingsPage() {
         smtpPassword: "", // Never show password
         fromEmail: data.fromEmail || "",
         fromName: data.fromName || "",
+        notificationEmail: data.notificationEmail || "",
       });
     } catch (err) {
       console.error("Failed to load email settings:", err);
@@ -153,6 +155,7 @@ export default function EmailSettingsPage() {
         smtpPassword: "",
         fromEmail: "",
         fromName: "",
+        notificationEmail: "",
       });
     } finally {
       setIsLoading(false);
@@ -218,6 +221,7 @@ export default function EmailSettingsPage() {
         smtpPassword: "",
         fromEmail: settings.fromEmail || "",
         fromName: settings.fromName || "",
+        notificationEmail: settings.notificationEmail || "",
       });
     }
     setHasChanges(false);
@@ -506,6 +510,28 @@ export default function EmailSettingsPage() {
                     placeholder="noreply@svdambalaj.com"
                   />
                 </SettingsField>
+              </div>
+            </SettingsSection>
+
+            <SettingsSection
+              title="Bildirim Ayarlari"
+              description="Yeni siparis, teklif ve numune bildirimleri icin admin e-posta adresi"
+            >
+              <SettingsField
+                label="Bildirim E-posta Adresi"
+                description="Yeni siparis, teklif ve numune talepleri bu adrese bildirilir"
+              >
+                <SettingsInput
+                  type="email"
+                  value={formData.notificationEmail}
+                  onChange={(e) => handleChange("notificationEmail", e.target.value)}
+                  placeholder="admin@svdambalaj.com"
+                />
+              </SettingsField>
+              <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-xs text-amber-700">
+                  Bu alan bos birakilirsa, bildirimler ADMIN_EMAIL ortam degiskenine gonderilir.
+                </p>
               </div>
             </SettingsSection>
 

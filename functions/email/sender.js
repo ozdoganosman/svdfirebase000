@@ -2,6 +2,29 @@ import { db } from "../db/client.js";
 import * as templates from "./templates.js";
 
 const mailCollection = db.collection("mail");
+const siteSettingsCollection = db.collection("siteSettings");
+
+/**
+ * Get admin notification email from database or environment
+ */
+export async function getAdminNotificationEmail() {
+  try {
+    // First try to get from database
+    const emailSettingsDoc = await siteSettingsCollection.doc("email").get();
+    if (emailSettingsDoc.exists) {
+      const data = emailSettingsDoc.data();
+      if (data.notificationEmail) {
+        return data.notificationEmail;
+      }
+    }
+
+    // Fallback to environment variable
+    return process.env.ADMIN_EMAIL || null;
+  } catch (error) {
+    console.error("Error getting admin notification email:", error);
+    return process.env.ADMIN_EMAIL || null;
+  }
+}
 
 /**
  * Send email using Firebase Trigger Email Extension
@@ -162,4 +185,32 @@ export async function sendNewOrderAdminEmail(order, adminEmail) {
   const { html, text } = await templates.orderConfirmationTemplate(order);
   const subject = `Yeni Sipariş - #${order.orderNumber || order.id}`;
   return sendEmail(adminEmail, subject, html, text);
+}
+
+/**
+ * Send shipping notification email to customer
+ */
+export async function sendShippingNotificationEmail(order) {
+  const customerEmail = order.customer?.email || order.billingAddress?.email;
+  if (!customerEmail) {
+    console.warn("No customer email for shipping notification:", order.id);
+    return { success: false, error: "No customer email" };
+  }
+
+  const { subject, html, text } = await templates.shippingNotificationTemplate(order);
+  return sendEmail(customerEmail, subject, html, text);
+}
+
+/**
+ * Send sample shipping notification email to customer
+ */
+export async function sendSampleShippingNotificationEmail(sample) {
+  const customerEmail = sample.customer?.email;
+  if (!customerEmail) {
+    console.warn("No customer email for sample shipping notification:", sample.id);
+    return { success: false, error: "No customer email" };
+  }
+
+  const { subject, html, text } = await templates.sampleShippingNotificationTemplate(sample);
+  return sendEmail(customerEmail, subject, html, text);
 }

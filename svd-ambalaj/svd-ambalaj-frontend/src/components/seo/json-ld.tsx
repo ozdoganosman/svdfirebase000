@@ -61,6 +61,11 @@ export function WebSiteJsonLd() {
 }
 
 // Product Schema
+type BulkPriceTier = {
+  minQty: number;
+  price: number;
+};
+
 type ProductJsonLdProps = {
   name: string;
   description: string;
@@ -71,6 +76,7 @@ type ProductJsonLdProps = {
   availability?: "InStock" | "OutOfStock" | "PreOrder";
   sku?: string;
   category?: string;
+  bulkPricing?: BulkPriceTier[];
 };
 
 export function ProductJsonLd({
@@ -83,7 +89,17 @@ export function ProductJsonLd({
   availability = "InStock",
   sku,
   category,
+  bulkPricing,
 }: ProductJsonLdProps) {
+  // If bulk pricing exists, use AggregateOffer
+  const hasMultiplePrices = bulkPricing && bulkPricing.length > 0;
+  const lowestPrice = hasMultiplePrices
+    ? Math.min(price || Infinity, ...bulkPricing.map(t => t.price))
+    : price;
+  const highestPrice = hasMultiplePrices
+    ? Math.max(price || 0, ...bulkPricing.map(t => t.price))
+    : price;
+
   const schema = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -97,7 +113,20 @@ export function ProductJsonLd({
       "@type": "Brand",
       name: "Sprey Valf Dünyası",
     },
-    ...(price && {
+    ...(hasMultiplePrices && lowestPrice && highestPrice ? {
+      offers: {
+        "@type": "AggregateOffer",
+        lowPrice: lowestPrice.toFixed(2),
+        highPrice: highestPrice.toFixed(2),
+        priceCurrency,
+        offerCount: (bulkPricing?.length || 0) + 1,
+        availability: `https://schema.org/${availability}`,
+        seller: {
+          "@type": "Organization",
+          name: "Sprey Valf Dünyası",
+        },
+      },
+    } : price ? {
       offers: {
         "@type": "Offer",
         price: price.toFixed(2),
@@ -108,7 +137,7 @@ export function ProductJsonLd({
           name: "Sprey Valf Dünyası",
         },
       },
-    }),
+    } : {}),
   };
 
   return (

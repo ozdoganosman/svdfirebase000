@@ -7,15 +7,20 @@ import { AppProviders } from "@/components/app-providers";
 import ExchangeRateBanner from "@/components/exchange-rate-banner";
 import { DynamicFavicon } from "@/components/dynamic-favicon";
 import { OrganizationJsonLd, WebSiteJsonLd, LocalBusinessJsonLd } from "@/components/seo/json-ld";
+import { GoogleAnalytics } from "@/components/google-analytics";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
+  preload: true,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+  preload: true,
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spreyvalfdunyasi.com";
@@ -104,6 +109,7 @@ export default function RootLayout({
         <LocalBusinessJsonLd />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-50 text-slate-900`}>
+        <GoogleAnalytics />
         <AppProviders>
           <DynamicFavicon />
           <SiteHeader />

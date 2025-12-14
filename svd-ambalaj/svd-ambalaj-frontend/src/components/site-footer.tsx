@@ -152,8 +152,14 @@ export function SiteFooter() {
                 <Link href="/categories" className="transition hover:text-amber-600">
                   Kategoriler
                 </Link>
-                <Link href="/cart" className="transition hover:text-amber-600">
-                  Sepetim
+                <Link href="/faq" className="transition hover:text-amber-600">
+                  Sıkça Sorulan Sorular
+                </Link>
+                <Link href="/hakkimizda" className="transition hover:text-amber-600">
+                  Hakkımızda
+                </Link>
+                <Link href="/iletisim" className="transition hover:text-amber-600">
+                  İletişim
                 </Link>
               </div>
             </div>

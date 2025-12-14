@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect, useRef } from "react";
+import { trackPurchase } from "@/components/google-analytics";
 
 const formatNow = () =>
   new Intl.DateTimeFormat("tr-TR", {
@@ -13,6 +14,18 @@ const formatNow = () =>
 function SuccessContent() {
   const searchParams = useSearchParams();
   const orderNumber = searchParams.get("number");
+  const total = searchParams.get("total");
+  const tracked = useRef(false);
+
+  useEffect(() => {
+    // Track purchase only once
+    if (orderNumber && !tracked.current) {
+      tracked.current = true;
+      const totalAmount = total ? parseFloat(total) : 0;
+      // Track purchase with available info
+      trackPurchase(orderNumber, totalAmount, []);
+    }
+  }, [orderNumber, total]);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-emerald-50 to-white py-20 text-slate-900">

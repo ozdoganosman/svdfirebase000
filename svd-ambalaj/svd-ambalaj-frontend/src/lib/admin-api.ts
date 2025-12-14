@@ -509,3 +509,172 @@ export async function fetchCustomers(): Promise<AdminCustomer[]> {
   const response = await apiFetch<{ customers: AdminCustomer[] }>("/admin/customers");
   return response.customers ?? [];
 }
+
+// ===== ANALYTICS TYPES =====
+
+export type DashboardSummary = {
+  todayRevenue: number;
+  thisMonthRevenue: number;
+  lastMonthRevenue: number;
+  totalRevenue: number;
+  revenueGrowth: number;
+  todayOrders: number;
+  thisMonthOrders: number;
+  totalOrders: number;
+  statusCounts: {
+    pending: number;
+    confirmed: number;
+    processing: number;
+    shipped: number;
+    delivered: number;
+    cancelled: number;
+  };
+  totalCustomers: number;
+  newCustomersThisMonth: number;
+  pendingOrders: number;
+  pendingQuotes: number;
+  pendingSamples: number;
+  averageOrderValue: number;
+};
+
+export type SalesReportData = {
+  period: string;
+  revenue: number;
+  orders: number;
+  items: number;
+  statusBreakdown: {
+    pending: number;
+    confirmed: number;
+    processing: number;
+    shipped: number;
+    delivered: number;
+    cancelled: number;
+  };
+};
+
+export type SalesReport = {
+  salesData: SalesReportData[];
+  totals: {
+    revenue: number;
+    orders: number;
+    items: number;
+    averageOrderValue: number;
+  };
+  period: { from: string; to: string };
+  groupBy: string;
+};
+
+export type CustomerSegments = {
+  new: number;
+  returning: number;
+  loyal: number;
+  dormant: number;
+};
+
+export type TopCustomer = {
+  id: string;
+  name: string;
+  email: string;
+  orders: number;
+  revenue: number;
+  lastOrder: string | null;
+};
+
+export type CustomerAnalytics = {
+  totalCustomers: number;
+  activeCustomers: number;
+  newCustomers: number;
+  segments: CustomerSegments;
+  topCustomers: TopCustomer[];
+  averageCustomerValue: number;
+  averageOrdersPerCustomer: number;
+};
+
+export type ProductPerformance = {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  quantitySold: number;
+  revenue: number;
+  orderCount: number;
+  currentStock: number;
+  stockStatus: "in_stock" | "low" | "critical" | "out_of_stock";
+};
+
+export type CategoryBreakdown = {
+  category: string;
+  revenue: number;
+  quantity: number;
+  products: number;
+};
+
+export type LowStockProduct = {
+  id: string;
+  name: string;
+  sku: string;
+  stock: number;
+  category: string;
+};
+
+export type ProductAnalytics = {
+  topSellers: ProductPerformance[];
+  mostPopular: ProductPerformance[];
+  lowStock: LowStockProduct[];
+  outOfStock: { id: string; name: string; sku: string; category: string }[];
+  categoryBreakdown: CategoryBreakdown[];
+  totalProducts: number;
+  totalSoldQuantity: number;
+  totalRevenue: number;
+};
+
+// ===== ANALYTICS API FUNCTIONS =====
+
+export async function fetchDashboardSummary(): Promise<DashboardSummary> {
+  return apiFetch<DashboardSummary>("/admin/analytics/dashboard");
+}
+
+export type SalesReportFilters = {
+  period?: string;
+  from?: string;
+  to?: string;
+  groupBy?: "hourly" | "daily" | "weekly" | "monthly";
+};
+
+export async function fetchSalesReport(filters: SalesReportFilters = {}): Promise<SalesReport> {
+  const query = new URLSearchParams();
+  if (filters.period) query.set("period", filters.period);
+  if (filters.from) query.set("from", filters.from);
+  if (filters.to) query.set("to", filters.to);
+  if (filters.groupBy) query.set("groupBy", filters.groupBy);
+
+  const search = query.toString();
+  return apiFetch<SalesReport>(`/admin/analytics/sales${search ? `?${search}` : ""}`);
+}
+
+export async function fetchCustomerAnalytics(period?: string): Promise<CustomerAnalytics> {
+  const query = period ? `?period=${period}` : "";
+  return apiFetch<CustomerAnalytics>(`/admin/analytics/customers${query}`);
+}
+
+export async function fetchProductAnalytics(period?: string, limit?: number): Promise<ProductAnalytics> {
+  const query = new URLSearchParams();
+  if (period) query.set("period", period);
+  if (limit) query.set("limit", limit.toString());
+
+  const search = query.toString();
+  return apiFetch<ProductAnalytics>(`/admin/analytics/products${search ? `?${search}` : ""}`);
+}
+
+export function getExportUrl(type: "orders" | "customers" | "products" | "sales", filters?: SalesReportFilters): string {
+  const base = resolveAdminApiBase();
+  const query = new URLSearchParams();
+
+  if (filters?.period) query.set("period", filters.period);
+  if (filters?.from) query.set("from", filters.from);
+  if (filters?.to) query.set("to", filters.to);
+  if (filters?.groupBy) query.set("groupBy", filters.groupBy);
+
+  const search = query.toString();
+  return `${base}/admin/analytics/export/${type}${search ? `?${search}` : ""}`;
+}

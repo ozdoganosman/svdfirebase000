@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useCart } from "@/context/CartContext";
+import { trackAddToCart } from "./google-analytics";
 
 export type AddToCartButtonProps = {
   product: {
@@ -62,6 +63,9 @@ export function AddToCartButton({
   const handleAddToCart = () => {
     startTransition(() => {
       addItem(product, effectiveQuantity);
+      // Track add to cart event
+      const unitPrice = product.price || product.priceTRY || 0;
+      trackAddToCart(product.id, product.title, unitPrice, effectiveQuantity);
     });
   };
 

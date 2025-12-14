@@ -7,8 +7,8 @@ import { useEffect, useState } from "react";
 import { resolveServerApiUrl } from "@/lib/server-api";
 import { getCurrentRate, formatDualPrice } from "@/lib/currency";
 import { AddToCartButton } from "@/components/add-to-cart-button";
-import { jsPDF } from "jspdf";
 import { useAuth } from "@/context/AuthContext";
+import { loadRecaptcha, executeRecaptcha } from "@/lib/recaptcha";
 
 type Product = {
   id: string;
@@ -102,6 +102,11 @@ export default function CartPage() {
   const [sampleLoading, setSampleLoading] = useState(false);
   const [sampleSuccess, setSampleSuccess] = useState(false);
   const [sampleError, setSampleError] = useState("");
+
+  // Load reCAPTCHA on component mount
+  useEffect(() => {
+    loadRecaptcha().catch(console.error);
+  }, []);
 
   // Fetch user profile and auto-fill forms
   useEffect(() => {
@@ -214,6 +219,9 @@ export default function CartPage() {
     setQuoteError("");
 
     try {
+      // Get reCAPTCHA token
+      const recaptchaToken = await executeRecaptcha("quote_request");
+
       // Prepare quote items
       const quoteItems = items.map(item => ({
         id: item.id,
@@ -252,7 +260,8 @@ export default function CartPage() {
           guaranteeType: quoteForm.guaranteeType,
           guaranteeDetails: quoteForm.guaranteeDetails
         },
-        notes: quoteForm.notes
+        notes: quoteForm.notes,
+        recaptchaToken
       };
 
       const response = await fetch(resolveServerApiUrl("/quotes"), {
@@ -300,6 +309,9 @@ export default function CartPage() {
     setSampleError("");
 
     try {
+      // Get reCAPTCHA token
+      const recaptchaToken = await executeRecaptcha("sample_from_cart");
+
       // Prepare sample items (just id and title)
       const sampleItems = items.map(item => ({
         id: item.id,
@@ -315,7 +327,8 @@ export default function CartPage() {
           userId: user?.uid || null
         },
         items: sampleItems,
-        notes: sampleForm.notes
+        notes: sampleForm.notes,
+        recaptchaToken
       };
 
       const response = await fetch(resolveServerApiUrl("/samples/from-cart"), {
@@ -351,7 +364,9 @@ export default function CartPage() {
     }
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
+    // Dynamic import for code splitting - jsPDF is ~140KB
+    const { jsPDF } = await import("jspdf");
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',

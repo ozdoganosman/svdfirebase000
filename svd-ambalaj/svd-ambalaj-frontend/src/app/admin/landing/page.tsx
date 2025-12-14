@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/admin-api";
+import Image from "next/image";
 
 // Types for landing content
 interface HeroButton {
@@ -1235,10 +1236,13 @@ function FeaturedProductsEditor({
                   {index + 1}
                 </span>
                 {(product.images?.[0] || product.image) && (
-                  <img
-                    src={product.images?.[0] || product.image}
+                  <Image
+                    src={product.images?.[0] || product.image || ""}
                     alt={product.title}
+                    width={40}
+                    height={40}
                     className="h-10 w-10 rounded-lg object-cover"
+                    unoptimized
                   />
                 )}
                 <div className="flex-1 min-w-0">
@@ -1298,10 +1302,13 @@ function FeaturedProductsEditor({
                       {isSelected && <span className="text-xs">✓</span>}
                     </div>
                     {(product.images?.[0] || product.image) && (
-                      <img
-                        src={product.images?.[0] || product.image}
+                      <Image
+                        src={product.images?.[0] || product.image || ""}
                         alt={product.title}
+                        width={40}
+                        height={40}
                         className="h-10 w-10 rounded-lg object-cover"
+                        unoptimized
                       />
                     )}
                     <div className="flex-1 min-w-0">

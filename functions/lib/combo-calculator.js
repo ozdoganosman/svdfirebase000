@@ -31,7 +31,7 @@ export function findComboMatches(cartItems, comboSettings) {
     }
 
     // Create grouping key
-    const key = requireSameNeckSize && neckSize ? `${neckSize}` : 'all';
+    const key = requireSameNeckSize && neckSize ? `${neckSize}` : "all";
 
     if (!groupedItems[key]) {
       groupedItems[key] = {};
@@ -100,7 +100,7 @@ export function findComboMatches(cartItems, comboSettings) {
         }
 
         matches.push({
-          neckSize: neckSizeKey === 'all' ? null : neckSizeKey,
+          neckSize: neckSizeKey === "all" ? null : neckSizeKey,
           type1,
           type2,
           items1,
@@ -145,9 +145,9 @@ export function calculateItemComboDiscount(item, comboQty, comboSettings, exchan
   let comboPriceUSD = basePrice;
 
   // Apply discount based on type
-  if (discountType === 'percentage') {
+  if (discountType === "percentage") {
     comboPriceUSD = basePrice * (1 - discountValue / 100);
-  } else if (discountType === 'fixed') {
+  } else if (discountType === "fixed") {
     comboPriceUSD = Math.max(0, basePrice - discountValue);
   }
 
@@ -271,16 +271,16 @@ export function formatComboMessage(match, comboSettings) {
   const { neckSize, type1, type2, comboQty } = match;
   const { discountType, discountValue } = comboSettings;
 
-  let discountText = '';
-  if (discountType === 'percentage') {
+  let discountText = "";
+  if (discountType === "percentage") {
     discountText = `%${discountValue} indirim`;
-  } else if (discountType === 'fixed') {
+  } else if (discountType === "fixed") {
     discountText = `$${discountValue.toFixed(2)} indirim`;
   }
 
-  const neckSizeText = neckSize ? ` (Ağız Ölçüsü: ${neckSize})` : '';
+  const neckSizeText = neckSize ? ` (Ağız Ölçüsü: ${neckSize})` : "";
 
   return `🔄 ${type1.toUpperCase()}-${type2.toUpperCase()} KOMBİNASYONU${neckSizeText}\n` +
-    `Eşleşen Miktar: ${comboQty.toLocaleString('tr-TR')} adet\n` +
+    `Eşleşen Miktar: ${comboQty.toLocaleString("tr-TR")} adet\n` +
     `Kombo ${discountText} uygulandı!`;
 }

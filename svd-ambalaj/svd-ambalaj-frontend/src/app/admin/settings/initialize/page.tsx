@@ -11,11 +11,23 @@ interface SettingsResults {
   };
 }
 
+interface FixedProduct {
+  id: string;
+  originalTitle: string;
+  fixedTitle: string;
+}
+
 export default function InitializeSettingsPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<SettingsResults | null>(null);
+
+  // Data fix state
+  const [fixLoading, setFixLoading] = useState(false);
+  const [fixSuccess, setFixSuccess] = useState(false);
+  const [fixError, setFixError] = useState<string | null>(null);
+  const [fixedProducts, setFixedProducts] = useState<FixedProduct[]>([]);
 
   const handleInitialize = async () => {
     setLoading(true);
@@ -40,6 +52,27 @@ export default function InitializeSettingsPage() {
       setError(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFixEncodedProducts = async () => {
+    setFixLoading(true);
+    setFixError(null);
+    setFixSuccess(false);
+
+    try {
+      const response = await apiFetch<{ success: boolean; message: string; fixedProducts: FixedProduct[] }>("/admin/fix-encoded-products", {
+        method: "POST",
+      });
+
+      setFixedProducts(response.fixedProducts || []);
+      setFixSuccess(true);
+    } catch (err) {
+      console.error("Fix encoded products failed:", err);
+      const errorMessage = err instanceof Error ? err.message : "Veriler düzeltilirken bir hata oluştu";
+      setFixError(errorMessage);
+    } finally {
+      setFixLoading(false);
     }
   };
 
@@ -165,6 +198,76 @@ export default function InitializeSettingsPage() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Data Fix Section */}
+        <div className="mt-8 pt-8 border-t border-slate-200">
+          <div className="text-center mb-6">
+            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <span className="text-2xl">🔧</span>
+            </div>
+            <h2 className="text-xl font-bold text-slate-900 mb-2">
+              Veri Düzeltme
+            </h2>
+            <p className="text-sm text-slate-600">
+              Ürün verilerindeki HTML kodlama hatalarını düzeltin (örn: 18&#x2F;410 → 18/410)
+            </p>
+          </div>
+
+          {fixError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <span className="text-xl">❌</span>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-red-900">Hata</h3>
+                  <p className="text-sm text-red-800 mt-1">{fixError}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {fixSuccess && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <span className="text-xl">✅</span>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-green-900">
+                    {fixedProducts.length > 0 ? `${fixedProducts.length} ürün düzeltildi` : "Düzeltme gerektiren ürün bulunamadı"}
+                  </h3>
+                  {fixedProducts.length > 0 && (
+                    <ul className="mt-2 text-sm text-green-800 space-y-1">
+                      {fixedProducts.map((product) => (
+                        <li key={product.id} className="flex items-center gap-2">
+                          <span className="text-green-600">✓</span>
+                          <span className="line-through text-red-600">{product.originalTitle}</span>
+                          <span>→</span>
+                          <span className="text-green-600">{product.fixedTitle}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={handleFixEncodedProducts}
+            disabled={fixLoading}
+            className="w-full bg-orange-600 text-white rounded-lg px-6 py-3 font-semibold hover:bg-orange-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+          >
+            {fixLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Düzeltiliyor...
+              </span>
+            ) : (
+              "Kodlanmış Verileri Düzelt"
+            )}
+          </button>
         </div>
       </div>
     </div>

@@ -7,8 +7,8 @@ import {
 } from "@/lib/server-api";
 import { formatDualPrice, type ExchangeRate } from "@/lib/currency";
 
-// Force dynamic rendering to always fetch fresh data
-export const dynamic = 'force-dynamic';
+// Revalidate every 2 minutes for better performance while staying fresh
+export const revalidate = 120;
 
 type BulkTier = {
   minQty: number;
@@ -51,7 +51,7 @@ type Category = {
 async function getProducts(apiBase: string): Promise<Product[]> {
   try {
     const response = await fetch(`${apiBase}/products`, {
-      cache: 'no-store'
+      next: { revalidate: 120 }
     });
 
     if (!response.ok) {
@@ -236,9 +236,9 @@ export default async function Home() {
         .filter((p): p is Product => p !== undefined)
     : products.slice(0, 8);
 
-  // Section order - default order if not set
+  // Section order - default order if not set (advantages removed - already shown in hero/howItWorks)
   const sectionOrder = landingContent?.sectionOrder ?? [
-    "hero", "advantages", "categories", "howItWorks", "products", "cta", "trustBadges"
+    "hero", "categories", "howItWorks", "products", "cta", "trustBadges"
   ];
 
   // Section components map
@@ -314,6 +314,8 @@ export default async function Home() {
                         fill
                         className="object-contain p-4 transition group-hover:scale-105"
                         sizes="(max-width: 768px) 50vw, 25vw"
+                        priority={index === 0}
+                        loading={index === 0 ? "eager" : "lazy"}
                       />
                     </div>
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 to-transparent p-3">
@@ -387,6 +389,7 @@ export default async function Home() {
                     fill
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                     className="object-cover transition duration-300 group-hover:scale-110"
+                    loading="lazy"
                   />
                 </div>
                 <div className="flex items-center justify-between p-3">
@@ -508,13 +511,14 @@ export default async function Home() {
                 key={product.id}
                 className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-amber-300 hover:shadow-lg"
               >
-                <Link href={`/products/${product.slug}`} className="relative h-44 w-full overflow-hidden bg-slate-50">
+                <Link href={`/products/${product.slug}`} className="relative h-52 w-full overflow-hidden bg-slate-50">
                   <Image
                     src={resolveProductImage(product)}
                     alt={product.title}
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                    className="object-contain p-4 transition duration-300 group-hover:scale-105"
+                    className="object-contain p-2 transition duration-300 group-hover:scale-105"
+                    loading="lazy"
                   />
                   {/* Bulk Pricing Badge */}
                   {product.bulkPricingUSD && product.bulkPricingUSD.length > 0 && (

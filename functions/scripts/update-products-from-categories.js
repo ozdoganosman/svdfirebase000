@@ -26,7 +26,7 @@ async function updateProductsFromCategories() {
 
   console.log(`Found ${Object.keys(categories).length} categories:\n`);
   Object.values(categories).forEach(cat => {
-    console.log(`  - ${cat.name} (${cat.id}): ${cat.productType || 'no type'}`);
+    console.log(`  - ${cat.name} (${cat.id}): ${cat.productType || "no type"}`);
   });
   console.log("");
 
@@ -60,7 +60,7 @@ async function updateProductsFromCategories() {
     const newProductType = category.productType;
 
     if (currentProductType === newProductType) {
-      console.log(`  ✓ ${data.title}: Already has correct productType (${newProductType || 'null'})`);
+      console.log(`  ✓ ${data.title}: Already has correct productType (${newProductType || "null"})`);
       skipped++;
       continue;
     }
@@ -71,7 +71,7 @@ async function updateProductsFromCategories() {
         updatedAt: new Date(),
       });
 
-      console.log(`  ✅ ${data.title}: Updated from '${currentProductType || 'null'}' to '${newProductType || 'null'}' (category: ${category.name})`);
+      console.log(`  ✅ ${data.title}: Updated from '${currentProductType || "null"}' to '${newProductType || "null"}' (category: ${category.name})`);
       updated++;
     } catch (error) {
       console.error(`  ❌ ${data.title}: Error updating - ${error.message}`);

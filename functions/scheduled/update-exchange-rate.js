@@ -114,3 +114,44 @@ export const forceUpdateExchangeRate = onSchedule(
     }
   },
 );
+
+/**
+ * Keep-warm function to prevent cold starts on main site
+ * Runs every 5 minutes to keep the SSR function warm
+ */
+export const keepSiteWarm = onSchedule(
+  {
+    schedule: "*/5 * * * *", // Every 5 minutes
+    timeZone: "Europe/Istanbul",
+    memory: "128MiB",
+  },
+  async () => {
+    console.log("[Keep Warm] Pinging site to prevent cold start...");
+
+    try {
+      // Ping the main site to keep SSR function warm
+      const response = await fetch("https://spreyvalfdunyasi.com/", {
+        method: "GET",
+        headers: {
+          "User-Agent": "Firebase-KeepWarm/1.0",
+        },
+      });
+
+      console.log("[Keep Warm] Site pinged successfully:", {
+        status: response.status,
+        timestamp: new Date().toISOString(),
+      });
+
+      return {
+        success: true,
+        status: response.status,
+      };
+    } catch (error) {
+      console.error("[Keep Warm] Error pinging site:", error.message);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  },
+);

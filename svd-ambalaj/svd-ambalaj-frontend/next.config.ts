@@ -38,6 +38,22 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // Performance optimizations
+  compiler: {
+    // Remove console.log in production
+    removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
+  },
+  // Enable experimental features for better performance
+  experimental: {
+    // Optimize package imports for tree-shaking
+    optimizePackageImports: ["firebase", "firebase/app", "firebase/auth", "firebase/firestore", "firebase/storage"],
+  },
+  // Compression
+  compress: true,
+  // Power by header removal
+  poweredByHeader: false,
+  // Generate ETags for caching
+  generateEtags: true,
 };
 
 export default nextConfig;

@@ -139,8 +139,9 @@ export default function AdminProductsPage() {
     const rows = form.bulkPricingUSD ?? [];
     return rows
       .map((row) => ({
-        minQty: Number(row.minQty),
-        price: Number(row.price),
+        // Convert Turkish comma decimal separator to dot
+        minQty: Number(String(row.minQty).replace(',', '.')),
+        price: Number(String(row.price).replace(',', '.')),
       }))
       .filter(
         (row) =>
@@ -181,6 +182,7 @@ export default function AdminProductsPage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    console.log('=== handleSubmit called ===', { title: form.title, category: form.category, priceUSD: form.priceUSD });
     if (!form.title || !form.category) {
       setError("Başlık ve kategori zorunludur");
       return;
@@ -211,13 +213,14 @@ export default function AdminProductsPage() {
     };
 
     // Only USD fields are sent; TRY fields are explicitly nulled to clear legacy data
-    const usdPriceStr = String(form.priceUSD || '').trim();
+    // Convert Turkish comma decimal separator to dot for all price fields
+    const usdPriceStr = String(form.priceUSD || '').trim().replace(',', '.');
     const usdPrice = usdPriceStr !== '' ? Number(usdPriceStr) : undefined;
     payload.priceUSD = usdPrice;
     payload.bulkPricingUSD = parsedBulkPricingUSD.length > 0 ? JSON.stringify(parsedBulkPricingUSD) : undefined;
 
     // Combo pricing
-    const comboPriceStr = String(form.comboPriceUSD || '').trim();
+    const comboPriceStr = String(form.comboPriceUSD || '').trim().replace(',', '.');
     const comboPrice = comboPriceStr !== '' ? Number(comboPriceStr) : undefined;
     payload.comboPriceUSD = comboPrice;
 
@@ -645,12 +648,12 @@ export default function AdminProductsPage() {
               <input
                 id="admin-product-price-usd"
                 name="priceUSD"
-                type="number"
-                 step="0.001"
+                type="text"
+                inputMode="decimal"
                 value={form.priceUSD ?? ""}
                 onChange={(event) => handleChange("priceUSD", event.target.value)}
                 className="mt-1 w-full rounded-md border border-amber-500 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                placeholder="1.00"
+                placeholder="1.00 veya 1,00"
                 required
               />
               <p className="mt-1 text-xs text-slate-600">
@@ -666,12 +669,12 @@ export default function AdminProductsPage() {
               <input
                 id="admin-product-combo-price-usd"
                 name="comboPriceUSD"
-                type="number"
-                 step="0.001"
+                type="text"
+                inputMode="decimal"
                 value={form.comboPriceUSD ?? ""}
                 onChange={(event) => handleChange("comboPriceUSD", event.target.value)}
                 className="mt-1 w-full rounded-md border border-purple-300 px-3 py-2 text-sm shadow-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200"
-                placeholder="0.90"
+                placeholder="0.90 veya 0,90"
               />
               <p className="mt-1 text-xs text-slate-600">
                 Kombo indiriminde kullanılacak özel fiyat (boş bırakırsanız normal fiyat üzerinden indirim uygulanır)
@@ -972,8 +975,8 @@ export default function AdminProductsPage() {
                       <div className="sm:col-span-4">
                         <label className="text-xs font-medium text-amber-800">Minimum Koli Adedi</label>
                         <input
-                          type="number"
-                          min={1}
+                          type="text"
+                          inputMode="numeric"
                           value={row.minQty}
                           onChange={(event) => handleBulkPricingUSDChange(index, 'minQty', event.target.value)}
                           className={`mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500 ${
@@ -985,15 +988,14 @@ export default function AdminProductsPage() {
                       <div className="sm:col-span-4">
                         <label className="text-xs font-medium text-amber-800">Birim Fiyatı (USD)</label>
                         <input
-                          type="number"
-                          step="0.001"
-                          min={0}
+                          type="text"
+                          inputMode="decimal"
                           value={row.price}
                           onChange={(event) => handleBulkPricingUSDChange(index, 'price', event.target.value)}
                           className={`mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500 ${
                             priceInvalid ? 'border-red-300' : 'border-amber-200'
                           }`}
-                          placeholder="Örn. 0.12"
+                          placeholder="Örn. 0.12 veya 0,12"
                         />
                       </div>
                       <div className="flex items-end justify-end sm:col-span-4">

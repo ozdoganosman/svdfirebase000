@@ -5,6 +5,8 @@ import { AddToCartButton } from "@/components/add-to-cart-button";
 import { resolveServerApiUrl, resolveServerApiBase } from "@/lib/server-api";
 import { formatDualPrice, type ExchangeRate } from "@/lib/currency";
 import { ProductJsonLd, BreadcrumbJsonLd } from "@/components/seo/json-ld";
+import { ProductViewTracker } from "@/components/product-view-tracker";
+import { RelatedProducts } from "@/components/related-products";
 
 type BulkTier = {
   minQty: number;
@@ -202,6 +204,11 @@ export default async function ProductDetailPage({
 
   return (
     <>
+      <ProductViewTracker
+        productId={product.id}
+        productName={product.title}
+        price={tryUnitPrice || 0}
+      />
       <ProductJsonLd
         name={product.title}
         description={product.description}
@@ -211,6 +218,7 @@ export default async function ProductDetailPage({
         priceCurrency="TRY"
         availability={product.stock && product.stock > 0 ? "InStock" : "OutOfStock"}
         category={category?.name}
+        bulkPricing={tryBulkPricing}
       />
       <BreadcrumbJsonLd items={breadcrumbItems} />
       <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-16 text-slate-900">
@@ -276,98 +284,59 @@ export default async function ProductDetailPage({
               )}
 
               {/* KOLI BAZLI FIYATLANDIRMA TABLOSU */}
-              <div className="rounded-2xl border border-amber-100 bg-white p-6 shadow-sm">
-                <p className="mb-4 text-lg font-semibold text-amber-900">
-                  {product.packageInfo ? 'Koli Bazlı Fiyatlandırma' : 'Adet Bazlı Fiyatlandırma'}
-                </p>
-                {product.packageInfo ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b-2 border-amber-200 text-left">
-                          <th className="pb-3 font-semibold text-slate-700">Koli Adedi</th>
-                          <th className="pb-3 font-semibold text-slate-700">Toplam Ürün</th>
-                          <th className="pb-3 font-semibold text-slate-700">Birim Fiyat</th>
-                          <th className="pb-3 text-right font-semibold text-slate-700">Koli Fiyatı</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        <tr className="hover:bg-amber-50">
-                          <td className="py-3 font-medium text-amber-900">
-                            1-{(product.bulkPricingUSD && product.bulkPricingUSD[0]) ? (product.bulkPricingUSD[0].minQty - 1) : '∞'} koli
-                          </td>
-                          <td className="py-3 text-slate-600">
-                            {product.packageInfo.itemsPerBox}-{(product.bulkPricingUSD && product.bulkPricingUSD[0]) ? ((product.bulkPricingUSD[0].minQty - 1) * product.packageInfo.itemsPerBox) : '∞'} adet
-                          </td>
-                          <td className="py-3 font-semibold text-slate-900">
-                            {product.priceUSD && exchangeRate
-                              ? formatDualPrice(product.priceUSD, exchangeRate.rate, true)
-                              : 'Fiyat için iletişime geçin'}
-                          </td>
-                          <td className="py-3 text-right font-bold text-amber-600">
-                            {product.priceUSD && exchangeRate
-                              ? formatDualPrice(product.priceUSD * product.packageInfo.itemsPerBox, exchangeRate.rate, true)
-                              : '—'}
-                          </td>
-                        </tr>
-                        {(product.bulkPricingUSD ?? [])?.map((tier, index) => {
-                          const bulkList = product.bulkPricingUSD;
-                          const nextTier = bulkList?.[index + 1];
-                          const maxQty = nextTier ? nextTier.minQty - 1 : null;
-                          const totalItems = tier.minQty * product.packageInfo!.itemsPerBox;
-                          const totalItemsFormatted = totalItems.toLocaleString('tr-TR');
-                          return (
-                            <tr key={`tier-${tier.minQty}`} className="hover:bg-amber-50">
-                              <td className="py-3 font-medium text-amber-900">
-                                {tier.minQty}{maxQty ? `-${maxQty}` : '+'} koli
-                                <br />
-                                <span className="text-xs text-slate-500">
-                                  ({totalItemsFormatted}{maxQty ? `-${(maxQty * product.packageInfo!.itemsPerBox).toLocaleString('tr-TR')}` : '+'} adet)
-                                </span>
-                              </td>
-                              <td className="py-3 text-slate-600">
-                                {tier.minQty * product.packageInfo!.itemsPerBox}
-                                {maxQty ? `-${maxQty * product.packageInfo!.itemsPerBox}` : '+'} adet
-                              </td>
-                              <td className="py-3 font-semibold text-slate-900">
-                                {product.bulkPricingUSD && exchangeRate
-                                  ? formatDualPrice(tier.price, exchangeRate.rate, true)
-                                  : '—'}
-                              </td>
-                              <td className="py-3 text-right font-bold text-amber-600">
-                                {product.bulkPricingUSD && exchangeRate
-                                  ? formatDualPrice(tier.price * product.packageInfo!.itemsPerBox, exchangeRate.rate, true)
-                                  : '—'}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <ul className="mt-4 space-y-2 text-sm text-amber-800">
-                    <li className="flex items-center justify-between">
-                      <span>1+ adet</span>
-                      <span className="font-semibold">
-                        {product.priceUSD && exchangeRate
-                          ? formatDualPrice(product.priceUSD, exchangeRate.rate, true)
-                          : 'Fiyat için iletişime geçin'}
-                      </span>
-                    </li>
-                    {(product.bulkPricingUSD ?? []).map((tier) => (
-                      <li key={`${product.id}-tier-${tier.minQty}`} className="flex items-center justify-between">
-                        <span>{tier.minQty}+ adet</span>
-                        <span className="font-semibold">
-                          {product.bulkPricingUSD && exchangeRate
-                            ? formatDualPrice(tier.price, exchangeRate.rate, true)
+              {product.packageInfo && (product.bulkPricingUSD?.length ?? 0) > 0 && (
+                <div className="rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-6 shadow-sm">
+                  <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-green-800">
+                    <span className="text-xl">💰</span>
+                    Toplu Alım İndirimi
+                  </h3>
+                  <div className="space-y-3">
+                    {/* Normal fiyat */}
+                    <div className="flex items-center justify-between rounded-lg bg-white p-4 shadow-sm">
+                      <div>
+                        <span className="font-medium text-slate-700">1-{(product.bulkPricingUSD?.[0]?.minQty ?? 2) - 1} koli</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-lg font-bold text-slate-900">
+                          {product.priceUSD && exchangeRate
+                            ? `$${product.priceUSD.toFixed(2)}`
                             : '—'}
                         </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+                        <span className="ml-2 text-sm text-slate-500">/ adet</span>
+                      </div>
+                    </div>
+                    {/* Bulk tiers */}
+                    {(product.bulkPricingUSD ?? []).map((tier, index) => {
+                      const nextTier = product.bulkPricingUSD?.[index + 1];
+                      const isLast = !nextTier;
+                      const discount = product.priceUSD ? Math.round((1 - tier.price / product.priceUSD) * 100) : 0;
+                      return (
+                        <div key={`tier-${tier.minQty}`} className="flex items-center justify-between rounded-lg bg-white p-4 shadow-sm">
+                          <div className="flex items-center gap-3">
+                            <span className="font-medium text-slate-700">
+                              {tier.minQty}{isLast ? '+' : `-${(nextTier?.minQty ?? tier.minQty) - 1}`} koli
+                            </span>
+                            {discount > 0 && (
+                              <span className="rounded-full bg-green-500 px-2 py-0.5 text-xs font-bold text-white">
+                                %{discount} indirim
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <span className="text-lg font-bold text-green-600">
+                              ${tier.price.toFixed(2)}
+                            </span>
+                            <span className="ml-2 text-sm text-slate-500">/ adet</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-4 text-xs text-green-700">
+                    * Fiyatlar USD cinsindendir. Sipariş sırasında güncel kurla TL&apos;ye çevrilir.
+                  </p>
+                </div>
+              )}
 
               <div className="grid gap-6 lg:grid-cols-2">
                 <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -489,6 +458,14 @@ export default async function ProductDetailPage({
             </Link>
           </aside>
         </div>
+
+        {/* Related Products */}
+        <RelatedProducts
+          currentProductId={product.id}
+          categoryId={product.category}
+          apiBase={resolveServerApiBase()}
+          exchangeRate={rate}
+        />
       </div>
     </main>
     </>

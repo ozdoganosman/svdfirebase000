@@ -421,13 +421,14 @@ export default async function ProductsPage({ searchParams }: {
               key={product.id}
               className="flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm shadow-slate-200/60 transition hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="relative h-48 w-full overflow-hidden bg-slate-100">
+              <div className="relative h-56 w-full overflow-hidden bg-slate-100">
                 <Image
                   src={resolveProductImage(product)}
                   alt={product.title}
                   fill
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  className="object-contain p-4 transition duration-500 hover:scale-110"
+                  className="object-contain p-2 transition duration-500 hover:scale-110"
+                  loading="lazy"
                 />
               </div>
               <div className="flex flex-1 flex-col gap-4 p-6">

@@ -14,13 +14,27 @@ const mapTimestamp = (value) => {
     return value.toISOString();
   }
   if (typeof value === "string") {
-    return value;
+    // Validate that it's a valid date string
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      return value;
+    }
+    return undefined;
   }
   // Firestore Timestamp objesini Date objesine dönüştür
   if (value && typeof value.toDate === "function") {
     return value.toDate().toISOString();
   }
-  return new Date(value).toISOString();
+  // Try to create a date, but handle invalid values
+  try {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+  } catch {
+    // Ignore invalid date values
+  }
+  return undefined;
 };
 
 const normalizeImages = (value) => {
@@ -84,11 +98,11 @@ const getProductTypeFromCategory = (categorySlug) => {
   if (!categorySlug) return null;
 
   const slug = categorySlug.toLowerCase();
-  if (slug.includes('sprey') || slug.includes('trigger') || slug.includes('pompa')) {
-    return 'başlık';
+  if (slug.includes("sprey") || slug.includes("trigger") || slug.includes("pompa")) {
+    return "başlık";
   }
-  if (slug.includes('şişe') || slug.includes('sise') || slug.includes('bottle')) {
-    return 'şişe';
+  if (slug.includes("şişe") || slug.includes("sise") || slug.includes("bottle")) {
+    return "şişe";
   }
   return null; // nötr for others
 };
@@ -558,11 +572,11 @@ const decreaseProductStock = async (productId, quantity, stockSettings = {}) => 
 
   let alertLevel = null;
   if (newStock === 0) {
-    alertLevel = 'out_of_stock';
+    alertLevel = "out_of_stock";
   } else if (newStock <= criticalThreshold) {
-    alertLevel = 'critical';
+    alertLevel = "critical";
   } else if (newStock <= lowThreshold) {
-    alertLevel = 'low';
+    alertLevel = "low";
   }
 
   return {

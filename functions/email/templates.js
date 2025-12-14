@@ -9,14 +9,14 @@
 import { getEmailTemplate } from "../db/settings.js";
 
 // Helper function to format currency
-const formatCurrency = (amount, currency = 'TRY') => {
-  return new Intl.NumberFormat('tr-TR', { style: 'currency', currency }).format(amount);
+const formatCurrency = (amount, currency = "TRY") => {
+  return new Intl.NumberFormat("tr-TR", { style: "currency", currency }).format(amount);
 };
 
 // Helper function to format date
 const formatDate = (dateStr) => {
-  if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('tr-TR');
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("tr-TR");
 };
 
 /**
@@ -24,36 +24,36 @@ const formatDate = (dateStr) => {
  * Supports: {{variable}}, {{#if condition}}...{{/if}}, {{#each items}}...{{/each}}
  */
 const processTemplate = (template, data) => {
-  if (!template) return '';
+  if (!template) return "";
 
   let result = template;
 
   // Process {{#each items}}...{{/each}} blocks
   result = result.replace(/\{\{#each\s+(\w+)\}\}([\s\S]*?)\{\{\/each\}\}/g, (match, arrayName, content) => {
     const array = getNestedValue(data, arrayName);
-    if (!Array.isArray(array)) return '';
+    if (!Array.isArray(array)) return "";
 
     return array.map(item => {
       let itemContent = content;
       // Replace item variables like {{this.title}}, {{this.quantity}}
       itemContent = itemContent.replace(/\{\{this\.(\w+)\}\}/g, (m, prop) => {
         const value = item[prop];
-        return value !== undefined ? String(value) : '';
+        return value !== undefined ? String(value) : "";
       });
       // Also support {{title}}, {{quantity}} directly within each block
       itemContent = itemContent.replace(/\{\{(\w+)\}\}/g, (m, prop) => {
-        if (prop === 'formatCurrency') return m; // Skip helper functions
+        if (prop === "formatCurrency") return m; // Skip helper functions
         const value = item[prop];
         return value !== undefined ? String(value) : m;
       });
       return itemContent;
-    }).join('');
+    }).join("");
   });
 
   // Process {{#if condition}}...{{/if}} blocks
   result = result.replace(/\{\{#if\s+(\w+(?:\.\w+)*)\}\}([\s\S]*?)\{\{\/if\}\}/g, (match, condition, content) => {
     const value = getNestedValue(data, condition);
-    return value ? content : '';
+    return value ? content : "";
   });
 
   // Process {{#if condition}}...{{else}}...{{/if}} blocks
@@ -65,7 +65,7 @@ const processTemplate = (template, data) => {
   // Process simple {{variable}} replacements
   result = result.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (match, path) => {
     const value = getNestedValue(data, path);
-    return value !== undefined ? String(value) : '';
+    return value !== undefined ? String(value) : "";
   });
 
   return result;
@@ -74,7 +74,7 @@ const processTemplate = (template, data) => {
 // Helper to get nested values like "customer.name" from data object
 const getNestedValue = (obj, path) => {
   if (!obj || !path) return undefined;
-  return path.split('.').reduce((current, key) => {
+  return path.split(".").reduce((current, key) => {
     return current && current[key] !== undefined ? current[key] : undefined;
   }, obj);
 };
@@ -83,26 +83,26 @@ const getNestedValue = (obj, path) => {
  * Build template data object with common computed values
  */
 const buildTemplateData = (type, entity) => {
-  const baseUrl = 'https://svdfirebase000.web.app';
+  const baseUrl = "https://svdfirebase000.web.app";
 
   const common = {
-    siteName: 'SVD Ambalaj',
+    siteName: "SVD Ambalaj",
     siteUrl: baseUrl,
     currentYear: new Date().getFullYear(),
   };
 
-  if (type === 'quote') {
+  if (type === "quote") {
     return {
       ...common,
       ...entity,
-      quoteNumber: entity.quoteNumber || '',
+      quoteNumber: entity.quoteNumber || "",
       createdAtFormatted: formatDate(entity.createdAt),
-      validUntilFormatted: entity.validUntil ? formatDate(entity.validUntil) : '',
+      validUntilFormatted: entity.validUntil ? formatDate(entity.validUntil) : "",
       totalFormatted: formatCurrency(entity.totals?.total || 0),
-      customerName: entity.customer?.name || '',
-      customerCompany: entity.customer?.company || '',
-      customerEmail: entity.customer?.email || '',
-      customerPhone: entity.customer?.phone || '',
+      customerName: entity.customer?.name || "",
+      customerCompany: entity.customer?.company || "",
+      customerEmail: entity.customer?.email || "",
+      customerPhone: entity.customer?.phone || "",
       hasAdminNotes: !!entity.adminNotes,
       hasValidUntil: !!entity.validUntil,
       itemsFormatted: (entity.items || []).map(item => ({
@@ -114,17 +114,17 @@ const buildTemplateData = (type, entity) => {
     };
   }
 
-  if (type === 'sample') {
+  if (type === "sample") {
     return {
       ...common,
       ...entity,
-      sampleNumber: entity.sampleNumber || '',
+      sampleNumber: entity.sampleNumber || "",
       createdAtFormatted: formatDate(entity.createdAt),
       shippingFeeFormatted: formatCurrency(entity.shippingFee || 200),
-      customerName: entity.customer?.name || '',
-      customerCompany: entity.customer?.company || '',
-      customerEmail: entity.customer?.email || '',
-      customerPhone: entity.customer?.phone || '',
+      customerName: entity.customer?.name || "",
+      customerCompany: entity.customer?.company || "",
+      customerEmail: entity.customer?.email || "",
+      customerPhone: entity.customer?.phone || "",
       hasNotes: !!entity.notes,
       samplesUrl: `${baseUrl}/account/samples`,
       adminSamplesUrl: `${baseUrl}/admin/samples`,
@@ -960,47 +960,47 @@ Sorularınız için bize ulaşmaktan çekinmeyin.
 // Default templates map
 const defaultTemplates = {
   quoteApproved: {
-    subject: 'Teklifiniz Onaylandı - {{quoteNumber}}',
+    subject: "Teklifiniz Onaylandı - {{quoteNumber}}",
     htmlTemplate: defaultQuoteApprovedHtml,
     textTemplate: defaultQuoteApprovedText,
   },
   quoteRejected: {
-    subject: 'Teklif Talebiniz Hakkında - {{quoteNumber}}',
+    subject: "Teklif Talebiniz Hakkında - {{quoteNumber}}",
     htmlTemplate: defaultQuoteRejectedHtml,
     textTemplate: defaultQuoteRejectedText,
   },
   sampleApproved: {
-    subject: 'Numune Talebiniz Onaylandı - {{sampleNumber}}',
+    subject: "Numune Talebiniz Onaylandı - {{sampleNumber}}",
     htmlTemplate: defaultSampleApprovedHtml,
     textTemplate: defaultSampleApprovedText,
   },
   newQuoteAdmin: {
-    subject: 'Yeni Teklif Talebi - {{quoteNumber}}',
+    subject: "Yeni Teklif Talebi - {{quoteNumber}}",
     htmlTemplate: defaultNewQuoteAdminHtml,
     textTemplate: defaultNewQuoteAdminText,
   },
   newSampleAdmin: {
-    subject: 'Yeni Numune Talebi - {{sampleNumber}}',
+    subject: "Yeni Numune Talebi - {{sampleNumber}}",
     htmlTemplate: defaultNewSampleAdminHtml,
     textTemplate: defaultNewSampleAdminText,
   },
   stockAlert: {
-    subject: '🚨 Stok Uyarısı - {{totalAlerts}} ürün dikkat gerektiriyor',
+    subject: "🚨 Stok Uyarısı - {{totalAlerts}} ürün dikkat gerektiriyor",
     htmlTemplate: defaultStockAlertHtml,
     textTemplate: defaultStockAlertText,
   },
   orderConfirmation: {
-    subject: '✅ Siparişiniz Alındı - #{{orderNumber}}',
+    subject: "✅ Siparişiniz Alındı - #{{orderNumber}}",
     htmlTemplate: defaultOrderConfirmationHtml,
     textTemplate: defaultOrderConfirmationText,
   },
   orderStatus: {
-    subject: '📦 Sipariş Durumu Güncellendi - #{{orderNumber}}',
+    subject: "📦 Sipariş Durumu Güncellendi - #{{orderNumber}}",
     htmlTemplate: defaultOrderStatusHtml,
     textTemplate: defaultOrderStatusText,
   },
   welcome: {
-    subject: '🎉 {{siteName}} Ailesine Hoş Geldiniz!',
+    subject: "🎉 {{siteName}} Ailesine Hoş Geldiniz!",
     htmlTemplate: defaultWelcomeHtml,
     textTemplate: defaultWelcomeText,
   },
@@ -1014,10 +1014,10 @@ const defaultTemplates = {
  * Quote Approved Email Template
  */
 export async function quoteApprovedTemplate(quote) {
-  const templateData = buildTemplateData('quote', quote);
+  const templateData = buildTemplateData("quote", quote);
 
   // Try to get custom template from DB
-  const customTemplate = await getEmailTemplate('quoteApproved');
+  const customTemplate = await getEmailTemplate("quoteApproved");
   const template = customTemplate || defaultTemplates.quoteApproved;
 
   return {
@@ -1031,9 +1031,9 @@ export async function quoteApprovedTemplate(quote) {
  * Quote Rejected Email Template
  */
 export async function quoteRejectedTemplate(quote) {
-  const templateData = buildTemplateData('quote', quote);
+  const templateData = buildTemplateData("quote", quote);
 
-  const customTemplate = await getEmailTemplate('quoteRejected');
+  const customTemplate = await getEmailTemplate("quoteRejected");
   const template = customTemplate || defaultTemplates.quoteRejected;
 
   return {
@@ -1047,9 +1047,9 @@ export async function quoteRejectedTemplate(quote) {
  * Sample Approved Email Template
  */
 export async function sampleApprovedTemplate(sample) {
-  const templateData = buildTemplateData('sample', sample);
+  const templateData = buildTemplateData("sample", sample);
 
-  const customTemplate = await getEmailTemplate('sampleApproved');
+  const customTemplate = await getEmailTemplate("sampleApproved");
   const template = customTemplate || defaultTemplates.sampleApproved;
 
   return {
@@ -1063,9 +1063,9 @@ export async function sampleApprovedTemplate(sample) {
  * New Quote Notification for Admin
  */
 export async function newQuoteAdminTemplate(quote) {
-  const templateData = buildTemplateData('quote', quote);
+  const templateData = buildTemplateData("quote", quote);
 
-  const customTemplate = await getEmailTemplate('newQuoteAdmin');
+  const customTemplate = await getEmailTemplate("newQuoteAdmin");
   const template = customTemplate || defaultTemplates.newQuoteAdmin;
 
   return {
@@ -1079,9 +1079,9 @@ export async function newQuoteAdminTemplate(quote) {
  * New Sample Request Notification for Admin
  */
 export async function newSampleAdminTemplate(sample) {
-  const templateData = buildTemplateData('sample', sample);
+  const templateData = buildTemplateData("sample", sample);
 
-  const customTemplate = await getEmailTemplate('newSampleAdmin');
+  const customTemplate = await getEmailTemplate("newSampleAdmin");
   const template = customTemplate || defaultTemplates.newSampleAdmin;
 
   return {
@@ -1095,10 +1095,10 @@ export async function newSampleAdminTemplate(sample) {
  * Stock Alert Email Template
  */
 export async function stockAlertTemplate(stockData) {
-  const baseUrl = 'https://svdfirebase000.web.app';
+  const baseUrl = "https://svdfirebase000.web.app";
 
   const templateData = {
-    siteName: 'SVD Ambalaj',
+    siteName: "SVD Ambalaj",
     siteUrl: baseUrl,
     adminProductsUrl: `${baseUrl}/admin/products`,
     // Summary
@@ -1115,14 +1115,14 @@ export async function stockAlertTemplate(stockData) {
     hasCritical: (stockData.critical || []).length > 0,
     hasLow: (stockData.low || []).length > 0,
     // Alert styling
-    alertEmoji: (stockData.outOfStock || []).length > 0 ? '🚫' : '⚠️',
+    alertEmoji: (stockData.outOfStock || []).length > 0 ? "🚫" : "⚠️",
     alertTitle: (stockData.outOfStock || []).length > 0
-      ? 'Stokta Olmayan Ürünler Var!'
-      : 'Düşük Stok Uyarısı',
-    alertClass: (stockData.outOfStock || []).length > 0 ? '' : 'warning',
+      ? "Stokta Olmayan Ürünler Var!"
+      : "Düşük Stok Uyarısı",
+    alertClass: (stockData.outOfStock || []).length > 0 ? "" : "warning",
   };
 
-  const customTemplate = await getEmailTemplate('stockAlert');
+  const customTemplate = await getEmailTemplate("stockAlert");
   const template = customTemplate || defaultTemplates.stockAlert;
 
   return {
@@ -1136,27 +1136,27 @@ export async function stockAlertTemplate(stockData) {
  * Order Confirmation Email Template
  */
 export async function orderConfirmationTemplate(order) {
-  const baseUrl = 'https://svdfirebase000.web.app';
+  const baseUrl = "https://svdfirebase000.web.app";
 
   // Status text mapping
   const statusTextMap = {
-    pending: 'Beklemede',
-    confirmed: 'Onaylandı',
-    processing: 'Hazırlanıyor',
-    shipped: 'Kargoya Verildi',
-    delivered: 'Teslim Edildi',
-    cancelled: 'İptal Edildi',
+    pending: "Beklemede",
+    confirmed: "Onaylandı",
+    processing: "Hazırlanıyor",
+    shipped: "Kargoya Verildi",
+    delivered: "Teslim Edildi",
+    cancelled: "İptal Edildi",
   };
 
   const templateData = {
-    siteName: 'SVD Ambalaj',
+    siteName: "SVD Ambalaj",
     siteUrl: baseUrl,
     ordersUrl: `${baseUrl}/account/orders`,
     orderNumber: order.orderNumber || order.id,
     createdAtFormatted: formatDate(order.createdAt),
     statusText: statusTextMap[order.status] || order.status,
-    customerName: order.customer?.name || order.billingAddress?.name || '',
-    customerEmail: order.customer?.email || '',
+    customerName: order.customer?.name || order.billingAddress?.name || "",
+    customerEmail: order.customer?.email || "",
     // Totals
     subtotalFormatted: formatCurrency(order.totals?.subtotal || 0),
     discountFormatted: formatCurrency(order.totals?.discount || 0),
@@ -1169,14 +1169,14 @@ export async function orderConfirmationTemplate(order) {
       subtotalFormatted: formatCurrency(item.subtotal || item.price * item.quantity || 0),
     })),
     // Delivery address
-    deliveryAddress: order.shippingAddress?.address || order.deliveryAddress?.address || '',
-    deliveryCity: order.shippingAddress?.city || order.deliveryAddress?.city || '',
+    deliveryAddress: order.shippingAddress?.address || order.deliveryAddress?.address || "",
+    deliveryCity: order.shippingAddress?.city || order.deliveryAddress?.city || "",
     // Notes
-    notes: order.notes || '',
+    notes: order.notes || "",
     hasNotes: !!order.notes,
   };
 
-  const customTemplate = await getEmailTemplate('orderConfirmation');
+  const customTemplate = await getEmailTemplate("orderConfirmation");
   const template = customTemplate || defaultTemplates.orderConfirmation;
 
   return {
@@ -1190,52 +1190,52 @@ export async function orderConfirmationTemplate(order) {
  * Order Status Update Email Template
  */
 export async function orderStatusTemplate(order) {
-  const baseUrl = 'https://svdfirebase000.web.app';
+  const baseUrl = "https://svdfirebase000.web.app";
 
   // Status text and message mapping
   const statusConfig = {
     pending: {
-      text: 'Beklemede',
-      message: 'Siparişiniz alındı ve inceleme aşamasında.',
-      emoji: '⏳',
-      class: 'pending',
+      text: "Beklemede",
+      message: "Siparişiniz alındı ve inceleme aşamasında.",
+      emoji: "⏳",
+      class: "pending",
     },
     confirmed: {
-      text: 'Onaylandı',
-      message: 'Siparişiniz onaylandı ve hazırlanmak üzere kuyruğa alındı.',
-      emoji: '✅',
-      class: 'confirmed',
+      text: "Onaylandı",
+      message: "Siparişiniz onaylandı ve hazırlanmak üzere kuyruğa alındı.",
+      emoji: "✅",
+      class: "confirmed",
     },
     processing: {
-      text: 'Hazırlanıyor',
-      message: 'Siparişiniz hazırlanıyor.',
-      emoji: '📦',
-      class: 'confirmed',
+      text: "Hazırlanıyor",
+      message: "Siparişiniz hazırlanıyor.",
+      emoji: "📦",
+      class: "confirmed",
     },
     shipped: {
-      text: 'Kargoya Verildi',
-      message: 'Siparişiniz kargoya verildi! Kargo takip numaranız ile gönderinizi takip edebilirsiniz.',
-      emoji: '🚚',
-      class: 'shipped',
+      text: "Kargoya Verildi",
+      message: "Siparişiniz kargoya verildi! Kargo takip numaranız ile gönderinizi takip edebilirsiniz.",
+      emoji: "🚚",
+      class: "shipped",
     },
     delivered: {
-      text: 'Teslim Edildi',
-      message: 'Siparişiniz başarıyla teslim edildi. Bizi tercih ettiğiniz için teşekkür ederiz!',
-      emoji: '🎉',
-      class: 'delivered',
+      text: "Teslim Edildi",
+      message: "Siparişiniz başarıyla teslim edildi. Bizi tercih ettiğiniz için teşekkür ederiz!",
+      emoji: "🎉",
+      class: "delivered",
     },
     cancelled: {
-      text: 'İptal Edildi',
-      message: 'Siparişiniz iptal edildi.',
-      emoji: '❌',
-      class: 'cancelled',
+      text: "İptal Edildi",
+      message: "Siparişiniz iptal edildi.",
+      emoji: "❌",
+      class: "cancelled",
     },
   };
 
   const statusInfo = statusConfig[order.status] || statusConfig.pending;
 
   const templateData = {
-    siteName: 'SVD Ambalaj',
+    siteName: "SVD Ambalaj",
     siteUrl: baseUrl,
     ordersUrl: `${baseUrl}/account/orders`,
     orderNumber: order.orderNumber || order.id,
@@ -1245,17 +1245,17 @@ export async function orderStatusTemplate(order) {
     statusClass: statusInfo.class,
     statusMessage: statusInfo.message,
     updatedAtFormatted: formatDate(order.updatedAt || new Date().toISOString()),
-    customerName: order.customer?.name || order.billingAddress?.name || '',
+    customerName: order.customer?.name || order.billingAddress?.name || "",
     // Tracking info
-    trackingNumber: order.trackingNumber || '',
-    trackingUrl: order.trackingUrl || '',
+    trackingNumber: order.trackingNumber || "",
+    trackingUrl: order.trackingUrl || "",
     hasTrackingNumber: !!order.trackingNumber,
     // Admin notes
-    adminNotes: order.adminNotes || '',
+    adminNotes: order.adminNotes || "",
     hasAdminNotes: !!order.adminNotes,
   };
 
-  const customTemplate = await getEmailTemplate('orderStatus');
+  const customTemplate = await getEmailTemplate("orderStatus");
   const template = customTemplate || defaultTemplates.orderStatus;
 
   return {
@@ -1269,18 +1269,310 @@ export async function orderStatusTemplate(order) {
  * Welcome Email Template (New User Registration)
  */
 export async function welcomeTemplate(user) {
-  const baseUrl = 'https://svdfirebase000.web.app';
+  const baseUrl = "https://svdfirebase000.web.app";
 
   const templateData = {
-    siteName: 'SVD Ambalaj',
+    siteName: "SVD Ambalaj",
     siteUrl: baseUrl,
-    userName: user.displayName || user.name || user.email?.split('@')[0] || 'Değerli Müşterimiz',
-    userEmail: user.email || '',
+    userName: user.displayName || user.name || user.email?.split("@")[0] || "Değerli Müşterimiz",
+    userEmail: user.email || "",
     currentYear: new Date().getFullYear(),
   };
 
-  const customTemplate = await getEmailTemplate('welcome');
+  const customTemplate = await getEmailTemplate("welcome");
   const template = customTemplate || defaultTemplates.welcome;
+
+  return {
+    subject: processTemplate(template.subject, templateData),
+    html: processTemplate(template.htmlTemplate, templateData),
+    text: processTemplate(template.textTemplate, templateData),
+  };
+}
+
+// ============================================================================
+// SHIPPING NOTIFICATION TEMPLATES
+// ============================================================================
+
+const defaultShippingNotificationHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #8b5cf6; color: white; padding: 20px; text-align: center; }
+    .content { background-color: #f9fafb; padding: 20px; }
+    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+    .button { display: inline-block; background-color: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .info-box { background-color: white; border-left: 4px solid #8b5cf6; padding: 15px; margin: 15px 0; }
+    .tracking-box { background-color: #ede9fe; border: 2px solid #8b5cf6; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+    .tracking-number { font-size: 24px; font-weight: bold; color: #7c3aed; letter-spacing: 2px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>{{siteName}}</h1>
+      <p>🚚 Siparişiniz Kargoya Verildi!</p>
+    </div>
+
+    <div class="content">
+      <p>Sayın {{customerName}},</p>
+      <p>Harika haberlerimiz var! <strong>#{{orderNumber}}</strong> numaralı siparişiniz kargoya verildi ve yola çıktı.</p>
+
+      <div class="tracking-box">
+        <p style="margin: 0 0 10px 0; color: #6b7280;">Kargo Takip Numaranız:</p>
+        <p class="tracking-number">{{trackingNumber}}</p>
+        {{#if carrier}}<p style="margin: 10px 0 0 0; color: #6b7280;">Kargo Firması: <strong>{{carrier}}</strong></p>{{/if}}
+      </div>
+
+      {{#if trackingUrl}}
+      <p style="text-align: center;">
+        <a href="{{trackingUrl}}" class="button">Kargonuzu Takip Edin</a>
+      </p>
+      {{/if}}
+
+      <div class="info-box">
+        <p><strong>Sipariş No:</strong> {{orderNumber}}</p>
+        <p><strong>Kargo Tarihi:</strong> {{shippedAtFormatted}}</p>
+        {{#if estimatedDelivery}}<p><strong>Tahmini Teslimat:</strong> {{estimatedDelivery}}</p>{{/if}}
+      </div>
+
+      <h3>Teslimat Adresi:</h3>
+      <div class="info-box">
+        <p>{{deliveryAddress}}</p>
+        <p>{{deliveryCity}}</p>
+      </div>
+
+      <p>Kargonuz genellikle 2-4 iş günü içinde teslim edilir. Herhangi bir sorunuz olursa bizimle iletişime geçmekten çekinmeyin.</p>
+
+      <a href="{{ordersUrl}}" class="button">Siparişimi Görüntüle</a>
+    </div>
+
+    <div class="footer">
+      <p>{{siteName}} - Plastik Ambalaj Ürünleri</p>
+      <p>Bu e-posta otomatik olarak gönderilmiştir.</p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+const defaultShippingNotificationText = `
+Sayın {{customerName}},
+
+Siparişiniz kargoya verildi!
+
+Sipariş No: {{orderNumber}}
+Kargo Takip No: {{trackingNumber}}
+{{#if carrier}}Kargo Firması: {{carrier}}{{/if}}
+Kargo Tarihi: {{shippedAtFormatted}}
+{{#if estimatedDelivery}}Tahmini Teslimat: {{estimatedDelivery}}{{/if}}
+
+Teslimat Adresi:
+{{deliveryAddress}}
+{{deliveryCity}}
+
+{{#if trackingUrl}}Kargonuzu takip edin: {{trackingUrl}}{{/if}}
+
+Siparişinizi görüntülemek için: {{ordersUrl}}
+
+{{siteName}}
+`;
+
+const defaultSampleShippingNotificationHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #10b981; color: white; padding: 20px; text-align: center; }
+    .content { background-color: #f9fafb; padding: 20px; }
+    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+    .button { display: inline-block; background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .info-box { background-color: white; border-left: 4px solid #10b981; padding: 15px; margin: 15px 0; }
+    .tracking-box { background-color: #d1fae5; border: 2px solid #10b981; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+    .tracking-number { font-size: 24px; font-weight: bold; color: #059669; letter-spacing: 2px; }
+    ul { padding-left: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>{{siteName}}</h1>
+      <p>📦 Numuneleriniz Kargoya Verildi!</p>
+    </div>
+
+    <div class="content">
+      <p>Sayın {{customerName}},</p>
+      <p>Numune talebiniz hazırlandı ve kargoya verildi!</p>
+
+      <div class="tracking-box">
+        <p style="margin: 0 0 10px 0; color: #6b7280;">Kargo Takip Numaranız:</p>
+        <p class="tracking-number">{{trackingNumber}}</p>
+        {{#if carrier}}<p style="margin: 10px 0 0 0; color: #6b7280;">Kargo Firması: <strong>{{carrier}}</strong></p>{{/if}}
+      </div>
+
+      <div class="info-box">
+        <p><strong>Numune No:</strong> {{sampleNumber}}</p>
+        <p><strong>Kargo Tarihi:</strong> {{shippedAtFormatted}}</p>
+      </div>
+
+      <h3>Gönderilen Numuneler:</h3>
+      <ul>
+        {{#each items}}<li>{{this.title}} - {{this.quantity}} adet</li>{{/each}}
+      </ul>
+
+      <h3>Teslimat Adresi:</h3>
+      <div class="info-box">
+        <p>{{deliveryAddress}}</p>
+        <p>{{deliveryCity}}</p>
+      </div>
+
+      <p>Numuneleriniz genellikle 2-4 iş günü içinde elinize ulaşır. Ürünlerimizi beğeneceğinizi umuyoruz!</p>
+    </div>
+
+    <div class="footer">
+      <p>{{siteName}} - Plastik Ambalaj Ürünleri</p>
+      <p>Bu e-posta otomatik olarak gönderilmiştir.</p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+const defaultSampleShippingNotificationText = `
+Sayın {{customerName}},
+
+Numuneleriniz kargoya verildi!
+
+Numune No: {{sampleNumber}}
+Kargo Takip No: {{trackingNumber}}
+{{#if carrier}}Kargo Firması: {{carrier}}{{/if}}
+Kargo Tarihi: {{shippedAtFormatted}}
+
+Gönderilen Numuneler:
+{{#each items}}- {{this.title}} - {{this.quantity}} adet
+{{/each}}
+
+Teslimat Adresi:
+{{deliveryAddress}}
+{{deliveryCity}}
+
+{{siteName}}
+`;
+
+/**
+ * Shipping Notification Email Template (Order)
+ */
+export async function shippingNotificationTemplate(order) {
+  const baseUrl = "https://svdfirebase000.web.app";
+
+  // Carrier tracking URL mapping
+  const carrierTrackingUrls = {
+    "Yurtiçi Kargo": "https://www.yurticikargo.com/tr/online-islemler/gonderi-sorgula?code=",
+    "Aras Kargo": "https://www.araskargo.com.tr/trs_gonderi_takip.aspx?gession=",
+    "MNG Kargo": "https://www.mngkargo.com.tr/gonderi-takip/?gon=",
+    "PTT Kargo": "https://gonderitakip.ptt.gov.tr/Track/Verify?q=",
+    "Sürat Kargo": "https://www.suratkargo.com.tr/gonderi-takip?takipNo=",
+    "UPS": "https://www.ups.com/track?tracknum=",
+    "FedEx": "https://www.fedex.com/fedextrack/?trknbr=",
+    "DHL": "https://www.dhl.com/tr-tr/home/tracking.html?tracking-id=",
+  };
+
+  const carrier = order.carrier || order.shippingCarrier || "";
+  const trackingNumber = order.trackingNumber || "";
+  let trackingUrl = order.trackingUrl || "";
+
+  // Auto-generate tracking URL if not provided
+  if (!trackingUrl && trackingNumber && carrier) {
+    const baseTrackingUrl = carrierTrackingUrls[carrier];
+    if (baseTrackingUrl) {
+      trackingUrl = baseTrackingUrl + trackingNumber;
+    }
+  }
+
+  const templateData = {
+    siteName: "SVD Ambalaj",
+    siteUrl: baseUrl,
+    ordersUrl: `${baseUrl}/account/orders`,
+    orderNumber: order.orderNumber || order.id,
+    customerName: order.customer?.name || order.billingAddress?.name || "",
+    trackingNumber,
+    carrier,
+    trackingUrl,
+    shippedAtFormatted: formatDate(order.shippedAt || order.updatedAt || new Date().toISOString()),
+    estimatedDelivery: order.estimatedDelivery || "",
+    deliveryAddress: order.shippingAddress?.address || order.deliveryAddress?.address || "",
+    deliveryCity: order.shippingAddress?.city || order.deliveryAddress?.city || "",
+  };
+
+  // Use orderStatus template as fallback or create dedicated template
+  const customTemplate = await getEmailTemplate("shippingNotification");
+  const template = customTemplate || {
+    subject: "🚚 Siparişiniz Kargoya Verildi - #{{orderNumber}}",
+    htmlTemplate: defaultShippingNotificationHtml,
+    textTemplate: defaultShippingNotificationText,
+  };
+
+  return {
+    subject: processTemplate(template.subject, templateData),
+    html: processTemplate(template.htmlTemplate, templateData),
+    text: processTemplate(template.textTemplate, templateData),
+  };
+}
+
+/**
+ * Sample Shipping Notification Email Template
+ */
+export async function sampleShippingNotificationTemplate(sample) {
+  const baseUrl = "https://svdfirebase000.web.app";
+
+  const carrierTrackingUrls = {
+    "Yurtiçi Kargo": "https://www.yurticikargo.com/tr/online-islemler/gonderi-sorgula?code=",
+    "Aras Kargo": "https://www.araskargo.com.tr/trs_gonderi_takip.aspx?gession=",
+    "MNG Kargo": "https://www.mngkargo.com.tr/gonderi-takip/?gon=",
+    "PTT Kargo": "https://gonderitakip.ptt.gov.tr/Track/Verify?q=",
+    "Sürat Kargo": "https://www.suratkargo.com.tr/gonderi-takip?takipNo=",
+    "UPS": "https://www.ups.com/track?tracknum=",
+    "FedEx": "https://www.fedex.com/fedextrack/?trknbr=",
+    "DHL": "https://www.dhl.com/tr-tr/home/tracking.html?tracking-id=",
+  };
+
+  const carrier = sample.carrier || "";
+  const trackingNumber = sample.trackingNumber || "";
+  let trackingUrl = "";
+
+  if (trackingNumber && carrier) {
+    const baseTrackingUrl = carrierTrackingUrls[carrier];
+    if (baseTrackingUrl) {
+      trackingUrl = baseTrackingUrl + trackingNumber;
+    }
+  }
+
+  const templateData = {
+    siteName: "SVD Ambalaj",
+    siteUrl: baseUrl,
+    sampleNumber: sample.sampleNumber || sample.id,
+    customerName: sample.customer?.name || "",
+    trackingNumber,
+    carrier,
+    trackingUrl,
+    shippedAtFormatted: formatDate(sample.shippedAt || sample.updatedAt || new Date().toISOString()),
+    items: sample.items || [],
+    deliveryAddress: sample.address?.address || sample.customer?.address || "",
+    deliveryCity: sample.address?.city || "",
+  };
+
+  const customTemplate = await getEmailTemplate("sampleShippingNotification");
+  const template = customTemplate || {
+    subject: "📦 Numuneleriniz Kargoya Verildi - #{{sampleNumber}}",
+    htmlTemplate: defaultSampleShippingNotificationHtml,
+    textTemplate: defaultSampleShippingNotificationText,
+  };
 
   return {
     subject: processTemplate(template.subject, templateData),
