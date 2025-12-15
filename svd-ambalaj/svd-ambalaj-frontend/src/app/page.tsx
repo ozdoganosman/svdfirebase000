@@ -112,7 +112,7 @@ type LandingContent = {
     secondaryButton: { text: string; href: string };
     stats: { value: string; label: string }[];
   };
-  advantages: { icon: string; title: string; description: string; highlight: string }[];
+  // advantages removed - features shown in howItWorks section
   howItWorks: {
     title: string;
     subtitle: string;
@@ -189,12 +189,7 @@ export default async function Home() {
     stats: [{ value: "24", label: "Ülkeye İhracat" }],
   };
 
-  const advantages = landingContent?.advantages ?? [
-    { icon: "🔄", title: "Kombo İndirimi", description: "Başlık + Şişe birlikte alana %10 indirim", highlight: "%10" },
-    { icon: "📦", title: "Toplu Alım Avantajı", description: "Adet arttıkça birim fiyat düşer", highlight: "Kademeli Fiyat" },
-    { icon: "🚚", title: "Hızlı Kargo", description: "50.000+ adet siparişlerde ücretsiz kargo", highlight: "Ücretsiz" },
-    { icon: "💳", title: "Güvenli Ödeme", description: "Kredi kartı ve havale ile ödeme", highlight: "3D Secure" },
-  ];
+  // advantages section removed - features already shown in howItWorks section
 
   const howItWorks = landingContent?.howItWorks ?? {
     title: "Nasıl Çalışır?",
@@ -329,33 +324,7 @@ export default async function Home() {
         </div>
       </section>
     ),
-    advantages: (
-      <section key="advantages" className="border-b border-slate-100 bg-gradient-to-r from-amber-50 via-white to-amber-50">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-8">
-            {advantages.map((item) => (
-              <div
-                key={item.title}
-                className="flex items-start gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100 transition hover:shadow-md"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-xl">
-                  {item.icon}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-slate-900 truncate">{item.title}</h3>
-                    <span className="shrink-0 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">
-                      {item.highlight}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-600 line-clamp-2">{item.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    ),
+    // advantages section removed - already shown in other sections
     categories: (
       <section key="categories" className="bg-white py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
