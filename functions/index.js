@@ -2883,7 +2883,14 @@ export const api = onRequest(
   {
     memory: "512MiB",
     timeoutSeconds: 120,
-    cors: true,
+    cors: [
+      "https://spreyvalfdunyasi.com",
+      "https://www.spreyvalfdunyasi.com",
+      "https://svdfirebase000.web.app",
+      "https://svdfirebase000.firebaseapp.com",
+      "http://localhost:3000",
+      "http://localhost:3001"
+    ],
   },
   app
 );
