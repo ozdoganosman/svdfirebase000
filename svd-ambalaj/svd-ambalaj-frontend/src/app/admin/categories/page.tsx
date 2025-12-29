@@ -2,8 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { AdminCategory, AdminMedia, apiFetch, resolveMediaUrl, uploadMediaFile } from "@/lib/admin-api";
+import { AdminCategory, AdminMedia, apiFetch, resolveMediaUrl, uploadMediaFile, UploadProgressCallback } from "@/lib/admin-api";
 import { MediaPicker } from "@/components/admin/media/media-picker";
+
+type UploadProgress = {
+  percent: number;
+  stage: 'preparing' | 'uploading' | 'processing' | 'complete';
+  message: string;
+};
 
 const emptyForm: CategoryPayload = {
   name: "",
@@ -39,6 +45,7 @@ export default function AdminCategoriesPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isMediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [syncing, setSyncing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -156,10 +163,20 @@ export default function AdminCategoriesPage() {
     }
 
     setUploadingImage(true);
+    setUploadProgress({ percent: 0, stage: 'preparing', message: 'Dosya hazirlanıyor...' });
     setError(null);
     setSuccess(null);
+
+    const onProgress: UploadProgressCallback = (progress) => {
+      setUploadProgress({
+        percent: progress.percent,
+        stage: progress.stage,
+        message: progress.message,
+      });
+    };
+
     try {
-      const media = await uploadMediaFile(file);
+      const media = await uploadMediaFile(file, onProgress);
       setForm((prev) => ({
         ...prev,
         image: media.url,
@@ -169,6 +186,7 @@ export default function AdminCategoriesPage() {
       setError((err as Error).message);
     } finally {
       setUploadingImage(false);
+      setUploadProgress(null);
       event.target.value = "";
     }
   };
@@ -341,7 +359,60 @@ export default function AdminCategoriesPage() {
               onChange={handleDirectUploadChange}
               className="hidden"
             />
-            {form.image && (
+            {/* Upload Progress Bar */}
+            {uploadingImage && uploadProgress && (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {uploadProgress.stage === 'preparing' && (
+                      <svg className="w-4 h-4 text-amber-600 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
+                    {uploadProgress.stage === 'uploading' && (
+                      <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                    )}
+                    {uploadProgress.stage === 'processing' && (
+                      <svg className="w-4 h-4 text-amber-600 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                      </svg>
+                    )}
+                    {uploadProgress.stage === 'complete' && (
+                      <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    <span className="text-sm font-medium text-amber-800">{uploadProgress.message}</span>
+                  </div>
+                  <span className="text-sm font-bold text-amber-700">%{uploadProgress.percent}</span>
+                </div>
+                <div className="w-full bg-amber-200 rounded-full h-2.5 overflow-hidden">
+                  <div
+                    className={`h-2.5 rounded-full transition-all duration-300 ease-out ${
+                      uploadProgress.stage === 'complete' ? 'bg-green-500' :
+                      uploadProgress.stage === 'processing' ? 'bg-amber-500 animate-pulse' : 'bg-amber-600'
+                    }`}
+                    style={{ width: `${uploadProgress.percent}%` }}
+                  ></div>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-xs text-amber-600">
+                  <span>
+                    {uploadProgress.stage === 'preparing' && 'Hazırlanıyor...'}
+                    {uploadProgress.stage === 'uploading' && 'Sunucuya gönderiliyor'}
+                    {uploadProgress.stage === 'processing' && 'Sunucuda işleniyor'}
+                    {uploadProgress.stage === 'complete' && 'Tamamlandı!'}
+                  </span>
+                  <span>
+                    {uploadProgress.stage === 'uploading' && uploadProgress.percent < 100 && '⬆️ Yükleniyor'}
+                    {uploadProgress.stage === 'processing' && '⚙️ İşleniyor'}
+                  </span>
+                </div>
+              </div>
+            )}
+            {form.image && !uploadingImage && (
               <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 shadow-sm">
                 <div className="relative aspect-video w-full overflow-hidden rounded-md border border-slate-200 bg-white">
                   <Image

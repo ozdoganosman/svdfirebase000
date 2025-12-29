@@ -345,7 +345,15 @@ export async function fetchMediaList(): Promise<AdminMedia[]> {
   return response.media ?? [];
 }
 
-export async function uploadMediaFile(file: File): Promise<AdminMedia> {
+export type UploadProgressCallback = (progress: {
+  loaded: number;
+  total: number;
+  percent: number;
+  stage: 'preparing' | 'uploading' | 'processing' | 'complete';
+  message: string;
+}) => void;
+
+export async function uploadMediaFile(file: File, onProgress?: UploadProgressCallback): Promise<AdminMedia> {
   // Validate file
   if (!file) {
     throw new Error("No file provided");
@@ -364,25 +372,95 @@ export async function uploadMediaFile(file: File): Promise<AdminMedia> {
   formData.append("file", file);
   formData.append("filename", file.name);
 
-  try {
-    console.log("Starting media upload", { filename: file.name, type: file.type, size: file.size });
-    const response = await apiFetch<{ media: AdminMedia }>("/media", {
-      method: "POST",
-      body: formData,
-    });
+  // Notify preparing stage
+  onProgress?.({
+    loaded: 0,
+    total: file.size,
+    percent: 0,
+    stage: 'preparing',
+    message: 'Dosya hazirlanıyor...'
+  });
 
-    if (!response?.media) {
-      throw new Error("Medya yüklenemedi - sunucu yanıtı geçersiz.");
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const url = resolveRequestUrl("/media");
+
+    xhr.open("POST", url, true);
+
+    // Add auth header if available
+    if (adminAuthToken) {
+      xhr.setRequestHeader("Authorization", `Bearer ${adminAuthToken}`);
     }
 
-    return response.media;
-  } catch (error) {
-    console.error("Media upload error:", error);
-    if (error instanceof Error) {
-      throw new Error(`Medya yüklenemedi: ${error.message}`);
-    }
-    throw new Error("Medya yüklenirken beklenmeyen bir hata oluştu.");
-  }
+    // Track upload progress
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.round((event.loaded / event.total) * 100);
+        onProgress?.({
+          loaded: event.loaded,
+          total: event.total,
+          percent,
+          stage: 'uploading',
+          message: percent < 100 ? `Yükleniyor... %${percent}` : 'Sunucuda isleniyor...'
+        });
+      }
+    };
+
+    // Handle upload complete (but server still processing)
+    xhr.upload.onload = () => {
+      onProgress?.({
+        loaded: file.size,
+        total: file.size,
+        percent: 100,
+        stage: 'processing',
+        message: 'Sunucuda isleniyor...'
+      });
+    };
+
+    // Handle response
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const response = JSON.parse(xhr.responseText);
+          if (!response?.media) {
+            reject(new Error("Medya yüklenemedi - sunucu yanıtı geçersiz."));
+            return;
+          }
+          onProgress?.({
+            loaded: file.size,
+            total: file.size,
+            percent: 100,
+            stage: 'complete',
+            message: 'Yükleme tamamlandi!'
+          });
+          resolve(response.media);
+        } catch {
+          reject(new Error("Sunucu yanıtı işlenemedi."));
+        }
+      } else {
+        try {
+          const errorResponse = JSON.parse(xhr.responseText);
+          reject(new Error(errorResponse.error || `HTTP ${xhr.status}: ${xhr.statusText}`));
+        } catch {
+          reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+        }
+      }
+    };
+
+    xhr.onerror = () => {
+      reject(new Error("Ağ hatası - bağlantı kurulamadı."));
+    };
+
+    xhr.ontimeout = () => {
+      reject(new Error("Yükleme zaman aşımına uğradı."));
+    };
+
+    // Set timeout (2 minutes for large files)
+    xhr.timeout = 120000;
+
+    console.log("Starting media upload with progress", { filename: file.name, type: file.type, size: file.size });
+    xhr.send(formData);
+  });
 }
 
 export async function deleteMediaItem(id: string): Promise<AdminMedia> {
