@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { ProductWithVariants } from "@/components/product-with-variants";
+import { ImageGallery } from "@/components/image-gallery";
 import { resolveServerApiUrl, resolveServerApiBase } from "@/lib/server-api";
 import { formatDualPrice, type ExchangeRate } from "@/lib/currency";
 import { ProductJsonLd, BreadcrumbJsonLd } from "@/components/seo/json-ld";
@@ -241,22 +241,8 @@ export default async function ProductDetailPage({
       <div className="mx-auto max-w-6xl px-6 sm:px-10">
         <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr]">
           <section className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2">
-              {galleryImages.map((image, index) => (
-                <div
-                  key={`${product.id}-image-${index}`}
-                  className="relative h-64 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100"
-                >
-                  <Image
-                    src={image}
-                    alt={`${product.title} görsel ${index + 1}`}
-                    fill
-                    sizes="(max-width: 640px) 100vw, 50vw"
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
+            {/* Image Gallery with Lightbox */}
+            <ImageGallery images={galleryImages} productTitle={product.title} />
 
             <article className="space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/60">
               <header className="space-y-3">
