@@ -226,6 +226,22 @@ export type AdminBulkPricingTier = {
   price: number;
 };
 
+// Variant option for configurable products (e.g., damlalık segments)
+export type VariantOption = {
+  id: string;
+  name: string;
+  stock: number;
+  priceModifier: number; // currently unused but reserved for future
+};
+
+// Variant segment (e.g., "Pipet Tipi", "Kauçuk Rengi", "Cam Rengi")
+export type VariantSegment = {
+  id: string;
+  name: string;
+  required: boolean;
+  options: VariantOption[];
+};
+
 export type AdminProduct = {
   id: string;
   title: string;
@@ -250,6 +266,9 @@ export type AdminProduct = {
     color?: string;
     neckSize?: string;
   };
+  // Variants/Segments for configurable products
+  variants?: VariantSegment[];
+  hasVariants?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };

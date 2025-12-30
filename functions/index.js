@@ -830,6 +830,7 @@ app.post("/products", requireAuth, async (req, res) => {
       stock,
       packageInfo,
       specifications,
+      variants,
     } = req.body || {};
 
     if (!title || typeof title !== "string") {
@@ -850,6 +851,7 @@ app.post("/products", requireAuth, async (req, res) => {
       stock,
       packageInfo,
       specifications,
+      variants,
     };
 
     const product = await catalog.createProduct(payload);
@@ -895,6 +897,7 @@ app.put("/products/:id", requireAuth, async (req, res) => {
       bulkPricing: body.bulkPricing !== undefined ? parseBulkPricing(body.bulkPricing) : undefined,
       bulkPricingUSD: body.bulkPricingUSD !== undefined ? parseBulkPricing(body.bulkPricingUSD) : undefined,
       comboPriceUSD: body.comboPriceUSD,
+      variants: body.variants,
     };
 
     // Filter out undefined values so they don't overwrite existing data
@@ -2881,7 +2884,7 @@ export { updateExchangeRate, forceUpdateExchangeRate, keepSiteWarm } from "./sch
 // Export API handler with v2 functions (increased memory for media uploads)
 export const api = onRequest(
   {
-    memory: "512MiB",
+    memory: "1GiB",
     timeoutSeconds: 120,
     cors: [
       "https://spreyvalfdunyasi.com",

@@ -25,7 +25,7 @@ export const generalLimiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  validate: { xForwardedForHeader: false }, // Disable IPv6 validation warning
+  validate: false, // Disable all validation to prevent header validation errors
   skip: (req) => {
     // Skip rate limiting for health check endpoints
     return req.path === "/health" || req.path === "/";
@@ -56,7 +56,7 @@ export const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { xForwardedForHeader: false }, // Disable IPv6 validation warning
+  validate: false, // Disable all validation to prevent header validation errors
   handler: (req, res) => {
     functions.logger.warn("Auth rate limit exceeded", {
       ip: req.headers["x-forwarded-for"] || req.ip,
@@ -82,7 +82,7 @@ export const paymentLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { xForwardedForHeader: false }, // Disable IPv6 validation warning
+  validate: false, // Disable all validation to prevent header validation errors
   handler: (req, res) => {
     functions.logger.warn("Payment rate limit exceeded", {
       ip: req.headers["x-forwarded-for"] || req.ip
@@ -107,7 +107,7 @@ export const formLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { xForwardedForHeader: false }, // Disable IPv6 validation warning
+  validate: false, // Disable all validation to prevent header validation errors
   handler: (req, res) => {
     functions.logger.warn("Form rate limit exceeded", {
       ip: req.headers["x-forwarded-for"] || req.ip,

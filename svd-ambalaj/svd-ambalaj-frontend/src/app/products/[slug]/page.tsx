@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { AddToCartButton } from "@/components/add-to-cart-button";
+import { ProductWithVariants } from "@/components/product-with-variants";
 import { resolveServerApiUrl, resolveServerApiBase } from "@/lib/server-api";
 import { formatDualPrice, type ExchangeRate } from "@/lib/currency";
 import { ProductJsonLd, BreadcrumbJsonLd } from "@/components/seo/json-ld";
@@ -11,6 +11,20 @@ import { RelatedProducts } from "@/components/related-products";
 type BulkTier = {
   minQty: number;
   price: number;
+};
+
+type VariantOption = {
+  id: string;
+  name: string;
+  stock: number;
+  priceModifier: number;
+};
+
+type VariantSegment = {
+  id: string;
+  name: string;
+  required: boolean;
+  options: VariantOption[];
 };
 
 type Product = {
@@ -36,6 +50,8 @@ type Product = {
     color?: string;
     neckSize?: string;
   };
+  variants?: VariantSegment[];
+  hasVariants?: boolean;
 };
 
 type Category = {
@@ -430,7 +446,7 @@ export default async function ProductDetailPage({
               )}
             </div>
 
-            <AddToCartButton
+            <ProductWithVariants
               product={{
                 id: product.id,
                 title: product.title,
@@ -439,9 +455,9 @@ export default async function ProductDetailPage({
                 bulkPricing: tryBulkPricing,
                 packageInfo: product.packageInfo,
                 specifications: product.specifications,
+                variants: product.variants,
+                hasVariants: product.hasVariants,
               }}
-              variant="primary"
-              className="w-full"
             />
 
             <a

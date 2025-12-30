@@ -107,6 +107,26 @@ const getProductTypeFromCategory = (categorySlug) => {
   return null; // nötr for others
 };
 
+// Normalize variants/segments structure
+const normalizeVariants = (value) => {
+  if (!value || !Array.isArray(value)) {
+    return [];
+  }
+  return value.map((segment) => ({
+    id: segment.id || "",
+    name: segment.name || "",
+    required: segment.required !== false, // default true
+    options: Array.isArray(segment.options)
+      ? segment.options.map((opt) => ({
+          id: opt.id || "",
+          name: opt.name || "",
+          stock: Number(opt.stock ?? 0),
+          priceModifier: Number(opt.priceModifier ?? 0),
+        }))
+      : [],
+  })).filter((seg) => seg.id && seg.name && seg.options.length > 0);
+};
+
 const mapProductDoc = (doc) => {
   if (!doc.exists) {
     return null;
@@ -143,6 +163,9 @@ const mapProductDoc = (doc) => {
       color: data.specifications.color || "",
       neckSize: data.specifications.neckSize || "", // Keep in specifications too
     } : undefined,
+    // Variants/Segments for configurable products (e.g., damlalık with multiple segments)
+    variants: normalizeVariants(data.variants),
+    hasVariants: Array.isArray(data.variants) && data.variants.length > 0,
     createdAt: mapTimestamp(data.createdAt),
     updatedAt: mapTimestamp(data.updatedAt),
   };
@@ -398,10 +421,26 @@ const createProduct = async (payload) => {
       minBoxes: Number(payload.packageInfo?.minBoxes ?? 1),
       boxLabel: payload.packageInfo?.boxLabel || "Koli",
     },
-    specifications: payload.specifications || undefined,
+    // Variants/Segments for configurable products
+    variants: normalizeVariants(payload.variants),
     createdAt: now,
     updatedAt: now,
   };
+
+  // Only add specifications if it has actual values (Firestore doesn't accept undefined)
+  if (payload.specifications && (
+    payload.specifications.hoseLength ||
+    payload.specifications.volume ||
+    payload.specifications.color ||
+    payload.specifications.neckSize
+  )) {
+    productData.specifications = {
+      hoseLength: payload.specifications.hoseLength || "",
+      volume: payload.specifications.volume || "",
+      color: payload.specifications.color || "",
+      neckSize: payload.specifications.neckSize || "",
+    };
+  }
 
   // Para birimi alanlarını sadece değer varsa ekle
   if (payload.price !== undefined && payload.price !== null) {
@@ -458,6 +497,8 @@ const updateProduct = async (id, payload) => {
       boxLabel: payload.packageInfo?.boxLabel || existing.packageInfo?.boxLabel || "Koli",
     } : existing.packageInfo,
     specifications: payload.specifications !== undefined ? payload.specifications : existing.specifications,
+    // Variants/Segments for configurable products
+    variants: payload.variants !== undefined ? normalizeVariants(payload.variants) : existing.variants,
     updatedAt: FieldValue.serverTimestamp(),
   };
 

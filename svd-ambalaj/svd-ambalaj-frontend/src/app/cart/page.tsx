@@ -54,7 +54,8 @@ export default function CartPage() {
     getAppliedTier,
     getNextTier,
     calculateItemTotal,
-    getTotalItemCount
+    getTotalItemCount,
+    getCartItemId
   } = useCart();
 
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
@@ -201,7 +202,7 @@ export default function CartPage() {
       });
   }, [items]);
 
-  const handleQuantityChange = (productId: string, value: string, packageInfo?: { itemsPerBox: number; minBoxes: number; boxLabel: string }) => {
+  const handleQuantityChange = (cartItemId: string, value: string, packageInfo?: { itemsPerBox: number; minBoxes: number; boxLabel: string }) => {
     const parsed = parseInt(value, 10);
     if (Number.isNaN(parsed)) {
       return;
@@ -210,7 +211,7 @@ export default function CartPage() {
     if (packageInfo && parsed < packageInfo.minBoxes) {
       return;
     }
-    updateQuantity(productId, parsed);
+    updateQuantity(cartItemId, parsed);
   };
 
   const handleQuoteSubmit = async (e: React.FormEvent) => {
@@ -660,6 +661,7 @@ export default function CartPage() {
               const nextTier = getNextTier(item);
               const totalItemCount = getTotalItemCount(item);
               const itemTotal = effectivePrice * totalItemCount;
+              const cartItemId = getCartItemId(item.id, item.selectedVariants);
 
               // Calculate base price (before any discounts) - use priceUSD converted to TRY
               const basePrice = item.priceUSD && exchangeRate
@@ -673,7 +675,7 @@ export default function CartPage() {
 
               return (
               <div
-                key={item.id}
+                key={cartItemId}
                 className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
               >
                 <div className="space-y-3">
@@ -699,6 +701,12 @@ export default function CartPage() {
                       )}
                       <div>
                         <h2 className="text-lg font-semibold text-slate-900">{item.title}</h2>
+                        {/* Variant Summary */}
+                        {item.variantSummary && (
+                          <p className="mt-1 text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-lg inline-block">
+                            🔧 {item.variantSummary}
+                          </p>
+                        )}
                         {item.packageInfo && (
                           <p className="mt-1 text-xs text-slate-500">
                             📦 {item.packageInfo.itemsPerBox} adet/{item.packageInfo.boxLabel.toLowerCase()}
@@ -725,7 +733,7 @@ export default function CartPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => removeItem(cartItemId)}
                       className="text-sm font-semibold text-rose-600 transition hover:text-rose-700"
                     >
                       Kaldır
@@ -767,7 +775,7 @@ export default function CartPage() {
                         type="number"
                         min={item.packageInfo?.minBoxes || 1}
                         value={item.quantity}
-                        onChange={(event) => handleQuantityChange(item.id, event.target.value, item.packageInfo)}
+                        onChange={(event) => handleQuantityChange(cartItemId, event.target.value, item.packageInfo)}
                         className="ml-3 w-24 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
                       />
                     </label>

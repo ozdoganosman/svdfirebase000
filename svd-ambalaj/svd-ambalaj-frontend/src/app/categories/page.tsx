@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { resolveServerApiUrl } from "@/lib/server-api";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spreyvalfdunyasi.com";
@@ -31,6 +32,8 @@ type Category = {
   name: string;
   slug: string;
   description?: string;
+  image?: string;
+  productType?: string;
 };
 
 async function getCategories(): Promise<Category[]> {
@@ -56,32 +59,35 @@ export default async function CategoriesPage() {
   const categories = await getCategories();
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-16 text-slate-900">
-      <div className="mx-auto max-w-6xl px-6 sm:px-10">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <span className="inline-flex items-center rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700">
-              Ürün Kategorileri
-            </span>
-            <h1 className="mt-4 text-4xl font-bold tracking-tight">
-              Tüm ambalaj çözümlerimizi kategorilere göre keşfedin
-            </h1>
-            <p className="mt-3 max-w-2xl text-lg text-slate-600">
-              Mist spreyler, köpük pompaları, kapaklar ve şişeler dahil geniş ürün gamımızla üretim hatlarınızı destekliyoruz. Her kategori için adet bazlı fiyatlandırma avantajlarımızdan yararlanın.
-            </p>
-          </div>
-          <a
-            href="/checkout"
-            className="inline-flex items-center rounded-full border border-amber-500 px-6 py-3 text-sm font-semibold text-amber-600 transition hover:bg-amber-500 hover:text-white"
-          >
-            Hızlı Teklif Al
-          </a>
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50/30 to-white py-12 sm:py-20 text-slate-900">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Header Section */}
+        <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
+          <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-100 to-orange-100 px-5 py-2.5 text-sm font-semibold text-amber-700 shadow-sm">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            Ürün Kategorileri
+          </span>
+          <h1 className="mt-6 text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent">
+            Ambalaj Çözümlerimizi Keşfedin
+          </h1>
+          <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed">
+            Sprey valf, pompa başlık, pet şişe ve daha fazlası. Profesyonel ambalaj ihtiyaçlarınız için
+            <span className="text-amber-600 font-medium"> toptan fiyat avantajlarından </span>
+            yararlanın.
+          </p>
         </div>
 
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {/* Categories Grid */}
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {categories.length === 0 && (
-            <div className="col-span-full rounded-2xl border border-dashed border-slate-200 p-10 text-center text-slate-500">
-              Şu anda listelenecek kategori bulunamadı. Lütfen daha sonra tekrar deneyin.
+            <div className="col-span-full rounded-3xl border-2 border-dashed border-slate-200 p-12 text-center">
+              <svg className="w-16 h-16 mx-auto text-slate-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              <p className="text-slate-500 text-lg">Şu anda listelenecek kategori bulunamadı.</p>
+              <p className="text-slate-400 text-sm mt-1">Lütfen daha sonra tekrar deneyin.</p>
             </div>
           )}
 
@@ -89,21 +95,89 @@ export default async function CategoriesPage() {
             <a
               key={category.id}
               href={`/categories/${category.slug}`}
-              className="group flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-amber-400 hover:shadow-lg"
+              className="group relative flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl bg-white border border-slate-200/80 shadow-sm hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300 hover:-translate-y-1 hover:border-amber-300"
             >
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900 group-hover:text-amber-600">
+              {/* Image Container */}
+              <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-slate-100 to-slate-50">
+                {category.image ? (
+                  <Image
+                    src={category.image}
+                    alt={category.name}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg className="w-20 h-20 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  </div>
+                )}
+                {/* Overlay gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                {/* Product Type Badge */}
+                {category.productType && (
+                  <span className="absolute top-3 right-3 sm:top-4 sm:right-4 inline-flex items-center rounded-full bg-white/90 backdrop-blur-sm px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
+                    {category.productType === "başlık" && "Başlık"}
+                    {category.productType === "şişe" && "Şişe"}
+                    {category.productType === "nötr" && "Aksesuar"}
+                    {!["başlık", "şişe", "nötr"].includes(category.productType) && category.productType}
+                  </span>
+                )}
+
+                {/* Hover CTA */}
+                <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                  <span className="inline-flex items-center justify-center w-full gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-white shadow-lg">
+                    Ürünleri Görüntüle
+                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex flex-col flex-1 p-4 sm:p-5">
+                <h2 className="text-lg sm:text-xl font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
                   {category.name}
                 </h2>
-                <p className="mt-3 text-sm text-slate-600">
-                  {category.description ?? ""}
-                </p>
+                {category.description && (
+                  <p className="mt-2 text-sm text-slate-500 line-clamp-2">
+                    {category.description}
+                  </p>
+                )}
+                <div className="mt-auto pt-4 flex items-center justify-between">
+                  <span className="text-sm font-medium text-amber-600 group-hover:text-amber-700 flex items-center gap-1">
+                    Kategoriyi İncele
+                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </span>
+                </div>
               </div>
-              <span className="mt-6 inline-flex items-center text-sm font-semibold text-amber-600">
-                Kategoriyi incele →
-              </span>
             </a>
           ))}
+        </div>
+
+        {/* Bottom CTA */}
+        <div className="mt-12 sm:mt-16 text-center">
+          <div className="inline-flex flex-col sm:flex-row items-center gap-4 p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50">
+            <div className="text-left">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900">Toptan Sipariş Avantajı</h3>
+              <p className="mt-1 text-sm text-slate-600">Yüksek adetlerde özel fiyatlardan yararlanın</p>
+            </div>
+            <a
+              href="/checkout"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 transition-all hover:scale-105"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+              Hızlı Teklif Al
+            </a>
+          </div>
         </div>
       </div>
     </main>

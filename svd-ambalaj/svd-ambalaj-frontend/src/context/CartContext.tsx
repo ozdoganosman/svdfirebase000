@@ -18,6 +18,22 @@ type BulkTier = {
   price: number;
 };
 
+type VariantOption = {
+  id: string;
+  name: string;
+  stock: number;
+  priceModifier: number;
+};
+
+type VariantSegment = {
+  id: string;
+  name: string;
+  required: boolean;
+  options: VariantOption[];
+};
+
+export type SelectedVariants = Record<string, string>; // segmentId -> optionId
+
 type ProductSummary = {
   id: string;
   title: string;
@@ -43,10 +59,15 @@ type ProductSummary = {
     color?: string;
     neckSize?: string;
   };
+  // Variant fields
+  variants?: VariantSegment[];
+  hasVariants?: boolean;
 };
 
 type CartItem = ProductSummary & {
   quantity: number;
+  selectedVariants?: SelectedVariants; // Selected variant options
+  variantSummary?: string; // Human-readable summary of selected variants
 };
 
 type ComboMatch = {
@@ -61,11 +82,12 @@ type ComboMatch = {
 
 export type CartContextValue = {
   items: CartItem[];
-  addItem: (product: ProductSummary, quantity?: number) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addItem: (product: ProductSummary, quantity?: number, selectedVariants?: SelectedVariants) => void;
+  removeItem: (cartItemId: string) => void; // Now uses cart item ID
+  updateQuantity: (cartItemId: string, quantity: number) => void; // Now uses cart item ID
   clearCart: () => void;
   getItemQuantity: (productId: string) => number;
+  getCartItemId: (productId: string, selectedVariants?: SelectedVariants) => string;
   subtotal: number;
   totalBoxes: number;
   totalItems: number;
@@ -331,67 +353,144 @@ export function CartProvider({ children }: CartProviderProps) {
   const calculateSubtotal = (items: CartItem[]) =>
     items.reduce((total, item) => total + calculateItemTotal(item), 0);
 
-  const addItem = (product: ProductSummary, quantity = 1) => {
+  // Helper to generate variant summary for display
+  const getVariantSummary = (product: ProductSummary, selectedVariants: SelectedVariants): string => {
+    if (!product.variants || !selectedVariants) return '';
+
+    const parts: string[] = [];
+    for (const segment of product.variants) {
+      const optionId = selectedVariants[segment.id];
+      if (optionId) {
+        const option = segment.options.find(o => o.id === optionId);
+        if (option) {
+          parts.push(`${segment.name}: ${option.name}`);
+        }
+      }
+    }
+    return parts.join(' | ');
+  };
+
+  // Generate unique cart item ID for variant products
+  const getCartItemId = (productId: string, selectedVariants?: SelectedVariants): string => {
+    if (!selectedVariants || Object.keys(selectedVariants).length === 0) {
+      return productId;
+    }
+    // Sort keys to ensure consistent ID
+    const sortedKeys = Object.keys(selectedVariants).sort();
+    const variantPart = sortedKeys.map(k => `${k}:${selectedVariants[k]}`).join('_');
+    return `${productId}__${variantPart}`;
+  };
+
+  const addItem = (product: ProductSummary, quantity = 1, selectedVariants?: SelectedVariants) => {
     setItems((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
+      // For products with variants, use a unique cart item ID based on selected variants
+      const cartItemId = getCartItemId(product.id, selectedVariants);
+      const existing = prev.find((item) => getCartItemId(item.id, item.selectedVariants) === cartItemId);
       const newQuantity = existing ? existing.quantity + quantity : quantity;
-      
+
+      // For variant products, calculate stock from selected variants (minimum of selected options)
+      let effectiveStock = product.stock;
+      if (product.hasVariants && selectedVariants && product.variants) {
+        const selectedStocks: number[] = [];
+        for (const segment of product.variants) {
+          const optionId = selectedVariants[segment.id];
+          if (optionId) {
+            const option = segment.options.find(o => o.id === optionId);
+            if (option) {
+              selectedStocks.push(option.stock);
+            }
+          }
+        }
+        if (selectedStocks.length > 0) {
+          effectiveStock = Math.min(...selectedStocks);
+        }
+      }
+
       // Stock validation for packaged products
-      if (product.stock !== undefined && product.packageInfo) {
-        const availableBoxes = Math.floor(product.stock / product.packageInfo.itemsPerBox);
+      if (effectiveStock !== undefined && product.packageInfo) {
+        const availableBoxes = Math.floor(effectiveStock / product.packageInfo.itemsPerBox);
         if (newQuantity > availableBoxes) {
           setToastMessage(`⚠️ Stokta sadece ${availableBoxes} ${product.packageInfo.boxLabel.toLowerCase()} var!`);
           return prev;
         }
       }
       // Stock validation for regular products
-      else if (product.stock !== undefined && newQuantity > product.stock) {
-        setToastMessage(`⚠️ Stokta sadece ${product.stock} adet var!`);
+      else if (effectiveStock !== undefined && newQuantity > effectiveStock) {
+        setToastMessage(`⚠️ Stokta sadece ${effectiveStock} adet var!`);
         return prev;
       }
-      
+
+      // Generate variant summary for display
+      const variantSummary = selectedVariants ? getVariantSummary(product, selectedVariants) : undefined;
+
       if (existing) {
-        setToastMessage(`${product.title} sepete eklendi! (${newQuantity} ${product.packageInfo?.boxLabel.toLowerCase() || 'adet'})`);
+        const displayText = variantSummary
+          ? `${product.title} (${variantSummary}) sepete eklendi! (${newQuantity} ${product.packageInfo?.boxLabel.toLowerCase() || 'adet'})`
+          : `${product.title} sepete eklendi! (${newQuantity} ${product.packageInfo?.boxLabel.toLowerCase() || 'adet'})`;
+        setToastMessage(displayText);
         return prev.map((item) =>
-          item.id === product.id
-            ? { ...product, quantity: newQuantity } // Always use fresh product data
+          getCartItemId(item.id, item.selectedVariants) === cartItemId
+            ? { ...product, quantity: newQuantity, selectedVariants, variantSummary } // Always use fresh product data
             : item
         );
       }
-      setToastMessage(`${product.title} sepete eklendi!`);
-      return [...prev, { ...product, quantity }];
+      const displayText = variantSummary
+        ? `${product.title} (${variantSummary}) sepete eklendi!`
+        : `${product.title} sepete eklendi!`;
+      setToastMessage(displayText);
+      return [...prev, { ...product, quantity, selectedVariants, variantSummary }];
     });
   };
 
-  const removeItem = (productId: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== productId));
+  // removeItem now uses cart item ID (productId or productId__variants combination)
+  const removeItem = (cartItemId: string) => {
+    setItems((prev) => prev.filter((item) => getCartItemId(item.id, item.selectedVariants) !== cartItemId));
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  // updateQuantity now uses cart item ID
+  const updateQuantity = (cartItemId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeItem(productId);
+      removeItem(cartItemId);
       return;
     }
     setItems((prev) => {
-      const product = prev.find((item) => item.id === productId);
+      const product = prev.find((item) => getCartItemId(item.id, item.selectedVariants) === cartItemId);
       if (!product) return prev;
-      
+
+      // For variant products, calculate stock from selected variants
+      let effectiveStock = product.stock;
+      if (product.hasVariants && product.selectedVariants && product.variants) {
+        const selectedStocks: number[] = [];
+        for (const segment of product.variants) {
+          const optionId = product.selectedVariants[segment.id];
+          if (optionId) {
+            const option = segment.options.find(o => o.id === optionId);
+            if (option) {
+              selectedStocks.push(option.stock);
+            }
+          }
+        }
+        if (selectedStocks.length > 0) {
+          effectiveStock = Math.min(...selectedStocks);
+        }
+      }
+
       // Stock validation for packaged products
-      if (product.stock !== undefined && product.packageInfo) {
-        const availableBoxes = Math.floor(product.stock / product.packageInfo.itemsPerBox);
+      if (effectiveStock !== undefined && product.packageInfo) {
+        const availableBoxes = Math.floor(effectiveStock / product.packageInfo.itemsPerBox);
         if (quantity > availableBoxes) {
           setToastMessage(`⚠️ Stokta sadece ${availableBoxes} ${product.packageInfo.boxLabel.toLowerCase()} var!`);
           return prev;
         }
       }
       // Stock validation for regular products
-      else if (product.stock !== undefined && quantity > product.stock) {
-        setToastMessage(`⚠️ Stokta sadece ${product.stock} adet var!`);
+      else if (effectiveStock !== undefined && quantity > effectiveStock) {
+        setToastMessage(`⚠️ Stokta sadece ${effectiveStock} adet var!`);
         return prev;
       }
-      
+
       return prev.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
+        getCartItemId(item.id, item.selectedVariants) === cartItemId ? { ...item, quantity } : item
       );
     });
   };
@@ -558,6 +657,7 @@ export function CartProvider({ children }: CartProviderProps) {
     updateQuantity,
     clearCart,
     getItemQuantity,
+    getCartItemId,
     subtotal,
     totalBoxes,
     totalItems,

@@ -4,6 +4,22 @@ import { useState, useTransition } from "react";
 import { useCart } from "@/context/CartContext";
 import { trackAddToCart } from "./google-analytics";
 
+type VariantOption = {
+  id: string;
+  name: string;
+  stock: number;
+  priceModifier: number;
+};
+
+type VariantSegment = {
+  id: string;
+  name: string;
+  required: boolean;
+  options: VariantOption[];
+};
+
+export type SelectedVariants = Record<string, string>; // segmentId -> optionId
+
 export type AddToCartButtonProps = {
   product: {
     id: string;
@@ -27,11 +43,15 @@ export type AddToCartButtonProps = {
       color?: string;
       neckSize?: string;
     };
+    variants?: VariantSegment[];
+    hasVariants?: boolean;
   };
   quantity?: number;
   variant?: "primary" | "secondary" | "ghost";
   className?: string;
   showQuantitySelector?: boolean;
+  selectedVariants?: SelectedVariants;
+  variantStock?: number; // Stock based on selected variants
 };
 
 const variantClasses: Record<NonNullable<AddToCartButtonProps["variant"]>, string> = {
@@ -49,6 +69,8 @@ export function AddToCartButton({
   variant = "primary",
   className = "",
   showQuantitySelector = true,
+  selectedVariants,
+  variantStock,
 }: AddToCartButtonProps) {
   const { addItem } = useCart();
   const [isPending, startTransition] = useTransition();
@@ -60,14 +82,32 @@ export function AddToCartButton({
   // If packageInfo exists and quantity is not explicitly set, use minBoxes
   const effectiveQuantity = showQuantitySelector ? selectedQuantity : (quantity ?? minQty);
 
+  // Check if product has variants and if all are selected
+  const hasVariants = product.hasVariants && product.variants && product.variants.length > 0;
+  const allVariantsSelected = hasVariants
+    ? product.variants!.every(seg => selectedVariants?.[seg.id])
+    : true;
+
+  // variantStock can be used for stock display/validation if needed
+  const _variantStock = variantStock;
+  void _variantStock; // Suppress unused warning
+
   const handleAddToCart = () => {
+    if (hasVariants && !allVariantsSelected) {
+      return; // Don't add if variants not selected
+    }
+
     startTransition(() => {
-      addItem(product, effectiveQuantity);
+      // Pass selectedVariants as third argument to addItem
+      addItem(product, effectiveQuantity, selectedVariants);
       // Track add to cart event
       const unitPrice = product.price || product.priceTRY || 0;
       trackAddToCart(product.id, product.title, unitPrice, effectiveQuantity);
     });
   };
+
+  // Determine if button should be disabled
+  const isDisabled = isPending || (hasVariants && !allVariantsSelected);
 
   const handleIncrement = () => {
     setSelectedQuantity(prev => prev + 1);
@@ -94,7 +134,7 @@ export function AddToCartButton({
       <button
         type="button"
         onClick={handleAddToCart}
-        disabled={isPending}
+        disabled={isDisabled}
         className={`${variantClasses[variant]} ${className}`.trim()}
       >
         {isPending ? "Ekleniyor..." : (product.packageInfo ? `${effectiveQuantity} ${product.packageInfo.boxLabel} Sepete Ekle` : buttonText)}
@@ -157,7 +197,7 @@ export function AddToCartButton({
       <button
         type="button"
         onClick={handleAddToCart}
-        disabled={isPending}
+        disabled={isDisabled}
         className={variantClasses[variant]}
       >
         {isPending ? (
