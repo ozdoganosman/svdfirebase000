@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 type VariantOption = {
   id: string;
@@ -24,7 +24,18 @@ type VariantSelectorProps = {
 };
 
 export function VariantSelector({ variants, onSelectionChange }: VariantSelectorProps) {
-  const [selections, setSelections] = useState<SelectedVariants>({});
+  // Initialize with first option of each segment selected
+  const initialSelections = useMemo(() => {
+    const initial: SelectedVariants = {};
+    variants.forEach((segment) => {
+      if (segment.options.length > 0) {
+        initial[segment.id] = segment.options[0].id;
+      }
+    });
+    return initial;
+  }, [variants]);
+
+  const [selections, setSelections] = useState<SelectedVariants>(initialSelections);
 
   // Calculate available stock based on selections
   const calculateAvailableStock = (currentSelections: SelectedVariants): number => {
@@ -52,7 +63,7 @@ export function VariantSelector({ variants, onSelectionChange }: VariantSelector
   const handleOptionSelect = (segmentId: string, optionId: string) => {
     setSelections(prev => ({
       ...prev,
-      [segmentId]: prev[segmentId] === optionId ? '' : optionId, // Toggle if same
+      [segmentId]: optionId,
     }));
   };
 

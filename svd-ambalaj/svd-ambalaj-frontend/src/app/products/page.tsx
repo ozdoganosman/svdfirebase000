@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
-import { AddToCartButton } from "@/components/add-to-cart-button";
+import { ProductCard } from "@/components/product-card";
 import { resolveServerApiUrl, resolveServerApiBase } from "@/lib/server-api";
-import { formatDualPrice, type ExchangeRate } from "@/lib/currency";
+import type { ExchangeRate } from "@/lib/currency";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spreyvalfdunyasi.com";
 
@@ -32,6 +31,20 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
+type VariantOption = {
+  id: string;
+  name: string;
+  stock: number;
+  priceModifier: number;
+};
+
+type VariantSegment = {
+  id: string;
+  name: string;
+  required: boolean;
+  options: VariantOption[];
+};
+
 type BulkTier = {
   minQty: number;
   price: number;
@@ -50,8 +63,8 @@ type Product = {
   image?: string;
   category?: string;
   stock?: number;
-  productType?: string | null; // "başlık" | "şişe" | "nötr" | null
-  neckSize?: string | null; // "24/410" etc
+  productType?: string | null;
+  neckSize?: string | null;
   packageInfo?: {
     itemsPerBox: number;
     minBoxes: number;
@@ -63,6 +76,8 @@ type Product = {
     color?: string;
     neckSize?: string;
   };
+  variants?: VariantSegment[];
+  hasVariants?: boolean;
 };
 
 type Category = {
@@ -206,15 +221,6 @@ export default async function ProductsPage({ searchParams }: {
   ]);
   
   const rate = exchangeRate?.rate ?? 0;
-
-  const resolveProductImage = (product: Product): string => {
-    const imagePath = product.images?.[0] ?? product.image;
-    if (!imagePath) {
-      return "/images/placeholders/product.jpg";
-    }
-    // Return URL as-is (unoptimized mode will handle it)
-    return imagePath;
-  };
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-16 text-slate-900">
@@ -417,126 +423,7 @@ export default async function ProductsPage({ searchParams }: {
           )}
 
           {products.map((product) => (
-            <article
-              key={product.id}
-              className="flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm shadow-slate-200/60 transition hover:-translate-y-1 hover:shadow-lg"
-            >
-              <div className="relative h-56 w-full overflow-hidden bg-slate-100">
-                <Image
-                  src={resolveProductImage(product)}
-                  alt={product.title}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  className="object-contain p-2 transition duration-500 hover:scale-110"
-                  loading="lazy"
-                />
-              </div>
-              <div className="flex flex-1 flex-col gap-4 p-6">
-                <header className="space-y-2">
-                  <h2 className="text-xl font-semibold text-slate-900">
-                    {product.title}
-                  </h2>
-                  {product.description && (
-                    <p className="text-sm text-slate-600">
-                      {product.description}
-                    </p>
-                  )}
-                </header>
-
-                {product.packageInfo && (
-                  <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm">
-                    <p className="font-semibold text-amber-900">
-                      📦 {product.packageInfo.itemsPerBox} adet/{product.packageInfo.boxLabel.toLowerCase()}
-                    </p>
-                  </div>
-                )}
-
-                {(product.specifications?.hoseLength || product.specifications?.volume || product.specifications?.color || product.specifications?.neckSize) && (
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-700">
-                      Teknik Özellikler
-                    </p>
-                    <ul className="space-y-1 text-xs text-slate-600">
-                      {product.specifications?.hoseLength && (
-                        <li>• <strong>Hortum Boyu:</strong> {product.specifications.hoseLength}</li>
-                      )}
-                      {product.specifications?.volume && (
-                        <li>• <strong>Hacim:</strong> {product.specifications.volume}</li>
-                      )}
-                      {product.specifications?.color && (
-                        <li>• <strong>Renk:</strong> {product.specifications.color}</li>
-                      )}
-                      {product.specifications?.neckSize && (
-                        <li>• <strong>Boyun Ölçüsü:</strong> {product.specifications.neckSize}</li>
-                      )}
-                    </ul>
-                  </div>
-                )}
-
-                <div className="mt-auto space-y-3">
-                  <div>
-                    <span className="text-sm text-slate-500">
-                      {product.packageInfo ? "Birim fiyat" : "Başlangıç fiyatı"}
-                    </span>
-                    <p className="text-2xl font-bold text-amber-600">
-                      {product.priceUSD && rate > 0 ? formatDualPrice(product.priceUSD, rate, true) : 'Fiyat için iletişime geçin'} <span className="text-sm font-normal text-slate-500">+KDV</span>
-                    </p>
-                    {product.packageInfo && (
-                      <p className="text-sm text-slate-600">
-                        1 {product.packageInfo.boxLabel.toLowerCase()} = {product.priceUSD && rate > 0 ? formatDualPrice(product.priceUSD, rate, false, product.packageInfo.itemsPerBox) : '—'} <span className="text-xs text-slate-500">+KDV</span>
-                      </p>
-                    )}
-                  </div>
-                  {(product.priceUSD && product.bulkPricingUSD && product.bulkPricingUSD.length > 0) && (
-                    <div className="rounded-xl bg-amber-50 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
-                        Toplu Alım Avantajı
-                      </p>
-                      <ul className="mt-3 space-y-2 text-sm text-amber-800">
-                        {product.bulkPricingUSD?.slice(0, 3).map((tier) => {
-                          const itemsPerBox = product.packageInfo?.itemsPerBox || 1;
-                          const totalItems = tier.minQty * itemsPerBox;
-                          return (
-                            <li key={`${product.id}-tier-${tier.minQty}`} className="flex items-center justify-between">
-                              <span>
-                                {tier.minQty}+ koli
-                                {itemsPerBox > 1 && (
-                                  <span className="text-xs text-slate-600"> ({totalItems.toLocaleString('tr-TR')}+ adet)</span>
-                                )}
-                              </span>
-                              <span className="font-semibold">{formatDualPrice(tier.price, rate, true)} <span className="text-xs font-normal">+KDV</span></span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-4 flex flex-col gap-3">
-                  <AddToCartButton
-                    product={{
-                      id: product.id,
-                      title: product.title,
-                      slug: product.slug,
-                      price: product.priceUSD && rate > 0 ? (product.priceUSD * rate) : 0,
-                      stock: product.stock,
-                      images: product.images,
-                      bulkPricing: product.priceUSD && product.bulkPricingUSD
-                        ? product.bulkPricingUSD.map(tier => ({ minQty: tier.minQty, price: tier.price * rate }))
-                        : undefined,
-                      packageInfo: product.packageInfo,
-                      specifications: product.specifications,
-                    }}
-                  />
-                  <Link
-                    href={`/products/${product.slug}`}
-                    className="inline-flex items-center justify-center rounded-full border border-amber-500 px-5 py-2 text-sm font-semibold text-amber-600 transition hover:bg-amber-500 hover:text-white"
-                  >
-                    Detayları Gör
-                  </Link>
-                </div>
-              </div>
-            </article>
+            <ProductCard key={product.id} product={product} rate={rate} />
           ))}
         </div>
 
