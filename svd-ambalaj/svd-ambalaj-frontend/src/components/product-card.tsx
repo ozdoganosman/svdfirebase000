@@ -120,7 +120,7 @@ export function ProductCard({ product, rate }: ProductCardProps) {
 
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm shadow-slate-200/60 transition hover:-translate-y-1 hover:shadow-lg">
-      <div className="relative h-56 w-full overflow-hidden bg-slate-100">
+      <Link href={`/products/${product.slug}`} className="relative h-56 w-full overflow-hidden bg-slate-100 block cursor-pointer">
         <Image
           src={resolveProductImage()}
           alt={product.title}
@@ -129,10 +129,12 @@ export function ProductCard({ product, rate }: ProductCardProps) {
           className="object-contain p-2 transition duration-500 hover:scale-110"
           loading="lazy"
         />
-      </div>
+      </Link>
       <div className="flex flex-1 flex-col gap-4 p-6">
         <header className="space-y-2">
-          <h2 className="text-xl font-semibold text-slate-900">{product.title}</h2>
+          <Link href={`/products/${product.slug}`}>
+            <h2 className="text-xl font-semibold text-slate-900 hover:text-amber-600 transition cursor-pointer">{product.title}</h2>
+          </Link>
           {product.description && (
             <p className="text-sm text-slate-600">{product.description}</p>
           )}
