@@ -196,24 +196,6 @@ export function ProductCard({ product, rate }: ProductCardProps) {
           </div>
         )}
 
-        {/* Bulk Pricing - Compact */}
-        {product.priceUSD && product.bulkPricingUSD && product.bulkPricingUSD.length > 0 && (
-          <div className="bg-amber-50 rounded-lg px-2 py-1.5 text-[10px]">
-            <p className="font-semibold text-amber-700 mb-1">Toplu Alım:</p>
-            <div className="space-y-0.5 text-amber-800">
-              {product.bulkPricingUSD?.slice(0, 2).map((tier) => {
-                const tierPrice = tier.price + priceModifier;
-                return (
-                  <div key={`tier-${tier.minQty}`} className="flex justify-between">
-                    <span>{tier.minQty}+ koli</span>
-                    <span className="font-medium">{formatDualPrice(tierPrice, rate, true)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         <div className="mt-auto pt-2 border-t border-slate-100">
           <p className="text-lg font-bold text-amber-600">
             {effectivePriceUSD && rate > 0
@@ -221,6 +203,12 @@ export function ProductCard({ product, rate }: ProductCardProps) {
               : "—"}
             <span className="text-[10px] font-normal text-slate-400 ml-1">+KDV</span>
           </p>
+          {/* Minimum fiyat gösterimi */}
+          {product.bulkPricingUSD && product.bulkPricingUSD.length > 0 && rate > 0 && (
+            <p className="text-[10px] text-green-600 font-medium">
+              {formatDualPrice(product.bulkPricingUSD[product.bulkPricingUSD.length - 1].price + priceModifier, rate, false)}&apos;e varan fiyatlarla
+            </p>
+          )}
           {product.packageInfo && (
             <p className="text-[10px] text-slate-500">
               1 {product.packageInfo.boxLabel.toLowerCase()} = {effectivePriceUSD && rate > 0

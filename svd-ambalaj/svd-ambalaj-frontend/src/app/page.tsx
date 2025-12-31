@@ -259,58 +259,74 @@ export default async function Home() {
 
             {/* Sağ - Floating Products (sadece görseller) */}
             <div className="flex-1 relative h-[350px] lg:h-[400px] hidden sm:block overflow-hidden">
-              {/* Tüm ürünler havada süzülüyor - çok dağınık kaotik yerleşim */}
-              {products.map((product, index) => {
-                // Çoklu seed ile daha kaotik dağılım
-                const seed1 = (index * 7919 + 13) % 101;
-                const seed2 = (index * 6563 + 29) % 103;
-                const seed3 = (index * 4231 + 41) % 107;
-                const seed4 = (index * 3571 + 53) % 109;
-                const seed5 = (index * 2749 + 67) % 113;
+              {/* Grid-bazlı yerleşim ile üst üste gelmeyi engelle */}
+              {(() => {
+                // Grid boyutları - ürün sayısına göre ayarla
+                const cols = 6;
+                const rows = Math.ceil(products.length / cols);
+                const cellWidth = 100 / cols; // Her hücre genişliği %
+                const cellHeight = 100 / rows; // Her hücre yüksekliği %
 
-                // Kaotik pozisyonlar - tam alan kullanımı
-                const baseTop = (seed1 / 101) * 85 + (seed3 / 107) * 10; // 0-95%
-                const baseLeft = (seed2 / 103) * 90 + (seed4 / 109) * 8; // 0-98%
+                return products.map((product, index) => {
+                  // Grid pozisyonu
+                  const gridCol = index % cols;
+                  const gridRow = Math.floor(index / cols);
 
-                // Daha geniş rotasyon aralığı (-45 ile +45 derece)
-                const rotate = ((seed3 / 107) - 0.5) * 90;
+                  // Seed'ler - hücre içi rastgele offset için
+                  const seed1 = (index * 7919 + 13) % 101;
+                  const seed2 = (index * 6563 + 29) % 103;
+                  const seed3 = (index * 4231 + 41) % 107;
+                  const seed4 = (index * 3571 + 53) % 109;
+                  const seed5 = (index * 2749 + 67) % 113;
 
-                // Kaotik animasyon parametreleri
-                const delay = (seed4 / 109) * 5; // 0-5 saniye delay
-                const scale = 0.8 + (seed5 / 113) * 0.4; // 0.8 - 1.2 arası (daha büyük)
-                const duration = 3 + (seed1 / 101) * 6; // 3-9 saniye
+                  // Hücre içinde rastgele offset (hücrenin %20-80'i arasında)
+                  const offsetX = 20 + (seed1 / 101) * 60; // Hücre içi X offset %
+                  const offsetY = 20 + (seed2 / 103) * 60; // Hücre içi Y offset %
 
-                // Rastgele z-index
-                const zIndex = Math.floor((seed2 / 103) * 20) + 1;
+                  // Final pozisyonlar
+                  const baseLeft = gridCol * cellWidth + (offsetX / 100) * cellWidth;
+                  const baseTop = gridRow * cellHeight + (offsetY / 100) * cellHeight;
 
-                return (
-                  <Link
-                    key={product.id}
-                    href={`/products/${product.slug}`}
-                    className="absolute transition-transform duration-300 hover:scale-150 hover:z-50"
-                    style={{
-                      top: `${baseTop}%`,
-                      left: `${baseLeft}%`,
-                      transform: `rotate(${rotate}deg) scale(${scale})`,
-                      animation: `float ${duration}s ease-in-out infinite`,
-                      animationDelay: `${delay}s`,
-                      zIndex,
-                    }}
-                    title={product.title}
-                  >
-                    <div className="relative w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 drop-shadow-lg hover:drop-shadow-2xl transition-all duration-300">
-                      <Image
-                        src={resolveProductImage(product)}
-                        alt={product.title}
-                        fill
-                        className="object-contain"
-                        sizes="48px"
-                        loading={index < 6 ? "eager" : "lazy"}
-                      />
-                    </div>
-                  </Link>
-                );
-              })}
+                  // Rotasyon (-30 ile +30 derece)
+                  const rotate = ((seed3 / 107) - 0.5) * 60;
+
+                  // Animasyon parametreleri
+                  const delay = (seed4 / 109) * 5;
+                  const scale = 0.85 + (seed5 / 113) * 0.3; // 0.85 - 1.15 arası
+                  const duration = 3 + (seed1 / 101) * 5;
+
+                  // Rastgele z-index
+                  const zIndex = Math.floor((seed2 / 103) * 20) + 1;
+
+                  return (
+                    <Link
+                      key={product.id}
+                      href={`/products/${product.slug}`}
+                      className="absolute transition-transform duration-300 hover:scale-150 hover:z-50"
+                      style={{
+                        top: `${baseTop}%`,
+                        left: `${baseLeft}%`,
+                        transform: `rotate(${rotate}deg) scale(${scale})`,
+                        animation: `float ${duration}s ease-in-out infinite`,
+                        animationDelay: `${delay}s`,
+                        zIndex,
+                      }}
+                      title={product.title}
+                    >
+                      <div className="relative w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 drop-shadow-lg hover:drop-shadow-2xl transition-all duration-300">
+                        <Image
+                          src={resolveProductImage(product)}
+                          alt={product.title}
+                          fill
+                          className="object-contain"
+                          sizes="48px"
+                          loading={index < 6 ? "eager" : "lazy"}
+                        />
+                      </div>
+                    </Link>
+                  );
+                });
+              })()}
 
               {/* Dekoratif blur efektler */}
               <div className="absolute top-[15%] right-[30%] w-20 h-20 rounded-full bg-amber-400/15 blur-2xl animate-pulse pointer-events-none" />
