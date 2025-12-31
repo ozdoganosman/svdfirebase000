@@ -15,7 +15,6 @@ export default function PricingSettingsPage() {
   const [formData, setFormData] = useState({
     currency: "TRY",
     taxRate: 20,
-    showPricesWithTax: true,
     allowGuestCheckout: false,
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -37,7 +36,6 @@ export default function PricingSettingsPage() {
       setFormData({
         currency: data.currency || "TRY",
         taxRate: data.taxRate || 20,
-        showPricesWithTax: data.showPricesWithTax ?? true,
         allowGuestCheckout: data.allowGuestCheckout ?? false,
       });
     } catch (err) {
@@ -75,7 +73,6 @@ export default function PricingSettingsPage() {
       setFormData({
         currency: settings.currency || "TRY",
         taxRate: settings.taxRate || 20,
-        showPricesWithTax: settings.showPricesWithTax ?? true,
         allowGuestCheckout: settings.allowGuestCheckout ?? false,
       });
     }
@@ -163,18 +160,6 @@ export default function PricingSettingsPage() {
               placeholder="20"
             />
           </SettingsField>
-        </SettingsSection>
-
-        <SettingsSection
-          title="Fiyat Gösterimi"
-          description="Müşterilere fiyatların nasıl gösterileceğini belirleyin"
-        >
-          <SettingsToggle
-            checked={formData.showPricesWithTax}
-            onChange={(checked) => handleChange("showPricesWithTax", checked)}
-            label="Fiyatları KDV Dahil Göster"
-            description="Aktif olduğunda tüm fiyatlar KDV dahil olarak gösterilir"
-          />
         </SettingsSection>
 
         <SettingsSection

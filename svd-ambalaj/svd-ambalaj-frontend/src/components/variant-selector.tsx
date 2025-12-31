@@ -106,7 +106,7 @@ export function VariantSelector({ variants, onSelectionChange }: VariantSelector
                   {option.name}
                   {!isOutOfStock && (
                     <span className={`ml-2 text-xs ${isSelected ? 'text-purple-200' : 'text-slate-400'}`}>
-                      ({option.stock} adet)
+                      ({option.stock} koli)
                     </span>
                   )}
                   {isOutOfStock && (
@@ -130,7 +130,7 @@ export function VariantSelector({ variants, onSelectionChange }: VariantSelector
             </svg>
             <span className="font-medium">Seçim tamamlandı!</span>
             <span className="text-green-600">
-              Mevcut stok: {calculateAvailableStock(selections)} adet
+              Mevcut stok: {calculateAvailableStock(selections)} koli
             </span>
           </div>
         </div>

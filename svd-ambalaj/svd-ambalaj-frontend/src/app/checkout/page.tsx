@@ -55,7 +55,7 @@ const defaultState: CheckoutFormState = {
 function CheckoutPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const {
     items,
     subtotal,
@@ -94,6 +94,13 @@ function CheckoutPageContent() {
     discountValue: number;
     message: string;
   } | null>(null);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/auth/login?redirect=/checkout");
+    }
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     getCurrentRate().then(rate => setExchangeRate(rate.rate)).catch(() => setExchangeRate(null));
@@ -470,6 +477,22 @@ function CheckoutPageContent() {
       setStatus("idle");
     }
   };
+
+  // Show loading or redirect if not authenticated
+  if (authLoading || !user) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-16">
+        <div className="mx-auto max-w-6xl px-6 sm:px-10">
+          <div className="text-center py-20">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-amber-500 border-r-transparent"></div>
+            <p className="mt-4 text-slate-600">
+              {authLoading ? "Yükleniyor..." : "Giriş sayfasına yönlendiriliyorsunuz..."}
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-16 text-slate-900">

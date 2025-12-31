@@ -4,7 +4,6 @@ import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { AppProviders } from "@/components/app-providers";
-import ExchangeRateBanner from "@/components/exchange-rate-banner";
 import { DynamicFavicon } from "@/components/dynamic-favicon";
 import { OrganizationJsonLd, WebSiteJsonLd, LocalBusinessJsonLd } from "@/components/seo/json-ld";
 import { GoogleAnalytics } from "@/components/google-analytics";
@@ -113,7 +112,6 @@ export default function RootLayout({
         <AppProviders>
           <DynamicFavicon />
           <SiteHeader />
-          <ExchangeRateBanner />
           <div className="min-h-screen">
             {children}
           </div>

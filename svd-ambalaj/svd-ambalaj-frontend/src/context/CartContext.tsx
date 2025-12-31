@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Toast } from "@/components/toast";
 import { getCurrentRate, convertUSDToTRY } from "@/lib/currency";
+import { cachedFetch, CACHE_KEYS, LONG_CACHE_DURATION } from "@/lib/api-cache";
 
 type ComboSettings = {
   isActive: boolean;
@@ -187,40 +188,50 @@ export function CartProvider({ children }: CartProviderProps) {
       });
   }, []);
 
-  // Fetch pricing settings (taxRate) on mount
+  // Fetch pricing settings (taxRate) on mount - with cache
   useEffect(() => {
     const fetchPricingSettings = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api-tfi7rlxtca-uc.a.run.app'}/pricing-settings`);
-        if (!response.ok) {
-          console.error("Failed to fetch pricing settings");
-          return;
-        }
-        const data = await response.json();
+        const data = await cachedFetch(
+          CACHE_KEYS.PRICING_SETTINGS,
+          async () => {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api-tfi7rlxtca-uc.a.run.app'}/pricing-settings`);
+            if (!response.ok) {
+              throw new Error("Failed to fetch pricing settings");
+            }
+            return response.json();
+          },
+          { duration: LONG_CACHE_DURATION }
+        );
         if (data.settings?.taxRate !== undefined) {
           setTaxRate(data.settings.taxRate);
         }
       } catch (error) {
-        console.error("Error fetching pricing settings:", error);
+        console.error("Failed to fetch pricing settings");
       }
     };
 
     fetchPricingSettings();
   }, []);
 
-  // Fetch combo settings on mount
+  // Fetch combo settings on mount - with cache
   useEffect(() => {
     const fetchComboSettings = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api-tfi7rlxtca-uc.a.run.app'}/combo-settings`);
-        if (!response.ok) {
-          console.error("Failed to fetch combo settings");
-          return;
-        }
-        const data = await response.json();
+        const data = await cachedFetch(
+          CACHE_KEYS.COMBO_SETTINGS,
+          async () => {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api-tfi7rlxtca-uc.a.run.app'}/combo-settings`);
+            if (!response.ok) {
+              throw new Error("Failed to fetch combo settings");
+            }
+            return response.json();
+          },
+          { duration: LONG_CACHE_DURATION }
+        );
         setComboSettings(data.settings);
       } catch (error) {
-        console.error("Error fetching combo settings:", error);
+        console.error("Failed to fetch combo settings");
       }
     };
 

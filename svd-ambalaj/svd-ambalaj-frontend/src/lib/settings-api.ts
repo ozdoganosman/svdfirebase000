@@ -4,6 +4,7 @@
  */
 
 import { apiFetch } from "./admin-api";
+import { cachedFetch, CACHE_KEYS, LONG_CACHE_DURATION, invalidateCache } from "./api-cache";
 
 // ==================== TYPES ====================
 
@@ -20,7 +21,6 @@ export type PricingSettings = SiteSettings & {
   section: "pricing";
   currency?: string;
   taxRate?: number;
-  showPricesWithTax?: boolean;
   allowGuestCheckout?: boolean;
 };
 
@@ -159,19 +159,33 @@ export type UserRoleInfo = {
 // ==================== SETTINGS API ====================
 
 /**
- * Get all site settings (requires authentication)
+ * Get all site settings (requires authentication) - with cache
  */
-export async function getAllSettings(): Promise<Record<string, SiteSettings>> {
-  const response = await apiFetch<{ settings: Record<string, SiteSettings> }>("/settings");
-  return response.settings;
+export async function getAllSettings(forceRefresh = false): Promise<Record<string, SiteSettings>> {
+  const data = await cachedFetch(
+    CACHE_KEYS.ALL_SETTINGS,
+    async () => {
+      const response = await apiFetch<{ settings: Record<string, SiteSettings> }>("/settings");
+      return response;
+    },
+    { duration: LONG_CACHE_DURATION, forceRefresh }
+  );
+  return data.settings;
 }
 
 /**
- * Get public site settings (no auth required - for header/footer)
+ * Get public site settings (no auth required - for header/footer) - with cache
  */
-export async function getPublicSiteSettings(): Promise<SiteInfoSettings> {
-  const response = await apiFetch<{ settings: SiteInfoSettings }>("/settings/site/public");
-  return response.settings;
+export async function getPublicSiteSettings(forceRefresh = false): Promise<SiteInfoSettings> {
+  const data = await cachedFetch(
+    CACHE_KEYS.PUBLIC_SITE_SETTINGS,
+    async () => {
+      const response = await apiFetch<{ settings: SiteInfoSettings }>("/settings/site/public");
+      return response;
+    },
+    { duration: LONG_CACHE_DURATION, forceRefresh }
+  );
+  return data.settings;
 }
 
 /**
@@ -184,6 +198,7 @@ export async function getSettings<T extends SiteSettings>(section: string): Prom
 
 /**
  * Update settings section (super admin only)
+ * Invalidates relevant caches after update
  */
 export async function updateSettings<T extends SiteSettings>(
   section: string,
@@ -193,6 +208,13 @@ export async function updateSettings<T extends SiteSettings>(
     method: "PUT",
     body: JSON.stringify(data),
   });
+
+  // Invalidate caches after update
+  invalidateCache(CACHE_KEYS.ALL_SETTINGS);
+  if (section === "site") {
+    invalidateCache(CACHE_KEYS.PUBLIC_SITE_SETTINGS);
+  }
+
   return response.settings;
 }
 
@@ -327,6 +349,7 @@ export async function getAdminRole(userId: string): Promise<AdminRole> {
 
 /**
  * Set admin role (super admin only)
+ * Invalidates user role cache after update
  */
 export async function setAdminRole(
   userId: string,
@@ -336,6 +359,10 @@ export async function setAdminRole(
     method: "PUT",
     body: JSON.stringify(data),
   });
+
+  // Invalidate user role cache
+  invalidateCache(CACHE_KEYS.USER_ROLE);
+
   return response.role;
 }
 
@@ -349,9 +376,15 @@ export async function deleteAdminRole(userId: string): Promise<void> {
 }
 
 /**
- * Get current user's role and permissions
+ * Get current user's role and permissions - with cache
  */
-export async function getCurrentUserRole(): Promise<UserRoleInfo> {
-  const response = await apiFetch<UserRoleInfo>("/admin/me/role");
-  return response;
+export async function getCurrentUserRole(forceRefresh = false): Promise<UserRoleInfo> {
+  return cachedFetch(
+    CACHE_KEYS.USER_ROLE,
+    async () => {
+      const response = await apiFetch<UserRoleInfo>("/admin/me/role");
+      return response;
+    },
+    { duration: LONG_CACHE_DURATION, forceRefresh }
+  );
 }

@@ -2884,7 +2884,7 @@ export { updateExchangeRate, forceUpdateExchangeRate, keepSiteWarm } from "./sch
 // Export API handler with v2 functions (increased memory for media uploads)
 export const api = onRequest(
   {
-    memory: "1GiB",
+    memory: "2GiB",
     timeoutSeconds: 120,
     cors: [
       "https://spreyvalfdunyasi.com",

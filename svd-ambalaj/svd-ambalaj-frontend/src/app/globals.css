@@ -50,3 +50,13 @@ body {
     opacity: 0;
   }
 }
+
+/* Floating animation for hero products */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(var(--rotate, 0deg));
+  }
+  50% {
+    transform: translateY(-15px) rotate(var(--rotate, 0deg));
+  }
+}

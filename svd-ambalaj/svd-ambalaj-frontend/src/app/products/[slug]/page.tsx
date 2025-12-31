@@ -443,6 +443,7 @@ export default async function ProductDetailPage({
                 specifications: product.specifications,
                 variants: product.variants,
                 hasVariants: product.hasVariants,
+                images: product.images,
               }}
             />
 

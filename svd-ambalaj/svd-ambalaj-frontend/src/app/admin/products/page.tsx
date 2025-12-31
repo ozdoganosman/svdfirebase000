@@ -662,7 +662,9 @@ export default function AdminProductsPage() {
                   <th className="px-3 py-2 font-medium text-slate-700">Başlık</th>
                   <th className="px-3 py-2 font-medium text-slate-700">Kategori</th>
                   <th className="px-3 py-2 font-medium text-slate-700">Fiyat</th>
-                  <th className="px-3 py-2 font-medium text-slate-700">Stok</th>
+                  <th className="px-3 py-2 font-medium text-slate-700">Koli İçi</th>
+                  <th className="px-3 py-2 font-medium text-slate-700">Stok (Koli)</th>
+                  <th className="px-3 py-2 font-medium text-slate-700">Stok (Adet)</th>
                   <th className="px-3 py-2 font-medium text-slate-700">Oluşturma</th>
                   <th className="px-3 py-2 font-medium text-slate-700">İşlemler</th>
                 </tr>
@@ -687,7 +689,43 @@ export default function AdminProductsPage() {
                           return <span className="text-slate-400">Fiyat girilmemiş</span>;
                         })()}
                       </td>
-                      <td className="px-3 py-2 text-slate-600">{product.stock}</td>
+                      <td className="px-3 py-2 text-slate-600">
+                        <span className="font-medium text-blue-700">
+                          {product.packageInfo?.itemsPerBox ?? 1}
+                        </span>
+                        <span className="text-xs text-slate-400 ml-1">adet</span>
+                      </td>
+                      <td className="px-3 py-2 text-slate-600">
+                        {product.variants && product.variants.length > 0 ? (
+                          <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                            Segmentli
+                          </span>
+                        ) : (
+                          <>
+                            <span className="font-medium">{product.stock ?? 0}</span>
+                            <span className="text-xs text-slate-400 ml-1">koli</span>
+                          </>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        {product.variants && product.variants.length > 0 ? (
+                          <span className="text-xs text-purple-600">
+                            {product.variants.reduce((total, seg) => total + seg.options.length, 0)} seçenek
+                          </span>
+                        ) : (
+                          (() => {
+                            const itemsPerBox = product.packageInfo?.itemsPerBox ?? 1;
+                            const stock = product.stock ?? 0;
+                            const totalUnits = stock * itemsPerBox;
+                            return (
+                              <span className="font-semibold text-green-700">
+                                {totalUnits.toLocaleString('tr-TR')}
+                                <span className="text-xs text-slate-400 ml-1 font-normal">adet</span>
+                              </span>
+                            );
+                          })()
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-xs text-slate-500">
                         {product.createdAt ? new Date(product.createdAt).toLocaleString("tr-TR") : "-"}
                       </td>
@@ -837,7 +875,9 @@ export default function AdminProductsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.stock}>Stok</label>
+            <label className="block text-sm font-medium text-slate-700" htmlFor={FIELD_IDS.stock}>
+              Stok (Koli)
+            </label>
             <input
               id={FIELD_IDS.stock}
               name="stock"
@@ -845,7 +885,15 @@ export default function AdminProductsPage() {
               value={form.stock ?? ""}
               onChange={(event) => handleChange("stock", event.target.value)}
               className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+              placeholder="Örn: 100"
             />
+            <p className="mt-1 text-xs text-slate-500">
+              Koli adedi girin. {form.packageInfo?.itemsPerBox && form.stock ? (
+                <span className="font-medium text-amber-600">
+                  = {(Number(form.stock) * Number(form.packageInfo.itemsPerBox)).toLocaleString('tr-TR')} adet
+                </span>
+              ) : null}
+            </p>
           </div>
           
           {/* KOLI BILGILERI SECTION */}
@@ -1388,7 +1436,7 @@ export default function AdminProductsPage() {
                               placeholder="Seçenek adı"
                             />
                             <div className="flex items-center gap-1">
-                              <label className="text-xs text-purple-700">Stok:</label>
+                              <label className="text-xs text-purple-700">Stok (Koli):</label>
                               <input
                                 type="number"
                                 value={option.stock}
@@ -1407,9 +1455,16 @@ export default function AdminProductsPage() {
                                     ),
                                   }));
                                 }}
-                                className="w-20 rounded-md border border-purple-200 px-2 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
+                                className="w-24 rounded-md border border-purple-200 px-2 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
                                 min="0"
+                                placeholder="Koli"
+                                title={form.packageInfo?.itemsPerBox && option.stock ? `= ${(option.stock * Number(form.packageInfo.itemsPerBox)).toLocaleString('tr-TR')} adet` : undefined}
                               />
+                              {form.packageInfo?.itemsPerBox && option.stock > 0 && (
+                                <span className="text-xs text-amber-600 font-medium whitespace-nowrap">
+                                  = {(option.stock * Number(form.packageInfo.itemsPerBox)).toLocaleString('tr-TR')} adet
+                                </span>
+                              )}
                             </div>
                             <button
                               type="button"

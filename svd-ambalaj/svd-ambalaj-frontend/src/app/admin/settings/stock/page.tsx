@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getSettings, updateSettings, StockSettings } from "@/lib/settings-api";
-import { apiFetch } from "@/lib/admin-api";
+import { apiFetch, AdminProduct } from "@/lib/admin-api";
 import {
   SettingsSection,
   SettingsField,
@@ -21,6 +21,26 @@ type StockAlertData = {
     lowCount: number;
     totalAlerts: number;
   };
+};
+
+type StockEditItem = {
+  id: string;
+  title: string;
+  stock: number;
+  newStock: string;
+  itemsPerBox: number;
+  newItemsPerBox: string;
+  hasVariants: boolean;
+  variants?: Array<{
+    id: string;
+    name: string;
+    options: Array<{
+      id: string;
+      name: string;
+      stock: number;
+      newStock: string;
+    }>;
+  }>;
 };
 
 export default function StockSettingsPage() {
@@ -43,9 +63,17 @@ export default function StockSettingsPage() {
   const [alertsLoading, setAlertsLoading] = useState(false);
   const [sendingAlert, setSendingAlert] = useState(false);
 
+  // Quick stock edit state
+  const [stockEditItems, setStockEditItems] = useState<StockEditItem[]>([]);
+  const [stockEditLoading, setStockEditLoading] = useState(false);
+  const [stockSaving, setStockSaving] = useState<string | null>(null);
+  const [stockEditSuccess, setStockEditSuccess] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'settings' | 'quick-edit'>('settings');
+
   useEffect(() => {
     loadSettings();
     loadStockAlerts();
+    loadProductsForStockEdit();
   }, []);
 
   const loadStockAlerts = async () => {
@@ -57,6 +85,128 @@ export default function StockSettingsPage() {
       console.error("Failed to load stock alerts:", err);
     } finally {
       setAlertsLoading(false);
+    }
+  };
+
+  const loadProductsForStockEdit = async () => {
+    try {
+      setStockEditLoading(true);
+      const data = await apiFetch<{ products: AdminProduct[] }>("/products");
+      const items: StockEditItem[] = (data.products ?? []).map((p) => ({
+        id: p.id,
+        title: p.title,
+        stock: p.stock ?? 0,
+        newStock: String(p.stock ?? 0),
+        itemsPerBox: p.packageInfo?.itemsPerBox ?? 1,
+        newItemsPerBox: String(p.packageInfo?.itemsPerBox ?? 1),
+        hasVariants: !!(p.variants && p.variants.length > 0),
+        variants: p.variants?.map((seg) => ({
+          id: seg.id,
+          name: seg.name,
+          options: seg.options.map((opt) => ({
+            id: opt.id,
+            name: opt.name,
+            stock: opt.stock ?? 0,
+            newStock: String(opt.stock ?? 0),
+          })),
+        })),
+      }));
+      setStockEditItems(items);
+    } catch (err) {
+      console.error("Failed to load products for stock edit:", err);
+    } finally {
+      setStockEditLoading(false);
+    }
+  };
+
+  const handleStockChange = (productId: string, value: string) => {
+    setStockEditItems((prev) =>
+      prev.map((item) =>
+        item.id === productId ? { ...item, newStock: value } : item
+      )
+    );
+  };
+
+  const handleItemsPerBoxChange = (productId: string, value: string) => {
+    setStockEditItems((prev) =>
+      prev.map((item) =>
+        item.id === productId ? { ...item, newItemsPerBox: value } : item
+      )
+    );
+  };
+
+  const handleVariantStockChange = (productId: string, segmentId: string, optionId: string, value: string) => {
+    setStockEditItems((prev) =>
+      prev.map((item) =>
+        item.id === productId
+          ? {
+              ...item,
+              variants: item.variants?.map((seg) =>
+                seg.id === segmentId
+                  ? {
+                      ...seg,
+                      options: seg.options.map((opt) =>
+                        opt.id === optionId ? { ...opt, newStock: value } : opt
+                      ),
+                    }
+                  : seg
+              ),
+            }
+          : item
+      )
+    );
+  };
+
+  const handleSaveStock = async (productId: string) => {
+    const item = stockEditItems.find((i) => i.id === productId);
+    if (!item) return;
+
+    setStockSaving(productId);
+    setStockEditSuccess(null);
+
+    try {
+      const newItemsPerBox = Number(item.newItemsPerBox) || 1;
+      const itemsPerBoxChanged = newItemsPerBox !== item.itemsPerBox;
+
+      if (item.hasVariants && item.variants) {
+        // Update variant stocks
+        const updatedVariants = item.variants.map((seg) => ({
+          ...seg,
+          options: seg.options.map((opt) => ({
+            ...opt,
+            stock: Number(opt.newStock) || 0,
+          })),
+        }));
+        const updateData: Record<string, unknown> = { variants: updatedVariants };
+        if (itemsPerBoxChanged) {
+          updateData.packageInfo = { itemsPerBox: newItemsPerBox };
+        }
+        await apiFetch(`/products/${productId}`, {
+          method: "PUT",
+          body: JSON.stringify(updateData),
+        });
+      } else {
+        // Update main stock and itemsPerBox
+        const newStock = Number(item.newStock) || 0;
+        const updateData: Record<string, unknown> = { stock: newStock };
+        if (itemsPerBoxChanged) {
+          updateData.packageInfo = { itemsPerBox: newItemsPerBox };
+        }
+        await apiFetch(`/products/${productId}`, {
+          method: "PUT",
+          body: JSON.stringify(updateData),
+        });
+      }
+
+      setStockEditSuccess(productId);
+      setTimeout(() => setStockEditSuccess(null), 2000);
+      await loadProductsForStockEdit();
+      await loadStockAlerts();
+    } catch (err) {
+      console.error("Failed to save stock:", err);
+      setError("Stok güncellenirken hata oluştu");
+    } finally {
+      setStockSaving(null);
     }
   };
 
@@ -167,10 +317,36 @@ export default function StockSettingsPage() {
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="p-6">
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-slate-900">Stok Yönetimi Ayarları</h2>
+          <h2 className="text-xl font-bold text-slate-900">Stok Yönetimi</h2>
           <p className="text-sm text-slate-600 mt-1">
-            Stok uyarı seviyeleri ve bildirim ayarlarını yapılandırın
+            Stok seviyelerini hızlıca güncelleyin veya ayarları yapılandırın
           </p>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-slate-200">
+          <button
+            type="button"
+            onClick={() => setActiveTab('quick-edit')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
+              activeTab === 'quick-edit'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            📦 Hızlı Stok Güncelleme
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('settings')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
+              activeTab === 'settings'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            ⚙️ Stok Ayarları
+          </button>
         </div>
 
         {error && (
@@ -197,6 +373,152 @@ export default function StockSettingsPage() {
           </div>
         )}
 
+        {/* Quick Stock Edit Tab */}
+        {activeTab === 'quick-edit' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-600">
+                Toplam {stockEditItems.length} ürün
+              </p>
+              <button
+                type="button"
+                onClick={loadProductsForStockEdit}
+                disabled={stockEditLoading}
+                className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+              >
+                <svg className={`w-4 h-4 ${stockEditLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Yenile
+              </button>
+            </div>
+
+            {stockEditLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {stockEditItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`p-4 border rounded-lg transition ${
+                      stockEditSuccess === item.id
+                        ? 'border-green-400 bg-green-50'
+                        : 'border-slate-200 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-slate-900 truncate">{item.title}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-slate-500">Koli içi:</span>
+                          <input
+                            type="number"
+                            value={item.newItemsPerBox}
+                            onChange={(e) => handleItemsPerBoxChange(item.id, e.target.value)}
+                            className="w-20 px-2 py-1 text-xs border border-slate-200 rounded-md focus:border-indigo-500 focus:outline-none"
+                            min="1"
+                          />
+                          <span className="text-xs text-slate-500">adet</span>
+                        </div>
+                      </div>
+
+                      {item.hasVariants ? (
+                        <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                          Segmentli
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              value={item.newStock}
+                              onChange={(e) => handleStockChange(item.id, e.target.value)}
+                              className="w-20 px-2 py-1.5 text-sm border border-slate-200 rounded-md focus:border-indigo-500 focus:outline-none"
+                              min="0"
+                            />
+                            <span className="text-xs text-slate-500">koli</span>
+                          </div>
+                          {Number(item.newItemsPerBox) > 1 && Number(item.newStock) > 0 && (
+                            <span className="text-xs text-amber-600 font-medium whitespace-nowrap">
+                              = {(Number(item.newStock) * Number(item.newItemsPerBox)).toLocaleString('tr-TR')} adet
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleSaveStock(item.id)}
+                            disabled={stockSaving === item.id || (item.newStock === String(item.stock) && item.newItemsPerBox === String(item.itemsPerBox))}
+                            className="px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                          >
+                            {stockSaving === item.id ? (
+                              <span className="flex items-center gap-1">
+                                <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                              </span>
+                            ) : stockEditSuccess === item.id ? '✓' : 'Kaydet'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Variant Options */}
+                    {item.hasVariants && item.variants && (
+                      <div className="mt-3 pt-3 border-t border-slate-100">
+                        {item.variants.map((segment) => (
+                          <div key={segment.id} className="mb-3 last:mb-0">
+                            <p className="text-xs font-medium text-purple-700 mb-2 uppercase tracking-wide">
+                              {segment.name}
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                              {segment.options.map((option) => (
+                                <div key={option.id} className="flex items-center gap-2 bg-slate-50 rounded-md px-2 py-1.5">
+                                  <span className="text-xs text-slate-700 flex-1 truncate">{option.name}</span>
+                                  <input
+                                    type="number"
+                                    value={option.newStock}
+                                    onChange={(e) => handleVariantStockChange(item.id, segment.id, option.id, e.target.value)}
+                                    className="w-16 px-1.5 py-1 text-xs border border-slate-200 rounded focus:border-indigo-500 focus:outline-none"
+                                    min="0"
+                                  />
+                                  <span className="text-[10px] text-slate-400">koli</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleSaveStock(item.id)}
+                            disabled={stockSaving === item.id}
+                            className="px-4 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                          >
+                            {stockSaving === item.id ? (
+                              <span className="flex items-center gap-1">
+                                <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Kaydediliyor...
+                              </span>
+                            ) : stockEditSuccess === item.id ? '✓ Kaydedildi' : 'Tümünü Kaydet'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+        <>
         <SettingsSection
           title="Stok Seviyeleri"
           description="Stok uyarıları için eşik değerlerini belirleyin"
@@ -483,6 +805,8 @@ export default function StockSettingsPage() {
               {settings.updatedBy && <p>Güncelleyen: {settings.updatedBy}</p>}
             </div>
           </div>
+        )}
+        </>
         )}
       </div>
 

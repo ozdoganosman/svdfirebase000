@@ -82,8 +82,8 @@ export function formatCurrency(
   const defaults: Intl.NumberFormatOptions = {
     style: "currency",
     currency: currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
   };
 
   const formatter = new Intl.NumberFormat("tr-TR", { ...defaults, ...options });

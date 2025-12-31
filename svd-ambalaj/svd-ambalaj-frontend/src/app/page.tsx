@@ -255,70 +255,67 @@ export default async function Home() {
               <p className="max-w-lg text-lg text-slate-300">
                 {hero.description}
               </p>
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href={hero.primaryButton.href}
-                  className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-6 py-3 font-semibold text-white shadow-lg shadow-amber-500/25 transition hover:bg-amber-400"
-                >
-                  {hero.primaryButton.text}
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
-                <Link
-                  href={hero.secondaryButton.href}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-3 font-semibold text-white transition hover:bg-white/10"
-                >
-                  {hero.secondaryButton.text}
-                </Link>
-              </div>
-              {/* Mini Stats */}
-              <div className="flex flex-wrap gap-6 pt-4 text-sm">
-                <div>
-                  <span className="text-2xl font-bold text-amber-400">{products.length}+</span>
-                  <span className="ml-2 text-slate-400">Ürün</span>
-                </div>
-                <div>
-                  <span className="text-2xl font-bold text-amber-400">{categories.length}</span>
-                  <span className="ml-2 text-slate-400">Kategori</span>
-                </div>
-                {hero.stats.map((stat, index) => (
-                  <div key={index}>
-                    <span className="text-2xl font-bold text-amber-400">{stat.value}</span>
-                    <span className="ml-2 text-slate-400">{stat.label}</span>
-                  </div>
-                ))}
-              </div>
             </div>
 
-            {/* Sağ - Featured Products Preview */}
-            <div className="flex-1">
-              <div className="grid grid-cols-2 gap-3">
-                {products.slice(0, 4).map((product, index) => (
+            {/* Sağ - Floating Products (sadece görseller) */}
+            <div className="flex-1 relative h-[350px] lg:h-[400px] hidden sm:block overflow-hidden">
+              {/* Tüm ürünler havada süzülüyor - çok dağınık kaotik yerleşim */}
+              {products.map((product, index) => {
+                // Çoklu seed ile daha kaotik dağılım
+                const seed1 = (index * 7919 + 13) % 101;
+                const seed2 = (index * 6563 + 29) % 103;
+                const seed3 = (index * 4231 + 41) % 107;
+                const seed4 = (index * 3571 + 53) % 109;
+                const seed5 = (index * 2749 + 67) % 113;
+
+                // Kaotik pozisyonlar - tam alan kullanımı
+                const baseTop = (seed1 / 101) * 85 + (seed3 / 107) * 10; // 0-95%
+                const baseLeft = (seed2 / 103) * 90 + (seed4 / 109) * 8; // 0-98%
+
+                // Daha geniş rotasyon aralığı (-45 ile +45 derece)
+                const rotate = ((seed3 / 107) - 0.5) * 90;
+
+                // Kaotik animasyon parametreleri
+                const delay = (seed4 / 109) * 5; // 0-5 saniye delay
+                const scale = 0.8 + (seed5 / 113) * 0.4; // 0.8 - 1.2 arası (daha büyük)
+                const duration = 3 + (seed1 / 101) * 6; // 3-9 saniye
+
+                // Rastgele z-index
+                const zIndex = Math.floor((seed2 / 103) * 20) + 1;
+
+                return (
                   <Link
                     key={product.id}
                     href={`/products/${product.slug}`}
-                    className={`group relative overflow-hidden rounded-2xl bg-white shadow-lg transition hover:shadow-xl hover:scale-[1.02] ${
-                      index === 0 ? 'col-span-2 row-span-1' : ''
-                    }`}
+                    className="absolute transition-transform duration-300 hover:scale-150 hover:z-50"
+                    style={{
+                      top: `${baseTop}%`,
+                      left: `${baseLeft}%`,
+                      transform: `rotate(${rotate}deg) scale(${scale})`,
+                      animation: `float ${duration}s ease-in-out infinite`,
+                      animationDelay: `${delay}s`,
+                      zIndex,
+                    }}
+                    title={product.title}
                   >
-                    <div className={`relative ${index === 0 ? 'h-40' : 'h-32'} w-full bg-white`}>
+                    <div className="relative w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 drop-shadow-lg hover:drop-shadow-2xl transition-all duration-300">
                       <Image
                         src={resolveProductImage(product)}
                         alt={product.title}
                         fill
-                        className="object-contain p-4 transition group-hover:scale-105"
-                        sizes="(max-width: 768px) 50vw, 25vw"
-                        priority={index === 0}
-                        loading={index === 0 ? "eager" : "lazy"}
+                        className="object-contain"
+                        sizes="48px"
+                        loading={index < 6 ? "eager" : "lazy"}
                       />
                     </div>
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 to-transparent p-3">
-                      <p className="text-xs font-medium text-white truncate">{product.title}</p>
-                    </div>
                   </Link>
-                ))}
-              </div>
+                );
+              })}
+
+              {/* Dekoratif blur efektler */}
+              <div className="absolute top-[15%] right-[30%] w-20 h-20 rounded-full bg-amber-400/15 blur-2xl animate-pulse pointer-events-none" />
+              <div className="absolute bottom-[20%] left-[40%] w-16 h-16 rounded-full bg-blue-400/15 blur-2xl animate-pulse pointer-events-none" style={{ animationDelay: '1s' }} />
+              <div className="absolute top-[50%] right-[10%] w-12 h-12 rounded-full bg-amber-300/20 blur-xl animate-pulse pointer-events-none" style={{ animationDelay: '2s' }} />
             </div>
           </div>
         </div>
@@ -351,7 +348,7 @@ export default async function Home() {
                 href={`/categories/${category.slug}`}
                 className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-amber-300 hover:shadow-lg"
               >
-                <div className="relative h-32 w-full overflow-hidden bg-slate-50">
+                <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-slate-300 via-slate-200 to-blue-100">
                   <Image
                     src={resolveMediaPath(category.image) || "/images/placeholders/category.jpg"}
                     alt={category.name}
@@ -480,7 +477,7 @@ export default async function Home() {
                 key={product.id}
                 className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-amber-300 hover:shadow-lg"
               >
-                <Link href={`/products/${product.slug}`} className="relative h-52 w-full overflow-hidden bg-slate-50">
+                <Link href={`/products/${product.slug}`} className="relative h-52 w-full overflow-hidden bg-gradient-to-br from-slate-300 via-slate-200 to-blue-100">
                   <Image
                     src={resolveProductImage(product)}
                     alt={product.title}

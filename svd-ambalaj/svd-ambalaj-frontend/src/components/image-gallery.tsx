@@ -43,7 +43,7 @@ export function ImageGallery({ images, productTitle }: ImageGalleryProps) {
         {/* Main Image */}
         <div
           onClick={() => openModal(selectedImage)}
-          className="relative h-80 sm:h-96 lg:h-[450px] w-full overflow-hidden rounded-2xl border border-slate-200 bg-white cursor-zoom-in shadow-lg hover:shadow-xl transition-shadow"
+          className="relative h-80 sm:h-96 lg:h-[450px] w-full overflow-hidden rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-300 via-slate-200 to-blue-100 cursor-zoom-in shadow-lg hover:shadow-xl transition-shadow"
         >
           <Image
             src={images[selectedImage]}

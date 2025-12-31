@@ -19,6 +19,7 @@ type Product = {
   price: number;
   priceUSD?: number;
   stock?: number;
+  images?: string[];
   bulkPricing?: { minQty: number; price: number }[];
   bulkPricingUSD?: { minQty: number; price: number }[];
   packageInfo?: {
@@ -281,6 +282,7 @@ export default async function CategoryDetailPage({
                       ? product.bulkPricingUSD.map(tier => ({ minQty: tier.minQty, price: tier.price * exchangeRate.rate }))
                       : undefined,
                     packageInfo: product.packageInfo,
+                    images: product.images,
                   }}
                 />
                 <Link
