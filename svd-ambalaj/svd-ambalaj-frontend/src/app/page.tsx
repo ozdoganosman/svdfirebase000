@@ -255,6 +255,44 @@ export default async function Home() {
               <p className="max-w-lg text-lg text-slate-300">
                 {hero.description}
               </p>
+
+              {/* Butonlar */}
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href={hero.primaryButton.href}
+                  className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-amber-600"
+                >
+                  {hero.primaryButton.text}
+                </Link>
+                <Link
+                  href={hero.secondaryButton.href}
+                  className="inline-flex items-center gap-2 rounded-full border-2 border-white/30 px-6 py-3 font-semibold text-white transition hover:bg-white/10"
+                >
+                  {hero.secondaryButton.text}
+                </Link>
+              </div>
+
+              {/* İstatistikler */}
+              {hero.stats && hero.stats.length > 0 && (
+                <div className="flex flex-wrap gap-6 pt-4">
+                  {/* Otomatik istatistikler */}
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-amber-400">{products.length}+</div>
+                    <div className="text-xs text-slate-400">Ürün</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-amber-400">{categories.length}</div>
+                    <div className="text-xs text-slate-400">Kategori</div>
+                  </div>
+                  {/* Kullanıcı tanımlı istatistikler */}
+                  {hero.stats.map((stat, index) => (
+                    <div key={index} className="text-center">
+                      <div className="text-2xl font-bold text-amber-400">{stat.value}</div>
+                      <div className="text-xs text-slate-400">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Sağ - Floating Products (sadece görseller) */}
