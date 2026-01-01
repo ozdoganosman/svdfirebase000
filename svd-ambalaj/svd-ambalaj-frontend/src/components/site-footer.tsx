@@ -165,6 +165,25 @@ export function SiteFooter() {
             </div>
           </div>
         </div>
+
+        {/* Legal Links */}
+        <div className="mt-8 pt-6 border-t border-slate-100">
+          <p className="text-sm font-semibold text-slate-900 mb-3">Yasal</p>
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500">
+            <Link href="/gizlilik-politikasi" className="transition hover:text-amber-600">
+              Gizlilik Politikası
+            </Link>
+            <Link href="/kullanim-kosullari" className="transition hover:text-amber-600">
+              Kullanım Koşulları
+            </Link>
+            <Link href="/mesafeli-satis-sozlesmesi" className="transition hover:text-amber-600">
+              Mesafeli Satış Sözleşmesi
+            </Link>
+            <Link href="/cerez-politikasi" className="transition hover:text-amber-600">
+              Çerez Politikası
+            </Link>
+          </div>
+        </div>
       </div>
 
       <div className="border-t border-slate-100 bg-slate-50 py-4 text-center text-xs text-slate-500">

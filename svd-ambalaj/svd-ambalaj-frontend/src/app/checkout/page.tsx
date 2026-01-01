@@ -86,6 +86,11 @@ function CheckoutPageContent() {
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
+
+  // Agreement checkboxes
+  const [agreementAccepted, setAgreementAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+
   const [appliedCoupon, setAppliedCoupon] = useState<{
     id: string;
     code: string;
@@ -784,13 +789,50 @@ function CheckoutPageContent() {
               </div>
             )}
 
+            {/* Sözleşme Onayları */}
+            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-700">Sözleşme Onayları</p>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={agreementAccepted}
+                  onChange={(e) => setAgreementAccepted(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+                />
+                <span className="text-sm text-slate-600">
+                  <a href="/mesafeli-satis-sozlesmesi" target="_blank" className="text-amber-600 hover:underline font-medium">
+                    Mesafeli Satış Sözleşmesi
+                  </a>
+                  &apos;ni okudum ve kabul ediyorum.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={privacyAccepted}
+                  onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+                />
+                <span className="text-sm text-slate-600">
+                  <a href="/gizlilik-politikasi" target="_blank" className="text-amber-600 hover:underline font-medium">
+                    Gizlilik Politikası ve KVKK Aydınlatma Metni
+                  </a>
+                  &apos;ni okudum ve kabul ediyorum.
+                </span>
+              </label>
+            </div>
+
             <button
               type="submit"
-              disabled={status === "submitting" || processingPayment}
+              disabled={status === "submitting" || processingPayment || !agreementAccepted || !privacyAccepted}
               className="w-full rounded-full bg-amber-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-amber-500/30 transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {status === "submitting" || processingPayment
                 ? (processingPayment ? "Ödeme sayfasına yönlendiriliyor..." : "Gönderiliyor...")
+                : !agreementAccepted || !privacyAccepted
+                ? "Sözleşmeleri Onaylayın"
                 : paymentMethod === "credit_card"
                 ? "Ödemeye Geç"
                 : "Sipariş Talebini Gönder"}
