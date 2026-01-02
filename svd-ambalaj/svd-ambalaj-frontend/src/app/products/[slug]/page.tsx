@@ -348,7 +348,7 @@ export default async function ProductDetailPage({
                       <li>• <strong>Paket bilgisi:</strong> {product.packageInfo.itemsPerBox} adet/{product.packageInfo.boxLabel.toLowerCase()}</li>
                     )}
                     {product.stock && product.stock > 0 && product.packageInfo && (
-                      <li>• <strong>Stok durumu:</strong> {Math.floor(product.stock / product.packageInfo.itemsPerBox)} {product.packageInfo.boxLabel.toLowerCase()} ({product.stock} adet)</li>
+                      <li>• <strong>Stok durumu:</strong> {product.stock} {product.packageInfo.boxLabel.toLowerCase()} ({(product.stock * product.packageInfo.itemsPerBox).toLocaleString('tr-TR')} adet)</li>
                     )}
                     {product.specifications?.hoseLength && (
                       <li>• <strong>Hortum Boyu:</strong> {product.specifications.hoseLength}</li>

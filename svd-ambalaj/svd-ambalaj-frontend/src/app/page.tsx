@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { AddToCartButton } from "@/components/add-to-cart-button";
 import {
   resolveServerApiBase,
   resolveServerApiOrigin,
@@ -23,6 +22,7 @@ type Product = {
   price: number;
   priceUSD?: number;
   stock?: number;
+  category?: string;
   bulkPricing?: BulkTier[];
   bulkPricingUSD?: BulkTier[];
   images?: string[];
@@ -112,7 +112,7 @@ type LandingContent = {
     secondaryButton: { text: string; href: string };
     stats: { value: string; label: string }[];
   };
-  // advantages removed - features shown in howItWorks section
+  advantages?: { icon: string; title: string; description: string; highlight: string }[];
   howItWorks: {
     title: string;
     subtitle: string;
@@ -189,7 +189,13 @@ export default async function Home() {
     stats: [{ value: "24", label: "Ülkeye İhracat" }],
   };
 
-  // advantages section removed - features already shown in howItWorks section
+  // Advantages - admin'den gelen veya varsayılan (howItWorks ile benzer bilgiler içerir)
+  const advantages = landingContent?.advantages ?? [
+    { icon: "🔄", title: "Kombo İndirimi", description: "Başlık + Şişe birlikte alana indirim", highlight: "%10" },
+    { icon: "📦", title: "Toplu Alım Avantajı", description: "Adet arttıkça birim fiyat düşer", highlight: "Kademeli" },
+    { icon: "🚚", title: "Ücretsiz Kargo", description: "50.000+ adet üzerinde ücretsiz", highlight: "Ücretsiz" },
+    { icon: "💳", title: "Güvenli Ödeme", description: "Kredi kartı ve havale ile ödeme", highlight: "3D Secure" },
+  ];
 
   const howItWorks = landingContent?.howItWorks ?? {
     title: "Nasıl Çalışır?",
@@ -223,17 +229,17 @@ export default async function Home() {
     productsSubtitle: "En çok tercih edilen ürünlerimiz",
   };
 
-  // Featured products - filter by IDs or use first 8
+  // Featured products - filter by IDs or use first 4
   const featuredProductIds = landingContent?.featuredProducts ?? [];
   const featuredProducts = featuredProductIds.length > 0
     ? featuredProductIds
         .map((id) => products.find((p) => p.id === id))
         .filter((p): p is Product => p !== undefined)
-    : products.slice(0, 8);
+    : products.slice(0, 4);
 
-  // Section order - default order if not set (advantages removed - already shown in hero/howItWorks)
+  // Section order - default order if not set (admin ile senkronize, cta ve trustBadges varsayılandan çıkarıldı)
   const sectionOrder = landingContent?.sectionOrder ?? [
-    "hero", "categories", "howItWorks", "products", "cta", "trustBadges"
+    "hero", "advantages", "categories", "howItWorks", "products"
   ];
 
   // Section components map
@@ -295,87 +301,112 @@ export default async function Home() {
               )}
             </div>
 
-            {/* Sağ - Floating Products (sadece görseller) */}
-            <div className="flex-1 relative h-[350px] lg:h-[400px] hidden sm:block overflow-hidden">
-              {/* Grid-bazlı yerleşim ile üst üste gelmeyi engelle */}
-              {(() => {
-                // Grid boyutları - ürün sayısına göre ayarla
-                const cols = 6;
-                const rows = Math.ceil(products.length / cols);
-                const cellWidth = 100 / cols; // Her hücre genişliği %
-                const cellHeight = 100 / rows; // Her hücre yüksekliği %
+            {/* Sağ - Tüm Ürünler Floating */}
+            <div className="flex-1 relative h-[350px] lg:h-[450px] hidden sm:block overflow-hidden">
+              {products.map((product, index) => {
+                // Her ürün için benzersiz seed değerleri
+                const seed1 = (index * 7919 + 13) % 101;
+                const seed2 = (index * 6563 + 29) % 103;
 
-                return products.map((product, index) => {
-                  // Grid pozisyonu
-                  const gridCol = index % cols;
-                  const gridRow = Math.floor(index / cols);
+                // Dinamik pozisyon hesaplama - tüm ürünler için
+                // Grid benzeri dağılım ama rastgele ofsetlerle
+                const gridCols = 5;
+                const gridRows = Math.ceil(products.length / gridCols);
+                const col = index % gridCols;
+                const row = Math.floor(index / gridCols);
 
-                  // Seed'ler - hücre içi rastgele offset için
-                  const seed1 = (index * 7919 + 13) % 101;
-                  const seed2 = (index * 6563 + 29) % 103;
-                  const seed3 = (index * 4231 + 41) % 107;
-                  const seed4 = (index * 3571 + 53) % 109;
-                  const seed5 = (index * 2749 + 67) % 113;
+                // Temel pozisyonlar
+                const baseLeft = (col / gridCols) * 85 + 5;
+                const baseTop = (row / Math.max(gridRows, 4)) * 75 + 5;
 
-                  // Hücre içinde rastgele offset (hücrenin %20-80'i arasında)
-                  const offsetX = 20 + (seed1 / 101) * 60; // Hücre içi X offset %
-                  const offsetY = 20 + (seed2 / 103) * 60; // Hücre içi Y offset %
+                // Rastgele ofsetler
+                const offsetX = ((seed1 / 101) - 0.5) * 12;
+                const offsetY = ((seed2 / 103) - 0.5) * 12;
 
-                  // Final pozisyonlar
-                  const baseLeft = gridCol * cellWidth + (offsetX / 100) * cellWidth;
-                  const baseTop = gridRow * cellHeight + (offsetY / 100) * cellHeight;
+                const finalLeft = Math.max(0, Math.min(85, baseLeft + offsetX));
+                const finalTop = Math.max(0, Math.min(80, baseTop + offsetY));
 
-                  // Rotasyon (-30 ile +30 derece)
-                  const rotate = ((seed3 / 107) - 0.5) * 60;
+                // Boyut - rastgele ama dengeli
+                const sizes = ['xs', 'sm', 'sm', 'md', 'md', 'lg'] as const;
+                const sizeIndex = (seed1 + seed2) % sizes.length;
+                const size = sizes[sizeIndex];
 
-                  // Animasyon parametreleri
-                  const delay = (seed4 / 109) * 5;
-                  const scale = 0.85 + (seed5 / 113) * 0.3; // 0.85 - 1.15 arası
-                  const duration = 3 + (seed1 / 101) * 5;
+                // Boyut sınıfları
+                const sizeClasses = {
+                  xs: 'w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16',
+                  sm: 'w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20',
+                  md: 'w-18 h-18 sm:w-20 sm:h-20 lg:w-24 lg:h-24',
+                  lg: 'w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28',
+                };
 
-                  // Rastgele z-index
-                  const zIndex = Math.floor((seed2 / 103) * 20) + 1;
+                // Z-index - büyükler önde
+                const zIndexMap = { xs: 10, sm: 15, md: 25, lg: 35 };
+                const zIndex = zIndexMap[size] + (seed1 % 5);
 
-                  return (
-                    <Link
-                      key={product.id}
-                      href={`/products/${product.slug}`}
-                      className="absolute transition-transform duration-300 hover:scale-150 hover:z-50"
-                      style={{
-                        top: `${baseTop}%`,
-                        left: `${baseLeft}%`,
-                        transform: `rotate(${rotate}deg) scale(${scale})`,
-                        animation: `float ${duration}s ease-in-out infinite`,
-                        animationDelay: `${delay}s`,
-                        zIndex,
-                      }}
-                      title={product.title}
-                    >
-                      <div className="relative w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 drop-shadow-lg hover:drop-shadow-2xl transition-all duration-300">
-                        <Image
-                          src={resolveProductImage(product)}
-                          alt={product.title}
-                          fill
-                          className="object-contain"
-                          sizes="48px"
-                          loading={index < 6 ? "eager" : "lazy"}
-                        />
-                      </div>
-                    </Link>
-                  );
-                });
-              })()}
+                // Hafif rotasyon
+                const rotate = ((seed1 / 101) - 0.5) * 15;
 
-              {/* Dekoratif blur efektler */}
-              <div className="absolute top-[15%] right-[30%] w-20 h-20 rounded-full bg-amber-400/15 blur-2xl animate-pulse pointer-events-none" />
-              <div className="absolute bottom-[20%] left-[40%] w-16 h-16 rounded-full bg-blue-400/15 blur-2xl animate-pulse pointer-events-none" style={{ animationDelay: '1s' }} />
-              <div className="absolute top-[50%] right-[10%] w-12 h-12 rounded-full bg-amber-300/20 blur-xl animate-pulse pointer-events-none" style={{ animationDelay: '2s' }} />
+                // Yavaş animasyon
+                const duration = 20 + (seed1 / 101) * 15;
+                const delay = (seed2 / 103) * 8;
+
+                return (
+                  <Link
+                    key={product.id}
+                    href={`/products/${product.slug}`}
+                    className="absolute transition-all duration-700 hover:scale-125 hover:z-[60]"
+                    style={{
+                      top: `${finalTop}%`,
+                      left: `${finalLeft}%`,
+                      transform: `rotate(${rotate}deg)`,
+                      animation: `slowFloat ${duration}s ease-in-out infinite`,
+                      animationDelay: `${delay}s`,
+                      zIndex,
+                    }}
+                    title={product.title}
+                  >
+                    <div className={`relative ${sizeClasses[size]} drop-shadow-[0_8px_25px_rgba(0,0,0,0.3)] hover:drop-shadow-[0_15px_40px_rgba(251,191,36,0.5)] transition-all duration-500`}>
+                      <Image
+                        src={resolveProductImage(product)}
+                        alt={product.title}
+                        fill
+                        className="object-contain"
+                        sizes="112px"
+                        loading={index < 6 ? "eager" : "lazy"}
+                      />
+                    </div>
+                  </Link>
+                );
+              })}
+
+              {/* Soft glow efektleri */}
+              <div className="absolute top-[25%] left-[30%] w-40 h-40 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
+              <div className="absolute bottom-[20%] right-[20%] w-32 h-32 rounded-full bg-blue-400/8 blur-3xl pointer-events-none" />
             </div>
           </div>
         </div>
       </section>
     ),
-    // advantages section removed - already shown in other sections
+    advantages: (
+      <section key="advantages" className="bg-white border-b border-slate-100">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 gap-4 py-6 sm:grid-cols-4 sm:gap-6 lg:gap-8">
+            {advantages.map((item, index) => (
+              <div key={index} className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xl">
+                  {item.icon}
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">{item.title}</div>
+                  <div className="text-xs text-slate-500">{item.description}</div>
+                  <div className="text-xs font-bold text-amber-600">{item.highlight}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    ),
     categories: (
       <section key="categories" className="bg-white py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -396,32 +427,98 @@ export default async function Home() {
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {categories.slice(0, 10).map((category) => (
-              <Link
-                key={category.id}
-                href={`/categories/${category.slug}`}
-                className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-amber-300 hover:shadow-lg"
-              >
-                <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-slate-300 via-slate-200 to-blue-100">
-                  <Image
-                    src={resolveMediaPath(category.image) || "/images/placeholders/category.jpg"}
-                    alt={category.name}
-                    fill
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                    className="object-cover transition duration-300 group-hover:scale-110"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="flex items-center justify-between p-3">
-                  <h3 className="text-sm font-semibold text-slate-900 group-hover:text-amber-600">
-                    {category.name}
-                  </h3>
-                  <svg className="h-4 w-4 text-slate-400 transition group-hover:translate-x-1 group-hover:text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </Link>
-            ))}
+            {categories.slice(0, 10).map((category) => {
+              // Bu kategorideki ürünleri bul
+              const categoryProducts = products.filter(p => p.category === category.id);
+              const productImages = categoryProducts
+                .slice(0, 4)
+                .map(p => resolveProductImage(p))
+                .filter(Boolean);
+
+              return (
+                <Link
+                  key={category.id}
+                  href={`/categories/${category.slug}`}
+                  className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-amber-300 hover:shadow-lg"
+                >
+                  <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-slate-300 via-slate-200 to-blue-100">
+                    {productImages.length >= 4 ? (
+                      // 4 ürün varsa 2x2 grid
+                      <div className="grid grid-cols-2 grid-rows-2 h-full">
+                        {productImages.slice(0, 4).map((img, idx) => (
+                          <div key={idx} className="relative overflow-hidden">
+                            <Image
+                              src={img}
+                              alt={categoryProducts[idx]?.title || category.name}
+                              fill
+                              sizes="(max-width: 640px) 25vw, 10vw"
+                              className="object-contain p-1 transition duration-300 group-hover:scale-110"
+                              loading="lazy"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : productImages.length >= 2 ? (
+                      // 2-3 ürün varsa yan yana
+                      <div className="grid grid-cols-2 h-full">
+                        {productImages.slice(0, 2).map((img, idx) => (
+                          <div key={idx} className="relative overflow-hidden">
+                            <Image
+                              src={img}
+                              alt={categoryProducts[idx]?.title || category.name}
+                              fill
+                              sizes="(max-width: 640px) 25vw, 10vw"
+                              className="object-contain p-2 transition duration-300 group-hover:scale-110"
+                              loading="lazy"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : productImages.length === 1 ? (
+                      // Tek ürün
+                      <Image
+                        src={productImages[0]}
+                        alt={categoryProducts[0]?.title || category.name}
+                        fill
+                        sizes="(max-width: 640px) 50vw, 20vw"
+                        className="object-contain p-3 transition duration-300 group-hover:scale-110"
+                        loading="lazy"
+                      />
+                    ) : category.image ? (
+                      // Kategori görseli
+                      <Image
+                        src={resolveMediaPath(category.image) || "/images/placeholders/category.jpg"}
+                        alt={category.name}
+                        fill
+                        sizes="(max-width: 640px) 50vw, 20vw"
+                        className="object-cover transition duration-300 group-hover:scale-110"
+                        loading="lazy"
+                      />
+                    ) : (
+                      // Placeholder
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <svg className="w-12 h-12 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between p-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900 group-hover:text-amber-600">
+                        {category.name}
+                      </h3>
+                      {categoryProducts.length > 0 && (
+                        <p className="text-xs text-slate-500">{categoryProducts.length} ürün</p>
+                      )}
+                    </div>
+                    <svg className="h-4 w-4 text-slate-400 transition group-hover:translate-x-1 group-hover:text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
 
           <div className="mt-6 text-center sm:hidden">
@@ -439,45 +536,66 @@ export default async function Home() {
       </section>
     ),
     howItWorks: (
-      <section key="howItWorks" className="bg-slate-50 py-12">
+      <section key="howItWorks" className="bg-gradient-to-b from-slate-900 to-slate-800 py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-slate-900">{howItWorks.title}</h2>
-            <p className="mt-2 text-slate-600">{howItWorks.subtitle}</p>
+          <div className="text-center mb-12">
+            <span className="inline-block rounded-full bg-amber-500/20 px-4 py-1.5 text-sm font-semibold text-amber-400 mb-4">
+              Avantajlar
+            </span>
+            <h2 className="text-3xl font-bold text-white lg:text-4xl">{howItWorks.title}</h2>
+            <p className="mt-3 text-lg text-slate-400">{howItWorks.subtitle}</p>
           </div>
 
-          <div className="mt-8 grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 lg:gap-8 md:grid-cols-3">
             {howItWorks.cards.map((card, index) => {
-              const colorClasses: Record<string, { border: string; bg: string; icon: string; text: string; example: string }> = {
-                amber: { border: 'border-amber-200', bg: 'from-amber-50', icon: 'bg-amber-500', text: 'text-amber-600', example: 'bg-amber-100/50 text-amber-800' },
-                blue: { border: 'border-blue-200', bg: 'from-blue-50', icon: 'bg-blue-500', text: 'text-blue-600', example: 'bg-blue-100/50 text-blue-800' },
-                green: { border: 'border-green-200', bg: 'from-green-50', icon: 'bg-green-500', text: 'text-green-600', example: 'bg-green-100/50 text-green-800' },
-                purple: { border: 'border-purple-200', bg: 'from-purple-50', icon: 'bg-purple-500', text: 'text-purple-600', example: 'bg-purple-100/50 text-purple-800' },
-                red: { border: 'border-red-200', bg: 'from-red-50', icon: 'bg-red-500', text: 'text-red-600', example: 'bg-red-100/50 text-red-800' },
+              const colorClasses: Record<string, { gradient: string; iconBg: string; subtitleText: string; exampleBg: string; exampleText: string; border: string }> = {
+                amber: { gradient: 'from-amber-500/10 to-amber-500/5', iconBg: 'bg-gradient-to-br from-amber-400 to-amber-600', subtitleText: 'text-amber-400', exampleBg: 'bg-amber-500/10 border-amber-500/20', exampleText: 'text-amber-300', border: 'border-amber-500/20 hover:border-amber-500/40' },
+                blue: { gradient: 'from-blue-500/10 to-blue-500/5', iconBg: 'bg-gradient-to-br from-blue-400 to-blue-600', subtitleText: 'text-blue-400', exampleBg: 'bg-blue-500/10 border-blue-500/20', exampleText: 'text-blue-300', border: 'border-blue-500/20 hover:border-blue-500/40' },
+                green: { gradient: 'from-emerald-500/10 to-emerald-500/5', iconBg: 'bg-gradient-to-br from-emerald-400 to-emerald-600', subtitleText: 'text-emerald-400', exampleBg: 'bg-emerald-500/10 border-emerald-500/20', exampleText: 'text-emerald-300', border: 'border-emerald-500/20 hover:border-emerald-500/40' },
+                purple: { gradient: 'from-purple-500/10 to-purple-500/5', iconBg: 'bg-gradient-to-br from-purple-400 to-purple-600', subtitleText: 'text-purple-400', exampleBg: 'bg-purple-500/10 border-purple-500/20', exampleText: 'text-purple-300', border: 'border-purple-500/20 hover:border-purple-500/40' },
+                red: { gradient: 'from-red-500/10 to-red-500/5', iconBg: 'bg-gradient-to-br from-red-400 to-red-600', subtitleText: 'text-red-400', exampleBg: 'bg-red-500/10 border-red-500/20', exampleText: 'text-red-300', border: 'border-red-500/20 hover:border-red-500/40' },
               };
               const colors = colorClasses[card.color] ?? colorClasses.amber;
 
+              // SVG icons based on card type/index
+              const icons = [
+                // Kombo İndirimi - Link/Chain icon
+                <svg key="combo" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>,
+                // Kademeli Fiyat - Trending down/chart icon
+                <svg key="bulk" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                </svg>,
+                // Kargo - Truck icon
+                <svg key="shipping" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+                </svg>,
+              ];
+
               return (
-                <div key={index} className={`rounded-2xl border ${colors.border} bg-gradient-to-br ${colors.bg} to-white p-6 shadow-sm`}>
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${colors.icon} text-2xl text-white`}>
-                      {card.icon}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-900">{card.title}</h3>
-                      <p className={`text-sm ${colors.text} font-semibold`}>{card.subtitle}</p>
-                    </div>
+                <div
+                  key={index}
+                  className={`group relative rounded-2xl border ${colors.border} bg-gradient-to-br ${colors.gradient} backdrop-blur-sm p-6 lg:p-8 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/20`}
+                >
+                  {/* Icon */}
+                  <div className={`inline-flex h-14 w-14 items-center justify-center rounded-xl ${colors.iconBg} shadow-lg mb-5`}>
+                    {icons[index] || icons[0]}
                   </div>
-                  <div className="mt-4 space-y-2 text-sm text-slate-600">
-                    <p>{card.description}</p>
-                    {card.example && (
-                      <div className={`rounded-lg ${colors.example} p-3`}>
-                        <p className="text-xs">
-                          <strong>Örnek:</strong> {card.example}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+
+                  {/* Content */}
+                  <h3 className="text-xl font-bold text-white mb-1">{card.title}</h3>
+                  <p className={`text-sm font-semibold ${colors.subtitleText} mb-4`}>{card.subtitle}</p>
+                  <p className="text-slate-400 text-sm leading-relaxed">{card.description}</p>
+
+                  {/* Example */}
+                  {card.example && (
+                    <div className={`mt-5 rounded-xl border ${colors.exampleBg} p-4`}>
+                      <p className={`text-xs ${colors.exampleText}`}>
+                        <span className="font-semibold">Örnek:</span> {card.example}
+                      </p>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -485,16 +603,22 @@ export default async function Home() {
 
           {/* Döviz Kuru Bilgisi */}
           {exchangeRate && (
-            <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-center">
-              <p className="text-sm text-slate-600">
-                Fiyatlar USD bazlı olup, güncel TCMB kuru ile TL&apos;ye çevrilmektedir.
-                <span className="ml-2 font-semibold text-slate-900">
+            <div className="mt-10 flex justify-center">
+              <div className="inline-flex items-center gap-3 rounded-full border border-slate-700 bg-slate-800/50 backdrop-blur-sm px-6 py-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/20">
+                  <span className="text-amber-400 text-sm">$</span>
+                </div>
+                <p className="text-sm text-slate-400">
+                  Fiyatlar USD bazlı, TCMB kuru ile TL&apos;ye çevrilir
+                </p>
+                <div className="h-4 w-px bg-slate-700" />
+                <span className="font-bold text-white">
                   $1 = ₺{exchangeRate.rate.toFixed(2)}
                 </span>
-                <span className="ml-2 text-xs text-slate-500">
+                <span className="text-xs text-slate-500">
                   ({new Date(exchangeRate.effectiveDate).toLocaleDateString("tr-TR")})
                 </span>
-              </p>
+              </div>
             </div>
           )}
         </div>
@@ -519,99 +643,85 @@ export default async function Home() {
             </Link>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="mt-6 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {featuredProducts.length === 0 && (
               <div className="col-span-full rounded-xl border border-dashed border-slate-300 p-10 text-center text-slate-500">
                 Ürünler yükleniyor...
               </div>
             )}
 
-            {featuredProducts.map((product) => (
-              <article
-                key={product.id}
-                className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-amber-300 hover:shadow-lg"
-              >
-                <Link href={`/products/${product.slug}`} className="relative h-52 w-full overflow-hidden bg-gradient-to-br from-slate-300 via-slate-200 to-blue-100">
-                  <Image
-                    src={resolveProductImage(product)}
-                    alt={product.title}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                    className="object-contain p-2 transition duration-300 group-hover:scale-105"
-                    loading="lazy"
-                  />
-                  {/* Bulk Pricing Badge */}
-                  {product.bulkPricingUSD && product.bulkPricingUSD.length > 0 && (
-                    <div className="absolute left-2 top-2 rounded-full bg-amber-500 px-2 py-1 text-xs font-bold text-white">
-                      Toplu Alım Fırsatı
-                    </div>
-                  )}
-                </Link>
+            {featuredProducts.map((product) => {
+              // En düşük fiyatı hesapla (bulk pricing varsa en düşük tier fiyatı)
+              const lowestPriceUSD = product.bulkPricingUSD && product.bulkPricingUSD.length > 0
+                ? Math.min(...product.bulkPricingUSD.map(t => t.price))
+                : product.priceUSD;
 
-                <div className="flex flex-1 flex-col p-4">
-                  <Link href={`/products/${product.slug}`}>
-                    <h3 className="font-semibold text-slate-900 group-hover:text-amber-600 line-clamp-2">
-                      {product.title}
-                    </h3>
-                  </Link>
-
-                  {/* Specs */}
-                  {product.specifications?.neckSize && (
-                    <p className="mt-1 text-xs text-slate-500">
-                      Ağız: {product.specifications.neckSize}
-                    </p>
-                  )}
-
-                  {/* Price */}
-                  <div className="mt-auto pt-3">
-                    <p className="text-lg font-bold text-amber-600">
-                      {product.priceUSD && exchangeRate
-                        ? formatDualPrice(product.priceUSD, exchangeRate.rate, true)
-                        : 'Fiyat için tıklayın'}
-                      <span className="ml-1 text-xs font-normal text-slate-500">+KDV</span>
-                    </p>
-                    {product.packageInfo && (
-                      <p className="text-xs text-slate-500">
-                        {product.packageInfo.itemsPerBox} adet/koli
-                      </p>
+              return (
+                <Link
+                  key={product.id}
+                  href={`/products/${product.slug}`}
+                  className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-amber-300 hover:shadow-lg"
+                >
+                  {/* Compact Image */}
+                  <div className="relative h-28 sm:h-32 w-full overflow-hidden bg-gradient-to-br from-slate-300 via-slate-200 to-blue-100">
+                    <Image
+                      src={resolveProductImage(product)}
+                      alt={product.title}
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                      className="object-contain p-2 transition duration-300 group-hover:scale-110"
+                      loading="lazy"
+                    />
+                    {/* Bulk Pricing Badge */}
+                    {product.bulkPricingUSD && product.bulkPricingUSD.length > 0 && (
+                      <div className="absolute left-1.5 top-1.5 rounded-full bg-green-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        💰 İndirimli
+                      </div>
                     )}
                   </div>
 
-                  {/* Actions */}
-                  <div className="mt-3 flex gap-2">
-                    <div className="flex-1">
-                      <AddToCartButton
-                        product={{
-                          id: product.id,
-                          title: product.title,
-                          slug: product.slug,
-                          price: product.priceUSD && exchangeRate ? product.priceUSD * exchangeRate.rate : 0,
-                          priceUSD: product.priceUSD,
-                          stock: product.stock,
-                          images: product.images,
-                          bulkPricing: product.priceUSD && product.bulkPricingUSD && exchangeRate
-                            ? product.bulkPricingUSD.map(tier => ({ minQty: tier.minQty, price: tier.price * exchangeRate.rate }))
-                            : undefined,
-                          bulkPricingUSD: product.bulkPricingUSD,
-                          packageInfo: product.packageInfo,
-                          specifications: product.specifications,
-                        }}
-                      />
+                  {/* Compact Content */}
+                  <div className="flex flex-1 flex-col p-2.5">
+                    <h3 className="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-amber-600 line-clamp-2 leading-tight">
+                      {product.title}
+                    </h3>
+
+                    {/* Compact Specs */}
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {product.specifications?.neckSize && (
+                        <span className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                          ⭕ {product.specifications.neckSize}
+                        </span>
+                      )}
+                      {product.packageInfo && (
+                        <span className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                          📦 {product.packageInfo.itemsPerBox}/koli
+                        </span>
+                      )}
                     </div>
-                    <Link
-                      href={`/products/${product.slug}`}
-                      className="flex items-center justify-center rounded-lg border border-slate-200 px-3 text-slate-600 transition hover:border-amber-400 hover:text-amber-600"
-                      title="Detayları Gör"
-                    >
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    </Link>
+
+                    {/* Price with lowest price indicator */}
+                    <div className="mt-auto pt-2">
+                      {lowestPriceUSD && exchangeRate ? (
+                        <>
+                          <p className="text-sm sm:text-base font-bold text-amber-600">
+                            {formatDualPrice(lowestPriceUSD, exchangeRate.rate, true)}
+                            <span className="ml-0.5 text-[10px] font-normal text-slate-400">+KDV</span>
+                          </p>
+                          {product.bulkPricingUSD && product.bulkPricingUSD.length > 0 && lowestPriceUSD !== product.priceUSD && (
+                            <p className="text-[10px] text-green-600 font-medium">
+                              ↓ En düşük fiyat
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-xs text-slate-500">Fiyat için tıklayın</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </Link>
+              );
+            })}
           </div>
 
           <div className="mt-8 text-center">

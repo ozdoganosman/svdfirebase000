@@ -60,3 +60,19 @@ body {
     transform: translateY(-15px) rotate(var(--rotate, 0deg));
   }
 }
+
+/* Slow floating animation for 3D space effect */
+@keyframes slowFloat {
+  0%, 100% {
+    transform: translateY(0) translateX(0) translateZ(var(--z, 0px));
+  }
+  25% {
+    transform: translateY(-8px) translateX(5px) translateZ(var(--z, 0px));
+  }
+  50% {
+    transform: translateY(-12px) translateX(-3px) translateZ(var(--z, 0px));
+  }
+  75% {
+    transform: translateY(-5px) translateX(-8px) translateZ(var(--z, 0px));
+  }
+}

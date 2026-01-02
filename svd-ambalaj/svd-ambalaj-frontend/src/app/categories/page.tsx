@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { resolveServerApiUrl } from "@/lib/server-api";
+import { resolveServerApiUrl, resolveServerApiOrigin } from "@/lib/server-api";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spreyvalfdunyasi.com";
 
@@ -36,6 +36,15 @@ type Category = {
   productType?: string;
 };
 
+type Product = {
+  id: string;
+  title: string;
+  slug: string;
+  category?: string;
+  images?: string[];
+  image?: string;
+};
+
 async function getCategories(): Promise<Category[]> {
   try {
     const response = await fetch(resolveServerApiUrl("/categories"), {
@@ -55,8 +64,40 @@ async function getCategories(): Promise<Category[]> {
   }
 }
 
+async function getProducts(): Promise<Product[]> {
+  try {
+    const response = await fetch(resolveServerApiUrl("/products"), {
+      next: { revalidate: 120 },
+    });
+
+    if (!response.ok) {
+      console.error("Failed to fetch products", response.statusText);
+      return [];
+    }
+
+    const payload = await response.json();
+    return payload?.products ?? [];
+  } catch (error) {
+    console.error("Product fetch error", error);
+    return [];
+  }
+}
+
+// Resolve product image path
+function resolveProductImage(product: Product): string {
+  const apiOrigin = resolveServerApiOrigin();
+  const img = product.images?.[0] || product.image;
+  if (!img) return "/images/placeholders/product.jpg";
+  if (img.startsWith("http")) return img;
+  if (img.startsWith("/")) return `${apiOrigin}${img}`;
+  return `${apiOrigin}/${img}`;
+}
+
 export default async function CategoriesPage() {
-  const categories = await getCategories();
+  const [categories, products] = await Promise.all([
+    getCategories(),
+    getProducts(),
+  ]);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50/30 to-white py-12 sm:py-20 text-slate-900">
@@ -91,74 +132,132 @@ export default async function CategoriesPage() {
             </div>
           )}
 
-          {categories.map((category) => (
-            <a
-              key={category.id}
-              href={`/categories/${category.slug}`}
-              className="group relative flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl bg-white border border-slate-200/80 shadow-sm hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300 hover:-translate-y-1 hover:border-amber-300"
-            >
-              {/* Image Container */}
-              <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-slate-100 to-slate-50">
-                {category.image ? (
-                  <Image
-                    src={category.image}
-                    alt={category.name}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <svg className="w-20 h-20 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
+          {categories.map((category) => {
+            // Bu kategorideki ürünleri bul
+            const categoryProducts = products.filter(p => p.category === category.id);
+            const productImages = categoryProducts
+              .slice(0, 4)
+              .map(p => resolveProductImage(p))
+              .filter(Boolean);
+
+            return (
+              <a
+                key={category.id}
+                href={`/categories/${category.slug}`}
+                className="group relative flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl bg-white border border-slate-200/80 shadow-sm hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300 hover:-translate-y-1 hover:border-amber-300"
+              >
+                {/* Image Container - Ürün görselleri grid */}
+                <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-slate-300 via-slate-200 to-blue-100">
+                  {productImages.length >= 4 ? (
+                    // 4 ürün varsa 2x2 grid
+                    <div className="grid grid-cols-2 grid-rows-2 h-full">
+                      {productImages.slice(0, 4).map((img, idx) => (
+                        <div key={idx} className="relative overflow-hidden">
+                          <Image
+                            src={img}
+                            alt={categoryProducts[idx]?.title || category.name}
+                            fill
+                            sizes="(max-width: 640px) 50vw, 25vw"
+                            className="object-contain p-2 transition-transform duration-500 group-hover:scale-110"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : productImages.length >= 2 ? (
+                    // 2-3 ürün varsa yan yana
+                    <div className="grid grid-cols-2 h-full">
+                      {productImages.slice(0, 2).map((img, idx) => (
+                        <div key={idx} className="relative overflow-hidden">
+                          <Image
+                            src={img}
+                            alt={categoryProducts[idx]?.title || category.name}
+                            fill
+                            sizes="(max-width: 640px) 50vw, 25vw"
+                            className="object-contain p-3 transition-transform duration-500 group-hover:scale-110"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : productImages.length === 1 ? (
+                    // Tek ürün
+                    <Image
+                      src={productImages[0]}
+                      alt={categoryProducts[0]?.title || category.name}
+                      fill
+                      sizes="(max-width: 640px) 100vw, 50vw"
+                      className="object-contain p-4 transition-transform duration-500 group-hover:scale-110"
+                    />
+                  ) : category.image ? (
+                    // Kategori görseli (fallback)
+                    <Image
+                      src={category.image}
+                      alt={category.name}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                  ) : (
+                    // Placeholder
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <svg className="w-20 h-20 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
+                  )}
+
+                  {/* Overlay gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                  {/* Product Type Badge */}
+                  {category.productType && (
+                    <span className="absolute top-3 right-3 sm:top-4 sm:right-4 inline-flex items-center rounded-full bg-white/90 backdrop-blur-sm px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
+                      {category.productType === "başlık" && "Başlık"}
+                      {category.productType === "şişe" && "Şişe"}
+                      {category.productType === "nötr" && "Aksesuar"}
+                      {!["başlık", "şişe", "nötr"].includes(category.productType) && category.productType}
+                    </span>
+                  )}
+
+                  {/* Ürün sayısı badge */}
+                  {categoryProducts.length > 0 && (
+                    <span className="absolute top-3 left-3 sm:top-4 sm:left-4 inline-flex items-center rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
+                      {categoryProducts.length} ürün
+                    </span>
+                  )}
+
+                  {/* Hover CTA */}
+                  <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                    <span className="inline-flex items-center justify-center w-full gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-white shadow-lg">
+                      Ürünleri Görüntüle
+                      <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                      </svg>
+                    </span>
                   </div>
-                )}
-                {/* Overlay gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                {/* Product Type Badge */}
-                {category.productType && (
-                  <span className="absolute top-3 right-3 sm:top-4 sm:right-4 inline-flex items-center rounded-full bg-white/90 backdrop-blur-sm px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
-                    {category.productType === "başlık" && "Başlık"}
-                    {category.productType === "şişe" && "Şişe"}
-                    {category.productType === "nötr" && "Aksesuar"}
-                    {!["başlık", "şişe", "nötr"].includes(category.productType) && category.productType}
-                  </span>
-                )}
-
-                {/* Hover CTA */}
-                <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                  <span className="inline-flex items-center justify-center w-full gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-white shadow-lg">
-                    Ürünleri Görüntüle
-                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </span>
                 </div>
-              </div>
 
-              {/* Content */}
-              <div className="flex flex-col flex-1 p-4 sm:p-5">
-                <h2 className="text-lg sm:text-xl font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
-                  {category.name}
-                </h2>
-                {category.description && (
-                  <p className="mt-2 text-sm text-slate-500 line-clamp-2">
-                    {category.description}
-                  </p>
-                )}
-                <div className="mt-auto pt-4 flex items-center justify-between">
-                  <span className="text-sm font-medium text-amber-600 group-hover:text-amber-700 flex items-center gap-1">
-                    Kategoriyi İncele
-                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </span>
+                {/* Content */}
+                <div className="flex flex-col flex-1 p-4 sm:p-5">
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
+                    {category.name}
+                  </h2>
+                  {category.description && (
+                    <p className="mt-2 text-sm text-slate-500 line-clamp-2">
+                      {category.description}
+                    </p>
+                  )}
+                  <div className="mt-auto pt-4 flex items-center justify-between">
+                    <span className="text-sm font-medium text-amber-600 group-hover:text-amber-700 flex items-center gap-1">
+                      Kategoriyi İncele
+                      <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </a>
-          ))}
+              </a>
+            );
+          })}
         </div>
 
         {/* Bottom CTA */}

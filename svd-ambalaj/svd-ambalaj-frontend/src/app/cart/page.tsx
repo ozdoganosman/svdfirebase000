@@ -4,11 +4,22 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/context/CartContext";
 import { useEffect, useState } from "react";
-import { resolveServerApiUrl } from "@/lib/server-api";
+import { resolveServerApiUrl, resolveServerApiOrigin } from "@/lib/server-api";
 import { getCurrentRate, formatDualPrice } from "@/lib/currency";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { useAuth } from "@/context/AuthContext";
 import { loadRecaptcha, executeRecaptcha } from "@/lib/recaptcha";
+
+// Helper to resolve image paths
+const resolveImagePath = (path: string | undefined | null): string => {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  if (path.startsWith('/uploads/')) {
+    const origin = resolveServerApiOrigin();
+    return origin ? `${origin}${path}` : path;
+  }
+  return path;
+};
 
 type Product = {
   id: string;
@@ -373,19 +384,27 @@ export default function CartPage() {
       unit: 'mm',
       format: 'a4'
     });
-    
+
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
+    const margin = 15;
     const contentWidth = pageWidth - (2 * margin);
     let yPos = margin;
 
-    // Helper function to format USD amounts with thousand separators
+    // Helper function to format USD amounts (standard US format: comma for thousands, dot for decimal)
     const formatUSD = (amount: number): string => {
-      return amount.toLocaleString('en-US', { 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
-      }).replace(/,/g, '.');
+      return amount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    };
+
+    // Helper function to format TRY amounts (Turkish format: dot for thousands, comma for decimal)
+    const formatTRY = (amount: number): string => {
+      return amount.toLocaleString('tr-TR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
     };
 
     // Helper function for Turkish text
@@ -400,181 +419,402 @@ export default function CartPage() {
         'ş': 's', 'Ş': 'S',
         'ü': 'u', 'Ü': 'U'
       };
-      
+
       let cleanText = text;
       Object.keys(turkishMap).forEach(key => {
         cleanText = cleanText.replace(new RegExp(key, 'g'), turkishMap[key]);
       });
-      
+
       doc.text(cleanText, x, y, options);
     };
 
-    // Header with logo area
-    doc.setFillColor(217, 119, 6);
-    doc.rect(0, 0, pageWidth, 40, 'F');
-    
-    doc.setFontSize(24);
+    // Check if we need a new page
+    const checkNewPage = (requiredSpace: number) => {
+      if (yPos + requiredSpace > pageHeight - 25) {
+        doc.addPage();
+        yPos = margin;
+        return true;
+      }
+      return false;
+    };
+
+    // ==================== HEADER ====================
+    // Dark slate header with gradient effect
+    doc.setFillColor(30, 41, 59); // slate-800
+    doc.rect(0, 0, pageWidth, 45, 'F');
+
+    // Accent line
+    doc.setFillColor(245, 158, 11); // amber-500
+    doc.rect(0, 45, pageWidth, 3, 'F');
+
+    // Company name
+    doc.setFontSize(28);
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
-    addText("SVD AMBALAJ", pageWidth / 2, 18, { align: "center" });
-    
-    doc.setFontSize(14);
-    addText("SEPET OZETI", pageWidth / 2, 28, { align: "center" });
-    
-    // Date and document info
-    yPos = 50;
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.setFont("helvetica", "normal");
-    addText(`Tarih: ${new Date().toLocaleDateString("tr-TR")}`, margin, yPos);
-    addText(`Belge No: SVD-${Date.now()}`, pageWidth - margin, yPos, { align: "right" });
-    
-    yPos += 10;
-    doc.setDrawColor(217, 119, 6);
-    doc.setLineWidth(0.5);
-    doc.line(margin, yPos, pageWidth - margin, yPos);
-    
-    yPos += 10;
+    addText("SVD AMBALAJ", pageWidth / 2, 20, { align: "center" });
 
-    // Products table header
-    doc.setFillColor(250, 250, 250);
-    doc.rect(margin, yPos, contentWidth, 8, 'F');
+    // Subtitle
+    doc.setFontSize(12);
+    doc.setTextColor(203, 213, 225); // slate-300
+    doc.setFont("helvetica", "normal");
+    addText("Profesyonel Ambalaj Cozumleri", pageWidth / 2, 30, { align: "center" });
+
+    // Document title badge
+    doc.setFillColor(245, 158, 11); // amber-500
+    doc.roundedRect(pageWidth / 2 - 25, 35, 50, 8, 2, 2, 'F');
     doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
-    addText("URUN", margin + 2, yPos + 5);
-    addText("MIKTAR", margin + 100, yPos + 5);
-    addText("BIRIM FIYAT", margin + 130, yPos + 5);
-    addText("TOPLAM", pageWidth - margin -15, yPos + 5);
-    
-    yPos += 12;
+    addText("SEPET OZETI", pageWidth / 2, 40.5, { align: "center" });
 
-    // Products
-    doc.setFont("helvetica", "normal");
+    // ==================== DOCUMENT INFO ====================
+    yPos = 58;
+
+    // Info box
+    doc.setFillColor(248, 250, 252); // slate-50
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.setLineWidth(0.3);
+    doc.roundedRect(margin, yPos - 5, contentWidth, 18, 3, 3, 'FD');
+
     doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105); // slate-600
+    doc.setFont("helvetica", "normal");
+
+    // Left info
+    addText(`Tarih: ${new Date().toLocaleDateString("tr-TR", { day: '2-digit', month: 'long', year: 'numeric' })}`, margin + 5, yPos + 2);
+    addText(`Saat: ${new Date().toLocaleTimeString("tr-TR", { hour: '2-digit', minute: '2-digit' })}`, margin + 5, yPos + 8);
+
+    // Right info
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 41, 59); // slate-800
+    addText(`Belge No: SVD-${Date.now().toString().slice(-8)}`, pageWidth - margin - 5, yPos + 2, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(71, 85, 105);
+    addText(`Urun Sayisi: ${items.length} kalem`, pageWidth - margin - 5, yPos + 8, { align: "right" });
+
+    yPos += 22;
+
+    // ==================== PRODUCTS SECTION ====================
+    // Section header
+    doc.setFillColor(30, 41, 59); // slate-800
+    doc.roundedRect(margin, yPos, contentWidth, 10, 2, 2, 'F');
+
+    doc.setFontSize(10);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    addText("URUN DETAYLARI", margin + 5, yPos + 7);
+
+    yPos += 15;
+
     const rate = exchangeRate || 0;
-    
+
+    // Products list
     items.forEach((item, index) => {
       const effectivePrice = getEffectivePrice(item);
       const itemTotal = calculateItemTotal(item);
       const totalItemCount = getTotalItemCount(item);
+      const appliedTier = getAppliedTier(item);
+      const comboQty = getItemComboQuantity(getCartItemId(item.id, item.selectedVariants));
 
-      // Check if we need a new page
-      if (yPos > pageHeight - 60) {
-        doc.addPage();
-        yPos = margin;
-      }
+      // Calculate required height for this item
+      const hasSpecs = item.specifications && Object.keys(item.specifications).length > 0;
+      const hasVariants = item.variantSummary;
+      const hasTierInfo = appliedTier;
+      const hasCombo = comboQty > 0;
+      let itemHeight = 32; // Base height
+      if (hasSpecs) itemHeight += 8;
+      if (hasVariants) itemHeight += 6;
+      if (hasTierInfo || hasCombo) itemHeight += 8;
 
-      // Alternate row background
-      if (index % 2 === 0) {
-        doc.setFillColor(248, 248, 248);
-        doc.rect(margin, yPos - 4, contentWidth, 16, 'F');
-      }
+      checkNewPage(itemHeight + 5);
+
+      // Product card
+      const cardY = yPos - 3;
+      const cardHeight = itemHeight;
+
+      // Card background
+      doc.setFillColor(index % 2 === 0 ? 255 : 249, index % 2 === 0 ? 255 : 250, index % 2 === 0 ? 255 : 251);
+      doc.setDrawColor(226, 232, 240); // slate-200
+      doc.setLineWidth(0.2);
+      doc.roundedRect(margin, cardY, contentWidth, cardHeight, 2, 2, 'FD');
+
+      // Product number badge
+      doc.setFillColor(100, 116, 139); // slate-500
+      doc.circle(margin + 6, yPos + 3, 4, 'F');
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      addText(`${index + 1}`, margin + 6, yPos + 4.5, { align: "center" });
 
       // Product name
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      const maxTitleWidth = 90;
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59); // slate-800
+      const maxTitleWidth = 95;
       const titleLines = doc.splitTextToSize(item.title, maxTitleWidth);
-      addText(titleLines[0], margin + 2, yPos);
-      
-      // Quantity details
+      addText(titleLines[0], margin + 14, yPos + 4);
+
+      let detailY = yPos + 10;
+
+      // Variant info (if exists)
+      if (hasVariants) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(124, 58, 237); // violet-600
+        addText(`Varyant: ${item.variantSummary}`, margin + 14, detailY);
+        detailY += 5;
+      }
+
+      // Specifications
+      if (hasSpecs) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(100, 116, 139); // slate-500
+        const specs: string[] = [];
+        if (item.specifications?.neckSize) specs.push(`Agiz: ${item.specifications.neckSize}`);
+        if (item.specifications?.volume) specs.push(`Hacim: ${item.specifications.volume}`);
+        if (item.specifications?.color) specs.push(`Renk: ${item.specifications.color}`);
+        if (item.specifications?.hoseLength) specs.push(`Hortum: ${item.specifications.hoseLength}`);
+        if (specs.length > 0) {
+          addText(specs.join(" | "), margin + 14, detailY);
+          detailY += 5;
+        }
+      }
+
+      // Quantity & packaging info
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
-      doc.setTextColor(80, 80, 80);
+      doc.setTextColor(71, 85, 105); // slate-600
       if (item.packageInfo) {
-        addText(`${item.quantity} ${item.packageInfo.boxLabel}`, margin + 100, yPos);
-        addText(`(${totalItemCount.toLocaleString('tr-TR')} adet)`, margin + 100, yPos + 4);
+        addText(`${item.quantity} ${item.packageInfo.boxLabel} x ${item.packageInfo.itemsPerBox} adet = ${totalItemCount.toLocaleString('tr-TR')} adet`, margin + 14, detailY);
       } else {
-        addText(`${item.quantity} adet`, margin + 100, yPos);
+        addText(`${item.quantity} adet`, margin + 14, detailY);
       }
-      
+      detailY += 5;
+
+      // Tier & Combo info
+      if (hasTierInfo || hasCombo) {
+        doc.setFontSize(7);
+        const infoTexts: string[] = [];
+        if (hasTierInfo) {
+          doc.setTextColor(22, 163, 74); // green-600
+          infoTexts.push(`Kademeli Fiyat: ${appliedTier.minQty}+ adet`);
+        }
+        if (hasCombo) {
+          doc.setTextColor(245, 158, 11); // amber-500
+          infoTexts.push(`Kombo Indirimi: ${comboQty} adet`);
+        }
+        if (infoTexts.length > 0) {
+          doc.setTextColor(22, 163, 74);
+          addText(infoTexts.join(" | "), margin + 14, detailY);
+        }
+      }
+
+      // Price section (right side)
+      const priceX = pageWidth - margin - 5;
+
       // Unit price
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
-      const unitPriceText = rate ? 
-        `$${formatUSD(effectivePrice)}` : 
-        `${effectivePrice.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
-      addText(unitPriceText, margin + 135, yPos);
-      
-      // Total price
+      doc.setTextColor(100, 116, 139); // slate-500
+      const unitPriceText = rate ?
+        `Birim: $${formatUSD(effectivePrice / rate)}` :
+        `Birim: ${formatTRY(effectivePrice)} TL`;
+      addText(unitPriceText, priceX, yPos + 4, { align: "right" });
+
+      // Total price box
+      doc.setFillColor(245, 158, 11); // amber-500
+      doc.roundedRect(priceX - 40, yPos + 8, 42, 10, 2, 2, 'F');
+
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.setTextColor(217, 119, 6);
-      const totalPriceText = rate ? 
-        `$${formatUSD(itemTotal)}` : 
-        `${itemTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
-      addText(totalPriceText, pageWidth - margin - 2, yPos, { align: "right" });
-      
-      yPos += 18;
-      
-      // Light separator
-      doc.setDrawColor(230, 230, 230);
-      doc.setLineWidth(0.1);
-      doc.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
+      doc.setFontSize(10);
+      doc.setTextColor(255, 255, 255);
+      const totalPriceText = rate ?
+        `$${formatUSD(itemTotal / rate)}` :
+        `${formatTRY(itemTotal)} TL`;
+      addText(totalPriceText, priceX - 19, yPos + 14.5, { align: "center" });
+
+      yPos += cardHeight + 3;
     });
 
-    // Summary section
+    // ==================== SUMMARY SECTION ====================
+    checkNewPage(70);
+
     yPos += 5;
-    doc.setDrawColor(217, 119, 6);
-    doc.setLineWidth(0.5);
-    doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 8;
-    
+
+    // Summary header
+    doc.setFillColor(30, 41, 59); // slate-800
+    doc.roundedRect(margin, yPos, contentWidth, 10, 2, 2, 'F');
+
+    doc.setFontSize(10);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    addText("SIPARIS OZETI", margin + 5, yPos + 7);
+
+    yPos += 15;
+
+    // Summary card
+    doc.setFillColor(248, 250, 252); // slate-50
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.setLineWidth(0.3);
+
+    // Calculate summary card height
+    let summaryHeight = 58; // Base height with kargo row
+    if (comboDiscount > 0) summaryHeight += 8;
+
+    doc.roundedRect(margin, yPos - 3, contentWidth, summaryHeight, 3, 3, 'FD');
+
+    const leftCol = margin + 8;
+    const rightCol = pageWidth - margin - 8;
+
+    // Summary rows
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(0, 0, 0);
-    
+    doc.setTextColor(71, 85, 105); // slate-600
+
+    // Box count
     if (totalBoxes > 0) {
-      addText(`Toplam Koli:`, margin, yPos);
-      addText(`${totalBoxes}`, pageWidth - margin - 2, yPos, { align: "right" });
-      yPos += 6;
+      addText("Toplam Koli:", leftCol, yPos + 3);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 41, 59);
+      addText(`${totalBoxes} koli`, rightCol, yPos + 3, { align: "right" });
+      yPos += 7;
     }
-    
-    addText(`Toplam Urun:`, margin, yPos);
-    addText(`${totalItems.toLocaleString('tr-TR')} adet`, pageWidth - margin - 2, yPos, { align: "right" });
+
+    // Item count
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(71, 85, 105);
+    addText("Toplam Urun:", leftCol, yPos + 3);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 41, 59);
+    addText(`${totalItems.toLocaleString('tr-TR')} adet`, rightCol, yPos + 3, { align: "right" });
     yPos += 8;
-    
-    const kdvOrani = 0.20;
-    const kdvHaricTutar = subtotal / (1 + kdvOrani);
-    const kdvTutari = subtotal - kdvHaricTutar;
-    
-    addText(`KDV Haric Tutar:`, margin, yPos);
-    const subtotalText = rate ? 
-      `$${formatUSD(kdvHaricTutar)}` : 
-      `${kdvHaricTutar.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
-    addText(subtotalText, pageWidth - margin - 2, yPos, { align: "right" });
-    yPos += 6;
-    
-    addText(`KDV (%20):`, margin, yPos);
-    const kdvText = rate ? 
-      `$${formatUSD(kdvTutari)}` : 
-      `${kdvTutari.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
-    addText(kdvText, pageWidth - margin - 2, yPos, { align: "right" });
+
+    // Separator
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.2);
+    doc.line(leftCol, yPos, rightCol, yPos);
+    yPos += 5;
+
+    // Tax calculations - subtotal is already after combo discount in CartContext
+    const kdvOrani = taxRate / 100;
+    // subtotal from context is the discounted price (after combo discount applied)
+    const urunToplami = subtotal; // This is already discounted
+    const kdvHaricTutar = urunToplami;
+    const kdvTutari = kdvHaricTutar * kdvOrani;
+    const kargoUcreti = totalItems >= 50000 ? 0 : totalBoxes * 120;
+    const genelToplam = kdvHaricTutar + kdvTutari + kargoUcreti;
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(71, 85, 105);
+    addText("Urun Toplami (KDV Haric):", leftCol, yPos + 3);
+    doc.setTextColor(30, 41, 59);
+    const subtotalText = rate ?
+      `$${formatUSD(kdvHaricTutar / rate)}` :
+      `${formatTRY(kdvHaricTutar)} TL`;
+    addText(subtotalText, rightCol, yPos + 3, { align: "right" });
+    yPos += 7;
+
+    // Combo discount info (if exists)
+    if (comboDiscount > 0) {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(22, 163, 74); // green-600
+      addText(`Kombo Indirimi (${comboDiscountLabel}):`, leftCol, yPos + 3);
+      const discountText = rate ?
+        `-$${formatUSD(comboDiscount / rate)}` :
+        `-${formatTRY(comboDiscount)} TL`;
+      addText(discountText, rightCol, yPos + 3, { align: "right" });
+      yPos += 7;
+    }
+
+    // Shipping
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(71, 85, 105);
+    addText("Kargo:", leftCol, yPos + 3);
+    if (totalItems >= 50000) {
+      doc.setTextColor(22, 163, 74); // green-600
+      doc.setFont("helvetica", "bold");
+      addText("UCRETSIZ", rightCol, yPos + 3, { align: "right" });
+    } else {
+      doc.setTextColor(30, 41, 59);
+      const kargoText = rate ?
+        `$${formatUSD(kargoUcreti / rate)}` :
+        `${formatTRY(kargoUcreti)} TL`;
+      addText(`${kargoText} (${totalBoxes} koli)`, rightCol, yPos + 3, { align: "right" });
+    }
+    yPos += 7;
+
+    // KDV
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(71, 85, 105);
+    addText(`KDV (%${taxRate}):`, leftCol, yPos + 3);
+    doc.setTextColor(30, 41, 59);
+    const kdvText = rate ?
+      `$${formatUSD(kdvTutari / rate)}` :
+      `${formatTRY(kdvTutari)} TL`;
+    addText(kdvText, rightCol, yPos + 3, { align: "right" });
     yPos += 10;
-    
+
     // Grand total box
-    doc.setFillColor(217, 119, 6);
-    doc.rect(margin, yPos - 4, contentWidth, 12, 'F');
+    doc.setFillColor(30, 41, 59); // slate-800
+    doc.roundedRect(margin, yPos, contentWidth, 16, 3, 3, 'F');
+
+    // Amber accent
+    doc.setFillColor(245, 158, 11);
+    doc.rect(margin, yPos, 4, 16, 'F');
+
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 255, 255);
-    addText(`GENEL TOPLAM:`, margin + 2, yPos + 4);
-    const grandTotalText = rate ? 
-      `$${formatUSD(subtotal)}` : 
-      `${subtotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL`;
-    addText(grandTotalText, pageWidth - margin - 2, yPos + 4, { align: "right" });
+    addText("GENEL TOPLAM (KDV Dahil):", margin + 10, yPos + 10);
 
-    // Footer
-    yPos = pageHeight - 20;
+    doc.setFontSize(14);
+    doc.setTextColor(245, 158, 11); // amber-500
+    const grandTotalText = rate ?
+      `$${formatUSD(genelToplam / rate)}` :
+      `${formatTRY(genelToplam)} TL`;
+    addText(grandTotalText, rightCol, yPos + 10, { align: "right" });
+
+    // ==================== FOOTER ====================
+    yPos = pageHeight - 30;
+
+    // Footer separator
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+
+    yPos += 6;
+
+    // Contact info
     doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
+    doc.setTextColor(100, 116, 139); // slate-500
+    doc.setFont("helvetica", "normal");
+    addText("SVD Ambalaj - Kaliteli ve Profesyonel Ambalaj Cozumleri", pageWidth / 2, yPos, { align: "center" });
+    yPos += 5;
+
+    // Contact details with icons simulation
+    doc.setFontSize(7);
+    addText("Web: www.svdambalaj.com  |  E-posta: info@svdambalaj.com  |  Tel: 0850 123 45 67", pageWidth / 2, yPos, { align: "center" });
+    yPos += 5;
+
+    // Disclaimer
+    doc.setFontSize(6);
+    doc.setTextColor(148, 163, 184); // slate-400
     doc.setFont("helvetica", "italic");
-    addText("SVD Ambalaj - Kaliteli Ambalaj Cozumleri", pageWidth / 2, yPos, { align: "center" });
-    addText("www.svdambalaj.com | info@svdambalaj.com | 0850 123 45 67", pageWidth / 2, yPos + 4, { align: "center" });
+    addText("Bu belge bilgi amaclidir. Resmi teklif icin lutfen satis ekibimizle iletisime gecin.", pageWidth / 2, yPos, { align: "center" });
+
+    // Page number
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(7);
+      doc.setTextColor(148, 163, 184);
+      doc.setFont("helvetica", "normal");
+      addText(`Sayfa ${i} / ${pageCount}`, pageWidth - margin, pageHeight - 8, { align: "right" });
+    }
 
     // Save
-    doc.save(`SVD-Sepet-${new Date().getTime()}.pdf`);
+    doc.save(`SVD-Sepet-${new Date().toISOString().slice(0,10)}.pdf`);
   };
 
   return (
@@ -697,7 +937,7 @@ export default function CartPage() {
                       {item.images && item.images[0] ? (
                         <div className="relative h-16 w-16 flex-shrink-0">
                           <Image
-                            src={item.images[0]}
+                            src={resolveImagePath(item.images[0])}
                             alt={item.title}
                             fill
                             sizes="64px"
@@ -969,12 +1209,17 @@ export default function CartPage() {
               <div className="mt-6 space-y-2">
                 <button
                   onClick={handleExportPDF}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                  className="group flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-slate-800 to-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition-all duration-200 hover:from-slate-700 hover:to-slate-800 hover:shadow-xl hover:shadow-slate-900/30 hover:scale-[1.02]"
                 >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  PDF İndir
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 group-hover:bg-white/20 transition-colors">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span>PDF Olarak İndir</span>
+                    <span className="text-xs font-normal text-slate-300">Sepet özeti ve tüm ürün detayları</span>
+                  </div>
                 </button>
                 {user ? (
                   <button
@@ -1060,7 +1305,7 @@ export default function CartPage() {
                   <Link href={`/products/${product.slug}`} className="relative block h-52 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
                     {product.images && product.images[0] ? (
                       <Image
-                        src={product.images[0]}
+                        src={resolveImagePath(product.images[0])}
                         alt={product.title}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"

@@ -250,12 +250,12 @@ export function CartProvider({ children }: CartProviderProps) {
           // Note: productType cannot be inferred, will need to be fetched from API
         }));
 
-        // Fetch fresh product data for all items to get productType
+        // Fetch fresh product data for all items to get productType and images
         const fetchFreshData = async () => {
           const updatedItems = await Promise.all(
             migratedItems.map(async (item) => {
-              // If productType already exists, skip
-              if (item.productType) return item;
+              // If both productType and images exist, skip
+              if (item.productType && item.images && item.images.length > 0) return item;
 
               try {
                 const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api-tfi7rlxtca-uc.a.run.app'}/products/${item.id}`);
@@ -263,11 +263,12 @@ export function CartProvider({ children }: CartProviderProps) {
                 const data = await response.json();
                 const freshProduct = data.product;
 
-                // Update item with fresh productType and neckSize
+                // Update item with fresh productType, neckSize, and images
                 return {
                   ...item,
                   productType: freshProduct.productType || item.productType,
                   neckSize: freshProduct.neckSize || item.neckSize || item.specifications?.neckSize,
+                  images: freshProduct.images || item.images,
                 };
               } catch (error) {
                 console.error(`Failed to fetch fresh data for ${item.id}:`, error);
@@ -279,14 +280,14 @@ export function CartProvider({ children }: CartProviderProps) {
           setItems(updatedItems);
         };
 
-        // Check if any item is missing productType
-        const needsFreshData = migratedItems.some(item => !item.productType);
+        // Check if any item is missing productType or images
+        const needsFreshData = migratedItems.some(item => !item.productType || !item.images || item.images.length === 0);
 
         if (needsFreshData) {
           // Wait for fresh data before setting items
           fetchFreshData();
         } else {
-          // All items have productType, use them immediately
+          // All items have productType and images, use them immediately
           setItems(migratedItems);
         }
       }
@@ -417,11 +418,10 @@ export function CartProvider({ children }: CartProviderProps) {
         }
       }
 
-      // Stock validation for packaged products
+      // Stock validation for packaged products (stock is already in boxes/koli)
       if (effectiveStock !== undefined && product.packageInfo) {
-        const availableBoxes = Math.floor(effectiveStock / product.packageInfo.itemsPerBox);
-        if (newQuantity > availableBoxes) {
-          setToastMessage(`⚠️ Stokta sadece ${availableBoxes} ${product.packageInfo.boxLabel.toLowerCase()} var!`);
+        if (newQuantity > effectiveStock) {
+          setToastMessage(`⚠️ Stokta sadece ${effectiveStock} ${product.packageInfo.boxLabel.toLowerCase()} var!`);
           return prev;
         }
       }
@@ -486,11 +486,10 @@ export function CartProvider({ children }: CartProviderProps) {
         }
       }
 
-      // Stock validation for packaged products
+      // Stock validation for packaged products (stock is already in boxes/koli)
       if (effectiveStock !== undefined && product.packageInfo) {
-        const availableBoxes = Math.floor(effectiveStock / product.packageInfo.itemsPerBox);
-        if (quantity > availableBoxes) {
-          setToastMessage(`⚠️ Stokta sadece ${availableBoxes} ${product.packageInfo.boxLabel.toLowerCase()} var!`);
+        if (quantity > effectiveStock) {
+          setToastMessage(`⚠️ Stokta sadece ${effectiveStock} ${product.packageInfo.boxLabel.toLowerCase()} var!`);
           return prev;
         }
       }
