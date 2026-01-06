@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "svdfirebase000"
+  },
+  "targets": {},
+  "etags": {
+    "svdfirebase000": {
+      "extensionInstances": {
+        "firestore-send-email": "c4c0275bb479b69c7bb0b1088f7453c7fd46b7dbddddb1b3d08d5691e9076b52",
+        "image-processing-api": "258ca7dc5346f849f196003ac7f87fe3a82a64218c5fc72450ea690464a17029"
+      }
+    }
   }
 }

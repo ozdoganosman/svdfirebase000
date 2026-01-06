@@ -65,7 +65,7 @@ async function getProduct(slug: string): Promise<Product | undefined> {
     const response = await fetch(
       resolveServerApiUrl(`/products/slug/${slug}`),
       {
-        next: { revalidate: 120 },
+        next: { revalidate: 10 }, // Short cache for quick updates
       }
     );
     if (!response.ok) {
@@ -82,7 +82,7 @@ async function getProduct(slug: string): Promise<Product | undefined> {
 async function getCategories(): Promise<Category[]> {
   try {
     const response = await fetch(resolveServerApiUrl("/categories"), {
-      next: { revalidate: 300 },
+      next: { revalidate: 60 }, // 1 minute cache
     });
     if (!response.ok) {
       return [];
@@ -99,7 +99,7 @@ async function getExchangeRate(): Promise<ExchangeRate | null> {
   try {
     const apiBase = resolveServerApiBase();
     const response = await fetch(`${apiBase}/exchange-rate`, {
-      next: { revalidate: 300 },
+      next: { revalidate: 60 }, // 1 minute cache
     });
     if (!response.ok) {
       return null;
@@ -301,7 +301,7 @@ export default async function ProductDetailPage({
                       <div className="text-right">
                         <span className="text-lg font-bold text-slate-900">
                           {product.priceUSD && exchangeRate
-                            ? `$${product.priceUSD.toFixed(2)}`
+                            ? `$${product.priceUSD.toFixed(3)}`
                             : '—'}
                         </span>
                         <span className="ml-2 text-sm text-slate-500">/ adet</span>
@@ -326,7 +326,7 @@ export default async function ProductDetailPage({
                           </div>
                           <div className="text-right">
                             <span className="text-lg font-bold text-green-600">
-                              ${tier.price.toFixed(2)}
+                              ${tier.price.toFixed(3)}
                             </span>
                             <span className="ml-2 text-sm text-slate-500">/ adet</span>
                           </div>

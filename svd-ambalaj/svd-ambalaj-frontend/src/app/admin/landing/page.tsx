@@ -100,7 +100,7 @@ const TABS: { id: TabType; label: string; icon: string }[] = [
   { id: "sections", label: "Bölüm Başlıkları", icon: "📝" },
 ];
 
-const DEFAULT_SECTION_ORDER = ["hero", "advantages", "categories", "howItWorks", "products"];
+const DEFAULT_SECTION_ORDER = ["hero", "categories", "howItWorks", "products"];
 
 const SECTION_LABELS: Record<string, { label: string; icon: string; description: string }> = {
   hero: { label: "Hero", icon: "🏠", description: "Ana banner ve başlık alanı" },

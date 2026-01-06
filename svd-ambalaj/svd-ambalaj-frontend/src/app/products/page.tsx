@@ -136,7 +136,7 @@ async function getExchangeRate(): Promise<ExchangeRate | null> {
   try {
     const apiBase = resolveServerApiBase();
     const response = await fetch(`${apiBase}/exchange-rate`, {
-      next: { revalidate: 300 },
+      next: { revalidate: 60 }, // 1 minute cache
     });
     if (!response.ok) {
       return null;

@@ -11,9 +11,10 @@ import ProductSearch from "@/components/product-search";
 export function SiteHeader() {
   const { items, totalBoxes } = useCart();
   const { user, signOut } = useAuth();
-  const { siteSettings } = useSettings();
+  const { siteSettings, categories } = useSettings();
   const [showSearch, setShowSearch] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showProductsMenu, setShowProductsMenu] = useState(false);
 
   // Show total boxes for packaged products, or item count for regular products
   const badgeCount = totalBoxes > 0 ? totalBoxes : items.length;
@@ -57,18 +58,64 @@ export function SiteHeader() {
             {/* Center Navigation */}
             <nav className="flex items-center">
               <div className="flex items-center bg-slate-50 rounded-full p-1">
-                <Link
-                  href="/products"
-                  className="px-5 py-2.5 text-sm font-medium text-slate-600 rounded-full transition-all duration-200 hover:bg-white hover:text-slate-900 hover:shadow-sm"
+                {/* Ürünler with Dropdown */}
+                <div
+                  className="relative"
+                  onMouseEnter={() => setShowProductsMenu(true)}
+                  onMouseLeave={() => setShowProductsMenu(false)}
                 >
-                  Ürünler
-                </Link>
-                <Link
-                  href="/categories"
-                  className="px-5 py-2.5 text-sm font-medium text-slate-600 rounded-full transition-all duration-200 hover:bg-white hover:text-slate-900 hover:shadow-sm"
-                >
-                  Kategoriler
-                </Link>
+                  <Link
+                    href="/products"
+                    className="flex items-center gap-1 px-5 py-2.5 text-sm font-medium text-slate-600 rounded-full transition-all duration-200 hover:bg-white hover:text-slate-900 hover:shadow-sm"
+                  >
+                    Ürünler
+                    <svg className={`h-4 w-4 transition-transform duration-200 ${showProductsMenu ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </Link>
+
+                  {/* Dropdown Menu */}
+                  {showProductsMenu && (
+                    <div className="absolute left-0 top-full pt-2 z-50">
+                      <div className="w-64 rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 py-2 overflow-hidden">
+                        <div className="px-4 py-2 border-b border-slate-100">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Kategoriler</p>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto py-1">
+                          {categories.length > 0 ? (
+                            categories.map((category) => (
+                              <Link
+                                key={category.id}
+                                href={`/categories/${category.slug}`}
+                                className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                              >
+                                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                  </svg>
+                                </span>
+                                {category.name}
+                              </Link>
+                            ))
+                          ) : (
+                            <p className="px-4 py-3 text-sm text-slate-500">Yükleniyor...</p>
+                          )}
+                        </div>
+                        <div className="border-t border-slate-100 px-4 py-2">
+                          <Link
+                            href="/products"
+                            className="flex items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 transition-colors"
+                          >
+                            Tüm Ürünleri Gör
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            </svg>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <Link
                   href="/iletisim"
                   className="px-5 py-2.5 text-sm font-medium text-slate-600 rounded-full transition-all duration-200 hover:bg-white hover:text-slate-900 hover:shadow-sm"
@@ -223,12 +270,43 @@ export function SiteHeader() {
 
             {/* Navigation */}
             <nav className="flex items-center gap-1">
-              <Link href="/products" className="px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                Ürünler
-              </Link>
-              <Link href="/categories" className="px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                Kategoriler
-              </Link>
+              <div
+                className="relative"
+                onMouseEnter={() => setShowProductsMenu(true)}
+                onMouseLeave={() => setShowProductsMenu(false)}
+              >
+                <Link href="/products" className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                  Ürünler
+                  <svg className={`h-4 w-4 transition-transform duration-200 ${showProductsMenu ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </Link>
+                {showProductsMenu && (
+                  <div className="absolute left-0 top-full pt-1 z-50">
+                    <div className="w-56 rounded-xl bg-white shadow-xl ring-1 ring-slate-200 py-2">
+                      <div className="max-h-64 overflow-y-auto">
+                        {categories.map((category) => (
+                          <Link
+                            key={category.id}
+                            href={`/categories/${category.slug}`}
+                            className="block px-4 py-2 text-sm text-slate-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                          >
+                            {category.name}
+                          </Link>
+                        ))}
+                      </div>
+                      <div className="border-t border-slate-100 mt-1 pt-1 px-2">
+                        <Link
+                          href="/products"
+                          className="block px-2 py-2 text-sm font-medium text-slate-600 hover:text-amber-600 transition-colors"
+                        >
+                          Tüm Ürünler →
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </nav>
 
             {/* Actions */}
@@ -331,11 +409,11 @@ export function SiteHeader() {
             </svg>
             <span className="text-[10px] font-medium">Ürünler</span>
           </Link>
-          <Link href="/categories" className="flex flex-col items-center gap-1 text-slate-500 hover:text-amber-600 transition-colors">
+          <Link href="/iletisim" className="flex flex-col items-center gap-1 text-slate-500 hover:text-amber-600 transition-colors">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            <span className="text-[10px] font-medium">Kategoriler</span>
+            <span className="text-[10px] font-medium">İletişim</span>
           </Link>
           <Link
             href={user ? "/account" : "/auth/login"}

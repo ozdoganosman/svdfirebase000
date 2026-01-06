@@ -34,6 +34,7 @@ const mapMediaDoc = (doc) => {
     size: Number(data.size ?? 0),
     mimeType: data.mimeType || "",
     url: data.url || "",
+    thumbnailUrl: data.thumbnailUrl || null,
     storageKey: data.storageKey,
     checksum: data.checksum || null,
     metadata: data.metadata || {},
@@ -61,6 +62,7 @@ const createMediaEntry = async (entry) => {
     mimeType,
     size,
     url,
+    thumbnailUrl = null,
     checksum = null,
     metadata = {},
   } = entry;
@@ -73,6 +75,7 @@ const createMediaEntry = async (entry) => {
     mimeType,
     size,
     url,
+    thumbnailUrl,
     checksum,
     metadata,
     createdAt: now,

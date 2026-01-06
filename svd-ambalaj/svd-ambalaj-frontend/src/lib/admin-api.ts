@@ -775,3 +775,27 @@ export function getExportUrl(type: "orders" | "customers" | "products" | "sales"
   const search = query.toString();
   return `${base}/admin/analytics/export/${type}${search ? `?${search}` : ""}`;
 }
+
+export interface ThumbnailMigrationResult {
+  success: boolean;
+  summary: {
+    total: number;
+    created: number;
+    skipped: number;
+    errors: number;
+  };
+  results?: {
+    filename: string;
+    status: "created" | "skipped" | "error";
+    originalSize?: number;
+    thumbSize?: number;
+    savings?: string;
+    error?: string;
+  }[];
+}
+
+export async function migrateThumbnails(): Promise<ThumbnailMigrationResult> {
+  return apiFetch<ThumbnailMigrationResult>("/admin/migrate-thumbnails", {
+    method: "POST",
+  });
+}

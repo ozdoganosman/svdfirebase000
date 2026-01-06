@@ -11,10 +11,17 @@ import {
   UserRoleInfo,
 } from "../lib/settings-api";
 
+export type Category = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
 type SettingsContextType = {
   settings: Record<string, SiteSettings> | null;
   pricingSettings: PricingSettings | null;
   siteSettings: SiteInfoSettings | null;
+  categories: Category[];
   userRole: UserRoleInfo | null;
   isLoading: boolean;
   error: string | null;
@@ -27,6 +34,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Record<string, SiteSettings> | null>(null);
   const [publicSiteSettings, setPublicSiteSettings] = useState<SiteInfoSettings | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [userRole, setUserRole] = useState<UserRoleInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +47,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Failed to load public site settings:", err);
       // Don't set error - use defaults
+    }
+  };
+
+  // Load categories (no auth required) - for header navigation
+  const loadCategories = async () => {
+    try {
+      const response = await fetch("/api/categories");
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data.categories || []);
+      }
+    } catch (err) {
+      console.error("Failed to load categories:", err);
+      // Don't set error - use empty array
     }
   };
 
@@ -72,8 +94,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Load public site settings immediately (no auth needed)
+    // Load public data immediately (no auth needed)
     loadPublicSiteSettings();
+    loadCategories();
 
     // Try to load all settings and user role (requires auth)
     const initialize = async () => {
@@ -94,6 +117,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         settings,
         pricingSettings,
         siteSettings,
+        categories,
         userRole,
         isLoading,
         error,

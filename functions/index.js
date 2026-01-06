@@ -9,6 +9,7 @@ import path from "path";
 import os from "os";
 import fs from "fs";
 import crypto from "crypto";
+import sharp from "sharp";
 import dotenv from "dotenv";
 
 import * as catalog from "./db/catalog.js";
@@ -60,6 +61,34 @@ const MEDIA_FILE_SIZE_LIMIT_MB =
     ? parsedMediaFileSizeMb
     : DEFAULT_MEDIA_FILE_SIZE_MB;
 const MEDIA_FILE_SIZE_LIMIT_BYTES = MEDIA_FILE_SIZE_LIMIT_MB * 1024 * 1024;
+
+// Thumbnail settings
+const THUMBNAIL_MAX_WIDTH = 800;
+const THUMBNAIL_QUALITY = 80;
+
+/**
+ * Generate a WebP thumbnail from an image file
+ * @param {string} inputPath - Path to the original image
+ * @param {string} outputPath - Path to save the thumbnail
+ * @returns {Promise<{success: boolean, size?: number, error?: string}>}
+ */
+const generateThumbnail = async (inputPath, outputPath) => {
+  try {
+    await sharp(inputPath)
+      .resize(THUMBNAIL_MAX_WIDTH, null, {
+        withoutEnlargement: true, // Don't upscale small images
+        fit: "inside"
+      })
+      .webp({ quality: THUMBNAIL_QUALITY })
+      .toFile(outputPath);
+
+    const stats = fs.statSync(outputPath);
+    return { success: true, size: stats.size };
+  } catch (error) {
+    functions.logger.error("Thumbnail generation failed", { error: error.message });
+    return { success: false, error: error.message };
+  }
+};
 
 if (!ADMIN_EMAIL_SOURCE) {
   functions.logger.warn("ADMIN_EMAIL environment variable missing; falling back to admin@example.com.");
@@ -315,6 +344,7 @@ app.post("/media", requireAuth, (req, res) => {
 
           // Add specific metadata for videos
           const isVideo = mimetype.startsWith("video/");
+          const isImage = mimetype.startsWith("image/");
           const metadata = {
             contentType: mimetype,
             metadata: {
@@ -338,6 +368,60 @@ app.post("/media", requireAuth, (req, res) => {
           // Create a public URL without signed URL
           const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(destination)}?alt=media`;
 
+          // Generate thumbnail for images
+          let thumbnailUrl = null;
+          if (isImage) {
+            // Handle both proper extensions (.jpg) and merged names (imagejpg from slugify)
+            const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'avif'];
+            let thumbName = safeName;
+            let foundExt = false;
+            for (const ext of imageExtensions) {
+              if (safeName.toLowerCase().endsWith('.' + ext)) {
+                thumbName = safeName.slice(0, -(ext.length + 1)) + '_thumb.webp';
+                foundExt = true;
+                break;
+              } else if (safeName.toLowerCase().endsWith(ext)) {
+                thumbName = safeName.slice(0, -ext.length) + '_thumb.webp';
+                foundExt = true;
+                break;
+              }
+            }
+            if (!foundExt) {
+              thumbName = safeName + '_thumb.webp';
+            }
+            const thumbTempPath = path.join(os.tmpdir(), thumbName);
+            const thumbDestination = `uploads/${thumbName}`;
+
+            const thumbResult = await generateThumbnail(tempPath, thumbTempPath);
+
+            if (thumbResult.success) {
+              try {
+                await bucket.upload(thumbTempPath, {
+                  destination: thumbDestination,
+                  metadata: {
+                    contentType: "image/webp",
+                    metadata: {
+                      originalName: finalFilename,
+                      fileType: "thumbnail"
+                    }
+                  },
+                  validation: "md5",
+                  public: true
+                });
+
+                thumbnailUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(thumbDestination)}?alt=media`;
+                functions.logger.info("Thumbnail generated and uploaded", {
+                  destination: thumbDestination,
+                  size: thumbResult.size
+                });
+              } catch (thumbUploadError) {
+                functions.logger.error("Thumbnail upload failed", { error: thumbUploadError.message });
+              } finally {
+                fs.unlink(thumbTempPath, () => {});
+              }
+            }
+          }
+
           const created = await media.createMediaEntry({
             storageKey: destination,
             filename: safeName,
@@ -345,6 +429,7 @@ app.post("/media", requireAuth, (req, res) => {
             mimeType: mimetype,
             size: stats.size,
             url: publicUrl,
+            thumbnailUrl: thumbnailUrl,
             checksum: null,
             metadata: { encoding },
           });
@@ -2875,6 +2960,167 @@ app.get("/admin/me/role", requireAuth, async (req, res) => {
   } catch (error) {
     functions.logger.error("Failed to get user role", error);
     res.status(500).json({ error: "Failed to get role information" });
+  }
+});
+
+// Debug endpoint to list storage files
+app.get("/admin/debug-storage", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const bucket = getStorage().bucket();
+    const [files] = await bucket.getFiles({ maxResults: 50 });
+    const fileNames = files.map(f => f.name);
+    res.json({
+      bucketName: bucket.name,
+      totalFiles: files.length,
+      files: fileNames
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Thumbnail Migration Endpoint
+// Generates thumbnails for existing images that don't have them
+// Processes in batches to avoid memory issues
+app.post("/admin/migrate-thumbnails", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const BATCH_SIZE = 5; // Process 5 images at a time to avoid memory issues
+    const bucket = getStorage().bucket();
+    const [files] = await bucket.getFiles({ prefix: 'uploads/' });
+
+    // Filter to only original images (not thumbnails)
+    // Support both proper extensions (.jpg) and merged names (imagejpg)
+    const imagePatterns = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'avif'];
+    const imagesToProcess = files.filter(file => {
+      const filename = file.name.toLowerCase();
+      // Skip thumbnails and videos
+      if (filename.includes('_thumb')) return false;
+      if (filename.endsWith('mp4') || filename.endsWith('webm') || filename.endsWith('mov')) return false;
+      // Check if filename ends with image extension (with or without dot)
+      return imagePatterns.some(ext => filename.endsWith(ext) || filename.endsWith('.' + ext));
+    });
+
+    let created = 0;
+    let skipped = 0;
+    let errors = 0;
+    const results = [];
+
+    // Helper function to get thumb filename
+    const getThumbFilename = (filename) => {
+      for (const ext of imagePatterns) {
+        if (filename.toLowerCase().endsWith('.' + ext)) {
+          return filename.slice(0, -(ext.length + 1)) + '_thumb.webp';
+        } else if (filename.toLowerCase().endsWith(ext)) {
+          return filename.slice(0, -ext.length) + '_thumb.webp';
+        }
+      }
+      return filename + '_thumb.webp';
+    };
+
+    // Process a single image
+    const processImage = async (file) => {
+      const filename = file.name;
+      const thumbFilename = getThumbFilename(filename);
+
+      try {
+        // Check if thumbnail already exists
+        const [thumbExists] = await bucket.file(thumbFilename).exists();
+        if (thumbExists) {
+          return { status: 'skipped' };
+        }
+
+        // Download original to temp
+        const tempOriginal = path.join(os.tmpdir(), `orig_${Date.now()}_${path.basename(filename)}`);
+        const tempThumb = path.join(os.tmpdir(), `thumb_${Date.now()}_${path.basename(thumbFilename)}`);
+
+        try {
+          await file.download({ destination: tempOriginal });
+
+          // Generate thumbnail with sharp
+          await sharp(tempOriginal)
+            .resize(THUMBNAIL_MAX_WIDTH, null, {
+              withoutEnlargement: true,
+              fit: 'inside'
+            })
+            .webp({ quality: THUMBNAIL_QUALITY })
+            .toFile(tempThumb);
+
+          // Get sizes for reporting
+          const originalStats = fs.statSync(tempOriginal);
+          const thumbStats = fs.statSync(tempThumb);
+
+          // Upload thumbnail
+          await bucket.upload(tempThumb, {
+            destination: thumbFilename,
+            metadata: {
+              contentType: 'image/webp',
+              metadata: {
+                originalName: path.basename(filename),
+                fileType: 'thumbnail'
+              }
+            },
+            public: true
+          });
+
+          const savings = ((1 - thumbStats.size / originalStats.size) * 100).toFixed(1);
+
+          // Cleanup temp files
+          try { fs.unlinkSync(tempOriginal); } catch (e) { /* ignore */ }
+          try { fs.unlinkSync(tempThumb); } catch (e) { /* ignore */ }
+
+          return {
+            status: 'created',
+            filename: path.basename(filename),
+            originalSize: originalStats.size,
+            thumbSize: thumbStats.size,
+            savings: `${savings}%`
+          };
+        } finally {
+          // Always cleanup temp files
+          try { fs.unlinkSync(tempOriginal); } catch (e) { /* ignore */ }
+          try { fs.unlinkSync(tempThumb); } catch (e) { /* ignore */ }
+        }
+      } catch (error) {
+        functions.logger.error("Thumbnail generation failed", { filename, error: error.message });
+        return { status: 'error', filename: path.basename(filename), error: error.message };
+      }
+    };
+
+    // Process images in batches
+    for (let i = 0; i < imagesToProcess.length; i += BATCH_SIZE) {
+      const batch = imagesToProcess.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.all(batch.map(processImage));
+
+      for (const result of batchResults) {
+        if (result.status === 'created') {
+          created++;
+          results.push(result);
+        } else if (result.status === 'skipped') {
+          skipped++;
+        } else if (result.status === 'error') {
+          errors++;
+        }
+      }
+
+      // Force garbage collection between batches if available
+      if (global.gc) {
+        global.gc();
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      summary: {
+        total: imagesToProcess.length,
+        created,
+        skipped,
+        errors
+      },
+      results: results.slice(0, 50) // Limit results to avoid large response
+    });
+  } catch (error) {
+    functions.logger.error("Thumbnail migration failed", error);
+    res.status(500).json({ error: `Migration failed: ${error.message}` });
   }
 });
 

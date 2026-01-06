@@ -4,7 +4,8 @@ import { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AddToCartButton, SelectedVariants } from "@/components/add-to-cart-button";
-import { formatDualPrice } from "@/lib/currency";
+import { formatDualPrice, formatCurrency, convertUSDToTRY } from "@/lib/currency";
+import { getThumbnailUrl } from "@/lib/image-utils";
 
 type VariantOption = {
   id: string;
@@ -108,12 +109,38 @@ export function ProductCard({ product, rate }: ProductCardProps) {
 
   const effectivePriceUSD = (product.priceUSD ?? 0) + priceModifier;
 
+  // Calculate highest and lowest prices (comparing base price with all bulk tiers)
+  const priceRange = useMemo(() => {
+    const basePrice = effectivePriceUSD;
+
+    if (!product.bulkPricingUSD || product.bulkPricingUSD.length === 0) {
+      return { highest: basePrice, lowest: basePrice, lowestMinQty: 1 };
+    }
+
+    // Get all bulk prices with modifier applied
+    const bulkPrices = product.bulkPricingUSD.map(t => t.price + priceModifier);
+    const allPrices = [basePrice, ...bulkPrices].filter(p => p > 0);
+
+    // Find the lowest price tier (for minQty display)
+    const lowestTier = product.bulkPricingUSD.reduce((min, tier) =>
+      tier.price < min.price ? tier : min,
+      product.bulkPricingUSD[0]
+    );
+
+    return {
+      highest: Math.max(...allPrices),
+      lowest: Math.min(...allPrices),
+      lowestMinQty: lowestTier.minQty
+    };
+  }, [effectivePriceUSD, product.bulkPricingUSD, priceModifier]);
+
   const resolveProductImage = (): string => {
     const imagePath = product.images?.[0] ?? product.image;
     if (!imagePath) {
       return "/images/placeholders/product.jpg";
     }
-    return imagePath;
+    // Use thumbnail for product cards (faster loading)
+    return getThumbnailUrl(imagePath) || imagePath;
   };
 
   const hasVariants = product.variants && product.variants.length > 0;
@@ -197,16 +224,31 @@ export function ProductCard({ product, rate }: ProductCardProps) {
         )}
 
         <div className="mt-auto pt-2 border-t border-slate-100">
-          <p className="text-lg font-bold text-amber-600">
-            {effectivePriceUSD && rate > 0
-              ? formatDualPrice(effectivePriceUSD, rate, true)
-              : "—"}
-            <span className="text-[10px] font-normal text-slate-400 ml-1">+KDV</span>
-          </p>
-          {/* Minimum fiyat gösterimi */}
-          {product.bulkPricingUSD && product.bulkPricingUSD.length > 0 && rate > 0 && (
+          {/* Price range display: lowest (green) - highest (amber) */}
+          <div className="flex items-baseline gap-1 flex-wrap">
+            {rate > 0 ? (
+              <>
+                <span className="text-base font-bold text-green-600">
+                  {formatCurrency(convertUSDToTRY(priceRange.lowest, rate), "TRY")}
+                </span>
+                {priceRange.highest !== priceRange.lowest && (
+                  <>
+                    <span className="text-slate-400 text-sm">-</span>
+                    <span className="text-base font-bold text-amber-600">
+                      {formatCurrency(convertUSDToTRY(priceRange.highest, rate), "TRY")}
+                    </span>
+                  </>
+                )}
+                <span className="text-[10px] font-normal text-slate-400 ml-1">+KDV</span>
+              </>
+            ) : (
+              <span className="text-lg font-bold text-amber-600">—</span>
+            )}
+          </div>
+          {/* Show quantity info for lowest price */}
+          {priceRange.highest !== priceRange.lowest && (
             <p className="text-[10px] text-green-600 font-medium">
-              {formatDualPrice(product.bulkPricingUSD[product.bulkPricingUSD.length - 1].price + priceModifier, rate, false)}&apos;e varan fiyatlarla
+              {priceRange.lowestMinQty}+ kolide en düşük
             </p>
           )}
           {product.packageInfo && (

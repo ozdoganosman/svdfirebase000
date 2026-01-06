@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { getThumbnailUrl } from "@/lib/image-utils";
 
 type ImageGalleryProps = {
   images: string[];
@@ -74,7 +75,7 @@ export function ImageGallery({ images, productTitle }: ImageGalleryProps) {
                 }`}
               >
                 <Image
-                  src={image}
+                  src={getThumbnailUrl(image) || image}
                   alt={`${productTitle} - Görsel ${index + 1}`}
                   fill
                   sizes="80px"
@@ -183,7 +184,7 @@ export function ImageGallery({ images, productTitle }: ImageGalleryProps) {
                   }`}
                 >
                   <Image
-                    src={image}
+                    src={getThumbnailUrl(image) || image}
                     alt={`Görsel ${index + 1}`}
                     fill
                     sizes="56px"
