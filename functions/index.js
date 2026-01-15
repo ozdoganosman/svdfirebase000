@@ -1652,6 +1652,40 @@ app.put("/orders/:id/status", requireAuth, async (req, res) => {
   }
 });
 
+// Cancel order endpoint - used when user cancels payment
+app.post("/orders/:id/cancel", async (req, res) => {
+  try {
+    const orderId = req.params.id;
+
+    // First check if order exists and is in pending_payment status
+    const orderDoc = await db.collection("orders").doc(orderId).get();
+    if (!orderDoc.exists) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    const orderData = orderDoc.data();
+
+    // Only allow cancellation of pending_payment orders
+    if (orderData.status !== "pending_payment") {
+      return res.status(400).json({ error: "Order cannot be cancelled" });
+    }
+
+    // Update order status to cancelled
+    await orders.updateOrder(orderId, {
+      status: "cancelled",
+      paymentStatus: "failed",
+      cancelledAt: new Date().toISOString(),
+      cancelReason: "user_cancelled"
+    });
+
+    functions.logger.info("Order cancelled by user", { orderId });
+    res.json({ success: true });
+  } catch (error) {
+    functions.logger.error("Error cancelling order", error);
+    res.status(500).json({ error: "Failed to cancel order" });
+  }
+});
+
 const statsOverviewHandler = async (req, res) => {
   try {
     const stats = await orders.getStatsOverview(req.query || {});

@@ -285,7 +285,21 @@ const getProductBySlug = async (slug) => {
   return snapshot.empty ? null : mapProductDoc(snapshot.docs[0]);
 };
 
-const listProductsByCategory = async (categoryId) => {
+const listProductsByCategory = async (categoryIdOrSlug) => {
+  // First try to find category by ID
+  let categoryId = categoryIdOrSlug;
+
+  // Check if the provided value is a slug (contains dashes and doesn't exist as direct ID)
+  const directSnapshot = await productsCollection.where("category", "==", categoryIdOrSlug).limit(1).get();
+
+  if (directSnapshot.empty) {
+    // No products found with this category ID, try to find by slug
+    const category = await getCategoryBySlug(categoryIdOrSlug);
+    if (category) {
+      categoryId = category.id;
+    }
+  }
+
   const snapshot = await productsCollection.where("category", "==", categoryId).get();
   return snapshot.docs.map(mapProductDoc);
 };

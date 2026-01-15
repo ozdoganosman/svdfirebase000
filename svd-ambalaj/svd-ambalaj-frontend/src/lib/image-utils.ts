@@ -2,7 +2,7 @@
  * Image utility functions for thumbnail handling
  */
 
-// Thumbnails are enabled - will try thumbnail first, fallback to original if not found
+// Enable thumbnails when thumbnail files exist in storage
 const THUMBNAILS_ENABLED = true;
 
 /**

@@ -71,10 +71,12 @@ const mapOrderDoc = (doc) => {
       title: item.title || "",
       quantity,
       price,
+      priceUSD: item.priceUSD || null,
       subtotal: parseNumber(item.subtotal, price * calculatedItemCount),
       category: item.category || null,
       packageInfo,
       totalItemCount: item.totalItemCount || calculatedItemCount,
+      imageUrl: item.imageUrl || null,
     };
   });
 
@@ -247,10 +249,12 @@ const createOrder = async (payload) => {
         title: item.title || "",
         quantity,
         price: unitPrice,
+        priceUSD: item.priceUSD || null, // USD price for display
         subtotal: parseNumber(item.subtotal, calculatedSubtotal),
         category: item.category || null,
         packageInfo: item.packageInfo || null,
         totalItemCount: item.totalItemCount || actualQuantity, // Actual item count
+        imageUrl: item.imageUrl || null, // Product image for order display
       };
     }),
     totals: {

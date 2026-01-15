@@ -4,22 +4,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/context/CartContext";
 import { useEffect, useState } from "react";
-import { resolveServerApiUrl, resolveServerApiOrigin } from "@/lib/server-api";
+import { resolveServerApiUrl } from "@/lib/server-api";
 import { getCurrentRate, formatDualPrice } from "@/lib/currency";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { useAuth } from "@/context/AuthContext";
 import { loadRecaptcha, executeRecaptcha } from "@/lib/recaptcha";
-
-// Helper to resolve image paths
-const resolveImagePath = (path: string | undefined | null): string => {
-  if (!path) return '';
-  if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  if (path.startsWith('/uploads/')) {
-    const origin = resolveServerApiOrigin();
-    return origin ? `${origin}${path}` : path;
-  }
-  return path;
-};
+import { getThumbnailUrl } from "@/lib/image-utils";
 
 type Product = {
   id: string;
@@ -937,7 +927,7 @@ export default function CartPage() {
                       {item.images && item.images[0] ? (
                         <div className="relative h-16 w-16 flex-shrink-0">
                           <Image
-                            src={resolveImagePath(item.images[0])}
+                            src={getThumbnailUrl(item.images[0])}
                             alt={item.title}
                             fill
                             sizes="64px"
@@ -1305,7 +1295,7 @@ export default function CartPage() {
                   <Link href={`/products/${product.slug}`} className="relative block h-52 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
                     {product.images && product.images[0] ? (
                       <Image
-                        src={resolveImagePath(product.images[0])}
+                        src={getThumbnailUrl(product.images[0])}
                         alt={product.title}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
