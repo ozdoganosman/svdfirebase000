@@ -1208,9 +1208,26 @@ app.get("/user/orders/:id", async (req, res) => {
   }
 });
 
+// CORS handler for receipt upload
+app.options("/orders/:orderId/receipt", cors({
+  origin: "*",
+  methods: ["POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
+}));
+
 // Upload payment receipt for bank transfer orders
-app.post("/orders/:orderId/receipt", async (req, res) => {
+app.post("/orders/:orderId/receipt", cors(), async (req, res) => {
   const { orderId } = req.params;
+
+  // Validate Content-Type
+  if (!req.headers["content-type"]) {
+    return res.status(400).json({ error: "Content-Type header eksik" });
+  }
+
+  if (!req.headers["content-type"].includes("multipart/form-data")) {
+    return res.status(400).json({ error: "Content-Type multipart/form-data olmalı" });
+  }
 
   try {
     // Check if order exists
