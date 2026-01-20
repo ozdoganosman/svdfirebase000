@@ -1208,6 +1208,120 @@ app.get("/user/orders/:id", async (req, res) => {
   }
 });
 
+// Upload payment receipt for bank transfer orders
+app.post("/orders/:orderId/receipt", async (req, res) => {
+  const { orderId } = req.params;
+
+  try {
+    // Check if order exists
+    const order = await orders.getOrderById(orderId);
+    if (!order) {
+      return res.status(404).json({ error: "Sipariş bulunamadı" });
+    }
+
+    const Busboy = (await import("busboy")).default;
+    const busboy = Busboy({
+      headers: req.headers,
+      limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+    });
+
+    let uploadedFile = null;
+    let uploadError = null;
+
+    busboy.on("file", async (fieldname, file, { filename, mimeType }) => {
+      functions.logger.info("Processing receipt upload", { orderId, filename, mimeType });
+
+      // Validate file type
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+      if (!allowedTypes.includes(mimeType)) {
+        uploadError = "Sadece resim (JPG, PNG, WebP) veya PDF dosyası yükleyebilirsiniz.";
+        file.resume();
+        return;
+      }
+
+      const timestamp = Date.now();
+      const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const storagePath = `receipts/${orderId}/${timestamp}-${safeFilename}`;
+      const tempPath = path.join(os.tmpdir(), `${timestamp}-${safeFilename}`);
+
+      const writeStream = fs.createWriteStream(tempPath);
+      file.pipe(writeStream);
+
+      file.on("limit", () => {
+        uploadError = "Dosya boyutu 10MB'dan büyük olamaz.";
+        file.unpipe(writeStream);
+        writeStream.destroy();
+        fs.unlink(tempPath, () => {});
+      });
+
+      await new Promise((resolve, reject) => {
+        writeStream.on("finish", resolve);
+        writeStream.on("error", reject);
+      });
+
+      if (uploadError) return;
+
+      try {
+        const bucket = getStorage().bucket();
+        await bucket.upload(tempPath, {
+          destination: storagePath,
+          metadata: { contentType: mimeType },
+          public: true,
+        });
+
+        const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(storagePath)}?alt=media`;
+
+        uploadedFile = {
+          url: publicUrl,
+          filename: filename,
+          mimeType: mimeType,
+          uploadedAt: new Date().toISOString(),
+        };
+
+        functions.logger.info("Receipt uploaded successfully", { orderId, url: publicUrl });
+      } catch (err) {
+        functions.logger.error("Receipt upload to storage failed", { error: err.message });
+        uploadError = "Dosya yüklenirken hata oluştu.";
+      } finally {
+        fs.unlink(tempPath, () => {});
+      }
+    });
+
+    busboy.on("finish", async () => {
+      if (uploadError) {
+        return res.status(400).json({ error: uploadError });
+      }
+
+      if (!uploadedFile) {
+        return res.status(400).json({ error: "Dosya seçilmedi." });
+      }
+
+      try {
+        // Update order with receipt info
+        await orders.updateOrder(orderId, {
+          paymentReceipt: uploadedFile,
+          paymentReceiptUploadedAt: uploadedFile.uploadedAt,
+        });
+
+        res.json({ success: true, receipt: uploadedFile });
+      } catch (err) {
+        functions.logger.error("Failed to update order with receipt", { error: err.message });
+        res.status(500).json({ error: "Sipariş güncellenirken hata oluştu." });
+      }
+    });
+
+    busboy.on("error", (error) => {
+      functions.logger.error("Busboy error", { error: error.message });
+      res.status(500).json({ error: "Dosya yüklenirken hata oluştu." });
+    });
+
+    busboy.end(req.rawBody);
+  } catch (error) {
+    functions.logger.error("Receipt upload error", { error: error.message });
+    res.status(500).json({ error: "Dekont yüklenirken hata oluştu." });
+  }
+});
+
 // User profile endpoints
 app.get("/user/profile", async (req, res) => {
   try {

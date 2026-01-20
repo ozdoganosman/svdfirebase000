@@ -738,6 +738,24 @@ const defaultOrderConfirmationHtml = `
         </tr>
       </table>
 
+      {{#if isBankTransfer}}
+      <div style="background-color: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <h3 style="color: #92400e; margin: 0 0 15px 0;">🏦 Banka Hesap Bilgileri</h3>
+        {{#each bankAccounts}}
+        <div style="background: white; border-radius: 6px; padding: 12px; margin-bottom: 10px; border: 1px solid #fde68a;">
+          <p style="margin: 0; font-weight: bold; color: #374151;">{{this.bank}}</p>
+          <p style="margin: 5px 0 0 0; font-family: monospace; font-size: 14px; color: #1f2937;">{{this.iban}}</p>
+        </div>
+        {{/each}}
+        <p style="color: #92400e; font-size: 12px; margin: 15px 0 0 0;">
+          ⚠️ Açıklama kısmına sipariş numaranızı (<strong>{{orderNumber}}</strong>) yazınız.
+        </p>
+        <p style="color: #1e40af; font-size: 12px; margin: 10px 0 0 0;">
+          📤 Ödemenizi yaptıktan sonra <a href="{{ordersUrl}}" style="color: #1e40af;">siparişlerim</a> sayfasından dekontunuzu yükleyebilirsiniz.
+        </p>
+      </div>
+      {{/if}}
+
       <div class="info-box">
         <p><strong>Teslimat Adresi:</strong></p>
         <p>{{deliveryAddress}}</p>
@@ -773,6 +791,17 @@ Tarih: {{createdAtFormatted}}
 Durum: {{statusText}}
 
 Toplam: {{totalFormatted}}
+
+{{#if isBankTransfer}}
+BANKA HESAP BİLGİLERİ:
+{{#each bankAccounts}}
+{{this.bank}}
+IBAN: {{this.iban}}
+{{/each}}
+
+Açıklama kısmına sipariş numaranızı ({{orderNumber}}) yazınız.
+Ödemenizi yaptıktan sonra siparişlerim sayfasından dekontunuzu yükleyebilirsiniz.
+{{/if}}
 
 Teslimat Adresi:
 {{deliveryAddress}}
@@ -1148,6 +1177,12 @@ export async function orderConfirmationTemplate(order) {
     cancelled: "İptal Edildi",
   };
 
+  // Bank account information for bank transfer orders
+  const bankAccounts = [
+    { bank: "GARANTİ BANKASI - ELEKTROKENT ŞB.", iban: "TR64 0006 2001 4950 0006 2969 00" },
+    { bank: "HALKBANK - D.EVLER ŞB.", iban: "TR29 0001 2009 3920 0010 2608 07" },
+  ];
+
   const templateData = {
     siteName: "SVD Ambalaj",
     siteUrl: baseUrl,
@@ -1174,6 +1209,10 @@ export async function orderConfirmationTemplate(order) {
     // Notes
     notes: order.notes || "",
     hasNotes: !!order.notes,
+    // Bank transfer info
+    paymentMethod: order.paymentMethod || "bank_transfer",
+    isBankTransfer: order.paymentMethod !== "credit_card",
+    bankAccounts: bankAccounts,
   };
 
   const customTemplate = await getEmailTemplate("orderConfirmation");

@@ -11,6 +11,89 @@ const apiBase =
   process.env.NEXT_PUBLIC_API_URL ??
   "http://localhost:5000/svdfirebase000/us-central1/api";
 
+// Bank account information
+const BANK_ACCOUNTS = [
+  { bank: "GARANTİ BANKASI - ELEKTROKENT ŞB.", iban: "TR64 0006 2001 4950 0006 2969 00" },
+  { bank: "HALKBANK - D.EVLER ŞB.", iban: "TR29 0001 2009 3920 0010 2608 07" },
+];
+
+// Receipt Upload Component
+function ReceiptUpload({ orderId, onUploadSuccess }: { orderId: string; onUploadSuccess?: () => void }) {
+  const [uploading, setUploading] = useState(false);
+  const [uploaded, setUploaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!validTypes.includes(file.type)) {
+      setError("Sadece resim (JPG, PNG) veya PDF dosyası yükleyebilirsiniz.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Dosya boyutu 10MB'dan küçük olmalıdır.");
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${apiBase}/orders/${orderId}/receipt`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Yükleme başarısız");
+
+      setUploaded(true);
+      onUploadSuccess?.();
+    } catch {
+      setError("Dekont yüklenirken hata oluştu. Lütfen tekrar deneyin.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (uploaded) {
+    return (
+      <div className="flex items-center gap-2 text-green-600">
+        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+        </svg>
+        <span className="font-medium text-sm">Dekont yüklendi!</span>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <label className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors text-sm font-medium">
+        {uploading ? (
+          <>
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent" />
+            <span>Yükleniyor...</span>
+          </>
+        ) : (
+          <>
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            <span>Dekont Yükle</span>
+          </>
+        )}
+        <input type="file" className="hidden" accept="image/*,.pdf" onChange={handleUpload} disabled={uploading} />
+      </label>
+      {error && <p className="text-red-600 text-xs mt-2">{error}</p>}
+    </div>
+  );
+}
+
 interface OrderItem {
   id: string;
   title: string;
@@ -65,6 +148,12 @@ interface Order {
   billingAddress?: string;
   shippedAt?: string;
   deliveredAt?: string;
+  paymentMethod?: string;
+  paymentReceipt?: {
+    url: string;
+    filename: string;
+    uploadedAt: string;
+  };
 }
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -275,6 +364,65 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                           <h3 className="font-semibold text-amber-800">Satıcı Notu</h3>
                           <p className="text-sm text-amber-700 mt-1">{order.adminNotes}</p>
                         </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bank Transfer Payment Info */}
+                  {order.paymentMethod !== "credit_card" && (
+                    <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-5">
+                      <div className="flex items-center gap-2 mb-4">
+                        <svg className="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        <h3 className="font-semibold text-amber-800">Banka Hesap Bilgileri</h3>
+                      </div>
+                      <div className="space-y-2 mb-4">
+                        {BANK_ACCOUNTS.map((account, idx) => (
+                          <div key={idx} className="bg-white rounded-lg p-3 border border-amber-100">
+                            <p className="font-medium text-slate-700 text-sm">{account.bank}</p>
+                            <p className="font-mono text-slate-900 text-xs mt-1">{account.iban}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-amber-700 mb-4">
+                        Aciklama kismina siparis numaranizi (<strong>{order.orderNumber}</strong>) yaziniz.
+                      </p>
+
+                      {/* Receipt Upload or Show Uploaded */}
+                      <div className="border-t border-amber-200 pt-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                          </svg>
+                          <span className="font-medium text-slate-700 text-sm">Dekont</span>
+                        </div>
+                        {order.paymentReceipt ? (
+                          <div className="flex items-center gap-3 bg-green-50 rounded-lg p-3 border border-green-200">
+                            <svg className="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-green-800">Dekont yuklendi</p>
+                              <p className="text-xs text-green-600">{order.paymentReceipt.filename}</p>
+                            </div>
+                            <a
+                              href={order.paymentReceipt.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                            >
+                              Goruntule
+                            </a>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-xs text-slate-500 mb-2">
+                              Odemenizi yaptiktan sonra dekontunuzu yukleyin.
+                            </p>
+                            <ReceiptUpload orderId={order.id} />
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

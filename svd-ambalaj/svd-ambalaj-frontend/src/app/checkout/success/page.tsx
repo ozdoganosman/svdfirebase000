@@ -10,6 +10,89 @@ const apiBase =
   process.env.NEXT_PUBLIC_API_URL ??
   "http://localhost:5000/svdfirebase000/us-central1/api";
 
+// Bank account information
+const BANK_ACCOUNTS = [
+  { bank: "GARANTİ BANKASI - ELEKTROKENT ŞB.", iban: "TR64 0006 2001 4950 0006 2969 00" },
+  { bank: "HALKBANK - D.EVLER ŞB.", iban: "TR29 0001 2009 3920 0010 2608 07" },
+];
+
+// Receipt Upload Component
+function ReceiptUpload({ orderId, orderNumber }: { orderId: string | null; orderNumber?: string }) {
+  const [uploading, setUploading] = useState(false);
+  const [uploaded, setUploaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !orderId) return;
+
+    // Validate file type
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!validTypes.includes(file.type)) {
+      setError("Sadece resim (JPG, PNG) veya PDF dosyası yükleyebilirsiniz.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Dosya boyutu 10MB'dan küçük olmalıdır.");
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${apiBase}/orders/${orderId}/receipt`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Yükleme başarısız");
+
+      setUploaded(true);
+    } catch {
+      setError("Dekont yüklenirken hata oluştu. Lütfen tekrar deneyin.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (uploaded) {
+    return (
+      <div className="mt-3 flex items-center gap-2 text-green-600">
+        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+        </svg>
+        <span className="font-medium">Dekont yüklendi!</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3">
+      <label className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors text-sm font-medium">
+        {uploading ? (
+          <>
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent" />
+            <span>Yükleniyor...</span>
+          </>
+        ) : (
+          <>
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            <span>Dekont Seç</span>
+          </>
+        )}
+        <input type="file" className="hidden" accept="image/*,.pdf" onChange={handleUpload} disabled={uploading} />
+      </label>
+      {error && <p className="text-red-600 text-xs mt-2">{error}</p>}
+    </div>
+  );
+}
+
 const formatNow = () =>
   new Intl.DateTimeFormat("tr-TR", {
     dateStyle: "long",
@@ -282,17 +365,44 @@ function SuccessContent() {
             )}
 
             {orderInfo?.paymentMethod !== "credit_card" && (
-              <div className="mt-6 rounded-xl bg-blue-50 border border-blue-100 p-4">
-                <div className="flex items-start gap-3 text-left">
-                  <svg className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div className="text-sm text-blue-700">
-                    <p className="font-semibold">Siradaki Adim</p>
-                    <p className="mt-1">Siparisiniz onaylandiktan sonra banka hesap bilgileri e-posta ile iletilecektir.</p>
+              <>
+                {/* IBAN Bilgileri */}
+                <div className="mt-6 rounded-xl bg-amber-50 border border-amber-200 p-5 text-left">
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg className="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    <span className="font-semibold text-amber-800">Banka Hesap Bilgileri</span>
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    {BANK_ACCOUNTS.map((account, idx) => (
+                      <div key={idx} className="bg-white rounded-lg p-3 border border-amber-100">
+                        <p className="font-medium text-slate-700">{account.bank}</p>
+                        <p className="font-mono text-slate-900 mt-1 text-xs sm:text-sm">{account.iban}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-amber-700 mt-3">
+                    Aciklama kismina siparis numaranizi (<strong>{orderNumber || orderInfo?.orderNumber}</strong>) yaziniz.
+                  </p>
+                </div>
+
+                {/* Dekont Yukleme */}
+                <div className="mt-4 rounded-xl bg-blue-50 border border-blue-200 p-5">
+                  <div className="flex items-start gap-3 text-left">
+                    <svg className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="font-semibold text-blue-800">Dekont Yukleyin</p>
+                      <p className="text-sm text-blue-700 mt-1">
+                        Odemenizi yaptiktan sonra dekontunuzu buraya yukleyin. Siparisiniz daha hizli onaylanacaktir.
+                      </p>
+                      <ReceiptUpload orderId={orderId} orderNumber={orderNumber || orderInfo?.orderNumber} />
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             )}
 
             {/* Action Buttons */}
