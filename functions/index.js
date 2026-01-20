@@ -1315,7 +1315,13 @@ app.post("/orders/:orderId/receipt", async (req, res) => {
       res.status(500).json({ error: "Dosya yüklenirken hata oluştu." });
     });
 
-    busboy.end(req.rawBody);
+    // Check if rawBody is available and is a buffer (same pattern as /media endpoint)
+    const hasRawBodyBuffer = Buffer.isBuffer(req.rawBody);
+    if (hasRawBodyBuffer) {
+      busboy.end(req.rawBody);
+    } else {
+      req.pipe(busboy);
+    }
   } catch (error) {
     functions.logger.error("Receipt upload error", { error: error.message });
     res.status(500).json({ error: "Dekont yüklenirken hata oluştu." });
