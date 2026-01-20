@@ -372,19 +372,33 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         </div>
                       )}
 
+                      {/* KDV Tutarı */}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">KDV (%20)</span>
+                        <span className="font-medium text-slate-800">
+                          {formatPrice(
+                            ((order.totals.subtotal - (order.totals.comboDiscount || 0) - (order.totals.discountTotal || 0)) + (order.totals.shipping || 0)) * 0.20,
+                            order.totals.currency
+                          )}
+                        </span>
+                      </div>
+
                       <div className="border-t border-slate-200 pt-3 mt-3">
                         <div className="flex justify-between items-start">
                           <div>
-                            <span className="text-lg font-semibold text-slate-800">Toplam</span>
-                            <p className="text-[10px] text-slate-400 mt-0.5">+KDV</p>
+                            <span className="text-lg font-semibold text-slate-800">Genel Toplam</span>
+                            <p className="text-[10px] text-slate-400 mt-0.5">KDV Dahil</p>
                           </div>
                           <div className="text-right">
                             <span className="text-xl font-bold text-amber-600">
-                              {formatPrice(order.totals.total, order.totals.currency)}
+                              {formatPrice(
+                                ((order.totals.subtotal - (order.totals.comboDiscount || 0) - (order.totals.discountTotal || 0)) + (order.totals.shipping || 0)) * 1.20,
+                                order.totals.currency
+                              )}
                             </span>
                             {order.exchangeRate && (
                               <p className="text-sm text-slate-500">
-                                ${(order.totals.total / order.exchangeRate).toFixed(2)}
+                                ${(((order.totals.subtotal - (order.totals.comboDiscount || 0) - (order.totals.discountTotal || 0)) + (order.totals.shipping || 0)) * 1.20 / order.exchangeRate).toFixed(2)}
                               </p>
                             )}
                           </div>
@@ -462,7 +476,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500">Sipariş Tarihi</span>
-                        <span className="text-slate-800">{formatShortDate(order.createdAt)}</span>
+                        <span className="text-slate-800">{formatDate(order.createdAt)}</span>
                       </div>
                       {order.exchangeRate && (
                         <div className="flex justify-between">

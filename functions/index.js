@@ -1130,24 +1130,30 @@ app.post("/orders", formLimiter, async (req, res) => {
   try {
     const order = await orders.createOrder(req.body || {});
 
-    // Send order confirmation email to customer
-    try {
-      await emailSender.sendOrderConfirmationEmail(order);
-      functions.logger.info("Order confirmation email sent", { orderId: order.id });
-    } catch (emailError) {
-      functions.logger.error("Failed to send order confirmation email", emailError);
-      // Don't fail the request if email fails
-    }
-
-    // Send new order notification to admin
-    try {
-      const adminEmail = await emailSender.getAdminNotificationEmail();
-      if (adminEmail) {
-        await emailSender.sendNewOrderAdminEmail(order, adminEmail);
-        functions.logger.info("New order admin notification sent", { orderId: order.id, adminEmail });
+    // For credit card payments, wait for PayTR callback to send emails
+    // For bank transfer, send emails immediately
+    if (order.paymentMethod !== "credit_card") {
+      // Send order confirmation email to customer
+      try {
+        await emailSender.sendOrderConfirmationEmail(order);
+        functions.logger.info("Order confirmation email sent", { orderId: order.id });
+      } catch (emailError) {
+        functions.logger.error("Failed to send order confirmation email", emailError);
+        // Don't fail the request if email fails
       }
-    } catch (emailError) {
-      functions.logger.error("Failed to send admin order notification", emailError);
+
+      // Send new order notification to admin
+      try {
+        const adminEmail = await emailSender.getAdminNotificationEmail();
+        if (adminEmail) {
+          await emailSender.sendNewOrderAdminEmail(order, adminEmail);
+          functions.logger.info("New order admin notification sent", { orderId: order.id, adminEmail });
+        }
+      } catch (emailError) {
+        functions.logger.error("Failed to send admin order notification", emailError);
+      }
+    } else {
+      functions.logger.info("Credit card order - emails will be sent after payment confirmation", { orderId: order.id });
     }
 
     res.status(201).send({ message: "Order received", order });
@@ -2960,6 +2966,26 @@ app.post("/payment/callback", async (req, res) => {
         status: "confirmed",
       });
       functions.logger.info("Payment successful for order:", orderId);
+
+      // Payment confirmed - now send confirmation emails
+      try {
+        const updatedOrder = await orders.getOrder(orderId);
+        if (updatedOrder) {
+          // Send order confirmation email to customer
+          await emailSender.sendOrderConfirmationEmail(updatedOrder);
+          functions.logger.info("Order confirmation email sent after payment", { orderId });
+
+          // Send new order notification to admin
+          const adminEmail = await emailSender.getAdminNotificationEmail();
+          if (adminEmail) {
+            await emailSender.sendNewOrderAdminEmail(updatedOrder, adminEmail);
+            functions.logger.info("Admin notification sent after payment", { orderId, adminEmail });
+          }
+        }
+      } catch (emailError) {
+        functions.logger.error("Failed to send emails after payment confirmation", emailError);
+        // Don't fail the callback if email fails
+      }
     } else {
       await orders.updateOrder(orderId, {
         paymentStatus: "failed",
