@@ -1242,10 +1242,10 @@ app.post("/orders/:orderId/receipt", cors(), async (req, res) => {
       limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
     });
 
-    let uploadedFile = null;
+    let uploadPromise = null;
     let uploadError = null;
 
-    busboy.on("file", async (fieldname, file, { filename, mimeType }) => {
+    busboy.on("file", (fieldname, file, { filename, mimeType }) => {
       functions.logger.info("Processing receipt upload", { orderId, filename, mimeType });
 
       // Validate file type
@@ -1269,39 +1269,49 @@ app.post("/orders/:orderId/receipt", cors(), async (req, res) => {
         file.unpipe(writeStream);
         writeStream.destroy();
         fs.unlink(tempPath, () => {});
+        file.resume();
       });
 
-      await new Promise((resolve, reject) => {
-        writeStream.on("finish", resolve);
-        writeStream.on("error", reject);
-      });
-
-      if (uploadError) return;
-
-      try {
-        const bucket = getStorage().bucket();
-        await bucket.upload(tempPath, {
-          destination: storagePath,
-          metadata: { contentType: mimeType },
-          public: true,
+      // Create upload promise - this will be awaited in the finish handler
+      uploadPromise = new Promise((resolve, reject) => {
+        writeStream.on("error", (err) => {
+          fs.unlink(tempPath, () => {});
+          reject(err);
         });
 
-        const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(storagePath)}?alt=media`;
+        writeStream.on("finish", async () => {
+          if (uploadError) {
+            fs.unlink(tempPath, () => {});
+            reject(new Error(uploadError));
+            return;
+          }
 
-        uploadedFile = {
-          url: publicUrl,
-          filename: filename,
-          mimeType: mimeType,
-          uploadedAt: new Date().toISOString(),
-        };
+          try {
+            const bucket = getStorage().bucket();
+            await bucket.upload(tempPath, {
+              destination: storagePath,
+              metadata: { contentType: mimeType },
+              public: true,
+            });
 
-        functions.logger.info("Receipt uploaded successfully", { orderId, url: publicUrl });
-      } catch (err) {
-        functions.logger.error("Receipt upload to storage failed", { error: err.message });
-        uploadError = "Dosya yüklenirken hata oluştu.";
-      } finally {
-        fs.unlink(tempPath, () => {});
-      }
+            const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(storagePath)}?alt=media`;
+
+            functions.logger.info("Receipt uploaded successfully", { orderId, url: publicUrl });
+
+            resolve({
+              url: publicUrl,
+              filename: filename,
+              mimeType: mimeType,
+              uploadedAt: new Date().toISOString(),
+            });
+          } catch (err) {
+            functions.logger.error("Receipt upload to storage failed", { error: err.message });
+            reject(err);
+          } finally {
+            fs.unlink(tempPath, () => {});
+          }
+        });
+      });
     });
 
     busboy.on("finish", async () => {
@@ -1309,11 +1319,14 @@ app.post("/orders/:orderId/receipt", cors(), async (req, res) => {
         return res.status(400).json({ error: uploadError });
       }
 
-      if (!uploadedFile) {
+      if (!uploadPromise) {
         return res.status(400).json({ error: "Dosya seçilmedi." });
       }
 
       try {
+        // Wait for the upload to complete
+        const uploadedFile = await uploadPromise;
+
         // Update order with receipt info
         await orders.updateOrder(orderId, {
           paymentReceipt: uploadedFile,
@@ -1322,8 +1335,8 @@ app.post("/orders/:orderId/receipt", cors(), async (req, res) => {
 
         res.json({ success: true, receipt: uploadedFile });
       } catch (err) {
-        functions.logger.error("Failed to update order with receipt", { error: err.message });
-        res.status(500).json({ error: "Sipariş güncellenirken hata oluştu." });
+        functions.logger.error("Failed to process receipt upload", { error: err.message });
+        res.status(500).json({ error: err.message || "Dekont yüklenirken hata oluştu." });
       }
     });
 
