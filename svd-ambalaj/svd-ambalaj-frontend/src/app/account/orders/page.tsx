@@ -25,6 +25,8 @@ interface Order {
   orderNumber: string;
   createdAt: string;
   status: string;
+  paymentMethod?: string;
+  paymentStatus?: string;
   totals: {
     subtotal: number;
     currency: string;

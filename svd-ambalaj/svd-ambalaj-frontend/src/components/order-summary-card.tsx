@@ -18,6 +18,8 @@ interface Order {
   orderNumber: string;
   createdAt: string;
   status: string;
+  paymentMethod?: string;
+  paymentStatus?: string;
   totals: {
     subtotal: number;
     currency: string;
@@ -59,10 +61,24 @@ function formatShortDate(dateString: string): string {
   });
 }
 
+function getPaymentStatusBadge(order: Order): { show: boolean; label: string; color: string } {
+  // Show payment waiting badge for bank transfer orders that are not paid yet
+  if (order.paymentMethod === "bank_transfer" && order.paymentStatus !== "paid") {
+    return {
+      show: true,
+      label: "Ödeme Bekleniyor",
+      color: "border-orange-200 bg-orange-50 text-orange-700",
+    };
+  }
+  return { show: false, label: "", color: "" };
+}
+
 export function OrderSummaryCard({ order, variant = "default" }: OrderSummaryCardProps) {
   const currency = order.totals?.currency || "TRY";
 
   if (variant === "compact") {
+    const paymentBadge = getPaymentStatusBadge(order);
+
     return (
       <Link
         href={`/account/orders/${order.id}`}
@@ -71,11 +87,16 @@ export function OrderSummaryCard({ order, variant = "default" }: OrderSummaryCar
         <div className="flex items-start justify-between gap-4">
           {/* Left: Order Info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold text-slate-800">#{order.orderNumber}</span>
               <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${getStatusColor(order.status)}`}>
                 {getStatusLabel(order.status)}
               </span>
+              {paymentBadge.show && (
+                <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${paymentBadge.color}`}>
+                  {paymentBadge.label}
+                </span>
+              )}
             </div>
             <p className="mt-1 text-sm text-slate-500">{formatShortDate(order.createdAt)}</p>
 
@@ -106,6 +127,8 @@ export function OrderSummaryCard({ order, variant = "default" }: OrderSummaryCar
   }
 
   // Default variant - more detailed
+  const paymentBadgeDefault = getPaymentStatusBadge(order);
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
       {/* Header */}
@@ -121,9 +144,16 @@ export function OrderSummaryCard({ order, variant = "default" }: OrderSummaryCar
             <p className="text-sm font-medium text-slate-600">{formatDate(order.createdAt)}</p>
           </div>
         </div>
-        <span className={`rounded-full border px-3 py-1 text-sm font-semibold ${getStatusColor(order.status)}`}>
-          {getStatusLabel(order.status)}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`rounded-full border px-3 py-1 text-sm font-semibold ${getStatusColor(order.status)}`}>
+            {getStatusLabel(order.status)}
+          </span>
+          {paymentBadgeDefault.show && (
+            <span className={`rounded-full border px-3 py-1 text-sm font-semibold ${paymentBadgeDefault.color}`}>
+              {paymentBadgeDefault.label}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Timeline */}
